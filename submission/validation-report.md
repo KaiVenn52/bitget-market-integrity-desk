@@ -15,6 +15,8 @@ Operator: project developer
 | Core browser tasks | 6/6 completed | Instrument switch, scan fallback, row expansion, evidence selection, provenance reveal, navigation |
 | Desktop viewport | Passed | `design/implementation-desktop-final.png`, 1536 × 1024 |
 | Mobile viewport | Passed | `design/implementation-mobile-final.png`, 390 × 844; no document-level horizontal overflow |
+| Public deployment | Passed | Stable Vercel URL returned HTTP 200 |
+| Public live rToken scan | Passed | Bitget returned a current rNVDAUSDT ticker; Passport labeled `LIVE · RULES` and underlying `Unavailable` |
 
 ## What these results prove
 
@@ -22,6 +24,7 @@ Operator: project developer
 - The production client compiles and the current code passes static checks.
 - The primary research workflow is operable in a real browser.
 - Failure states remain visible and inspectable.
+- The deployed server can retrieve the public Bitget rToken ticker and preserve an authenticated Stock+ failure as a partial-live `UNVERIFIABLE` Passport.
 
 ## What these results do not prove
 
@@ -40,4 +43,3 @@ Freeze 12–20 cases with a timestamp boundary and immutable evidence bundle. Ke
 5. median completion time.
 
 Every published metric must be labeled observed, estimated, or targeted. Demonstration fixtures must never be described as historical evidence.
-

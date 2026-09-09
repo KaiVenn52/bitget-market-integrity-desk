@@ -2,6 +2,8 @@
 
 A read-only, evidence-first AI Trading Desk for Bitget tokenized U.S. equities. It produces a reproducible Market State Passport rather than a trading signal.
 
+**Live demo:** https://bitget-market-integrity-desk.vercel.app
+
 > Can the current state of a 24/7 tokenized-equity market be supported by fresh, internally consistent evidence?
 
 ![Market Integrity Desk](design/implementation-desktop-final.png)

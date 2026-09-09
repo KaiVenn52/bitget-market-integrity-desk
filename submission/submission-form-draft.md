@@ -13,7 +13,7 @@ Human-only fields are marked `[[REQUIRED]]`. Do not submit this document without
 - **Apply for Demo Day:** Yes
 - **How did you hear about this event?:** Twitter / X
 - **Competition Track:** AI Trading Desk
-- **Competition Sub-theme:** Tokenized U.S. Equities / Market Research Tool
+- **Competition Sub-theme:** Open Theme
 
 ## Project
 
@@ -64,12 +64,12 @@ Qwen 3.8 Max acts as a bounded evidence investigator. It receives the determinis
 
 ## Submission Material Links
 
-- **Required · Project demo:** `[[DEPLOYMENT URL]]`
-- **Required · Public GitHub repository:** `[[GITHUB URL]]`
-- **Required · Full research-task walkthrough:** `[[PUBLIC WALKTHROUGH URL]]`
+- **Required · Project demo:** https://bitget-market-integrity-desk.vercel.app
+- **Required · Public GitHub repository:** https://github.com/KaiVenn52/bitget-market-integrity-desk
+- **Required · Full research-task walkthrough:** https://github.com/KaiVenn52/bitget-market-integrity-desk/blob/main/submission/walkthrough.md
 - **Recommended · Demo video, ≤3 minutes:** `[[PUBLIC X OR YOUTUBE URL]]`
-- **Validation report:** `[[PUBLIC REPOSITORY URL]]/blob/main/submission/validation-report.md`
-- **Methodology and limitations:** `[[PUBLIC REPOSITORY URL]]/blob/main/README.md`
+- **Validation report:** https://github.com/KaiVenn52/bitget-market-integrity-desk/blob/main/submission/validation-report.md
+- **Methodology and limitations:** https://github.com/KaiVenn52/bitget-market-integrity-desk/blob/main/README.md
 
 ## Remaining form fields
 
@@ -78,4 +78,3 @@ Qwen 3.8 Max acts as a bounded evidence investigator. It receives the determinis
 - **Material Additions Since S1:** Leave blank if No; otherwise describe only substantial additions.
 - **Apply for Post-event Kimi K3 Token Credits:** Yes
 - **Open to Playbook Review and Listing Discussion:** Yes
-
