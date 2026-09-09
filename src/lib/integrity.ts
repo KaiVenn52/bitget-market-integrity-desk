@@ -24,6 +24,7 @@ export const derivePassportState = (checks: IntegrityCheck[]): PassportState => 
 }
 
 export function buildChecks(instrument: MarketInstrument, tokenAge: number, underlyingAge: number): IntegrityCheck[] {
+  if (instrument.underlyingPrice == null) throw new Error('Underlying price is required for deterministic alignment checks')
   const premium = bpsBetween(instrument.tokenPrice, instrument.underlyingPrice)
   const alignment = priceState(premium)
   const tokenFreshness = freshnessState(tokenAge)

@@ -12,10 +12,10 @@ export function PassportPanel({ passport }: { passport: Passport }) {
       <div className="section-title"><div><h2>Market State Passport</h2><p>A reproducible view of what is observable, stale, contradictory, or unverifiable.</p></div><div className={`passport-state state-${passport.state.toLowerCase()}`}>{passport.state}</div></div>
       <div className="facts">
         <div><span>Token market</span><strong>{passport.instrument.tokenPrice.toFixed(2)} <small>USDT</small></strong><em>Bitget · {passport.instrument.symbol}</em></div>
-        <div><span>Underlying</span><strong>{passport.instrument.underlyingPrice.toFixed(2)} <small>USD</small></strong><em>{passport.instrument.underlyingSymbol}</em></div>
-        <div><span>Premium / discount</span><strong className={Math.abs(passport.premiumBps) > 20 ? 'negative' : ''}>{signed(passport.premiumBps)} bps</strong><em>Deterministic</em></div>
+        <div><span>Underlying</span><strong>{passport.instrument.underlyingPrice == null ? 'Unavailable' : <>{passport.instrument.underlyingPrice.toFixed(2)} <small>USD</small></>}</strong><em>{passport.instrument.underlyingSymbol}</em></div>
+        <div><span>Premium / discount</span><strong className={passport.premiumBps != null && Math.abs(passport.premiumBps) > 20 ? 'negative' : ''}>{passport.premiumBps == null ? 'N/A' : `${signed(passport.premiumBps)} bps`}</strong><em>Deterministic</em></div>
         <div><span>Session state</span><strong className="positive">{passport.sessionState}</strong><em>U.S. regular hours</em></div>
-        <div><span>Quote age</span><strong>{passport.tokenQuoteAge}s</strong><em>Underlying {passport.underlyingQuoteAge}s</em></div>
+        <div><span>Quote age</span><strong>{passport.tokenQuoteAge}s</strong><em>Underlying {passport.underlyingQuoteAge == null ? 'unavailable' : `${passport.underlyingQuoteAge}s`}</em></div>
         <div><span>Liquidity observability</span><strong className="unknown-text">{passport.liquidity}</strong><em>Depth unavailable</em></div>
         <div><span>Corporate action</span><strong>{passport.corporateAction}</strong><em>Never inferred</em></div>
       </div>

@@ -8,7 +8,7 @@ export interface MarketInstrument {
   underlyingSymbol: string
   company: string
   tokenPrice: number
-  underlyingPrice: number
+  underlyingPrice: number | null
   change24h: number
 }
 
@@ -50,8 +50,8 @@ export interface Passport {
   scannedAt: string
   sessionState: string
   tokenQuoteAge: number
-  underlyingQuoteAge: number
-  premiumBps: number
+  underlyingQuoteAge: number | null
+  premiumBps: number | null
   liquidity: 'OBSERVABLE' | 'NOT OBSERVABLE'
   corporateAction: string
   checks: IntegrityCheck[]

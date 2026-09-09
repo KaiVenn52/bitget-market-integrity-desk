@@ -58,6 +58,8 @@ The Vite-only local run uses the snapshot fallback because `/api/scan` is a Verc
 
 Set `BITGET_QWEN_API_KEY` only in the server environment to enable the model-backed evidence brief. Without it, the UI remains fully functional and labels the deterministic fallback as `RULES`; the key is never shipped to the browser.
 
+The public rToken ticker can run without exchange credentials. The Stock+ underlying quote is authenticated; optionally configure the read-only server variables `BITGET_ACCESS_KEY`, `BITGET_SECRET_KEY`, and `BITGET_PASSPHRASE`. If they are absent, the deployment returns a real partial-live Passport with the underlying and dependent checks marked `UNVERIFIABLE`—it never mixes the live rToken with a snapshot underlying.
+
 ## Validation
 
 ```powershell

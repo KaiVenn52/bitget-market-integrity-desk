@@ -10,6 +10,7 @@ export const instruments: MarketInstrument[] = [
 
 export function snapshotFor(symbol: string): Passport {
   const instrument = instruments.find((item) => item.symbol === symbol) ?? instruments[0]
+  if (instrument.underlyingPrice == null) throw new Error('Snapshot requires an underlying price')
   const now = new Date()
   const tokenAge = symbol === 'rTSLAUSDT' ? 68 : 18
   const underlyingAge = 12
