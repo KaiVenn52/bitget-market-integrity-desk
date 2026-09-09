@@ -8,9 +8,10 @@ const allowed = new Map([
 
 async function getJson(path, signal) {
   const response = await fetch(`${BITGET_BASE}${path}`, { headers: { accept: 'application/json', 'user-agent': 'Market-Integrity-Desk/0.1' }, signal })
-  if (!response.ok) throw new Error(`Bitget ${response.status}`)
-  const json = await response.json()
-  if (json.code !== '00000') throw new Error(json.msg || 'Bitget API error')
+  const text = await response.text()
+  let json
+  try { json = JSON.parse(text) } catch { throw new Error(`${path} returned non-JSON (${response.status})`) }
+  if (!response.ok || json.code !== '00000') throw new Error(`${path} failed (${response.status}): ${json.msg || 'Bitget API error'}`)
   return json
 }
 
