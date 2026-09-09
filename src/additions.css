@@ -1,0 +1,152 @@
+.empty-watch {
+  padding: 20px 16px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.benchmark-summary.checked {
+  box-shadow: inset 0 2px var(--mint);
+}
+
+.raw-provenance {
+  overflow: auto;
+  margin: 10px 0 0;
+  padding: 9px;
+  border: 1px solid var(--line);
+  background: #081018;
+  color: #a9c5d8;
+  font: 8px/1.5 'IBM Plex Mono', monospace;
+}
+
+.protocol-note {
+  margin: 0 14px 14px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+  html,
+  body,
+  #root,
+  .app-shell {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .desk-grid {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .watchlist {
+    width: 100vw;
+    max-width: 100vw;
+    overflow: hidden;
+  }
+
+  .watch-rows {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .desk-main {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    padding: 10px !important;
+    overflow: hidden;
+  }
+
+  .desk-grid,
+  .passport-stack > .panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .passport-stack,
+  .instrument-bar {
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  .instrument-bar {
+    height: auto;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 10px;
+  }
+
+  .instrument-bar .primary-button {
+    width: auto;
+    align-self: stretch;
+    justify-content: center;
+    padding: 0 11px;
+    font-size: 10px;
+  }
+
+  .passport .section-title {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .passport-state {
+    align-self: flex-start;
+  }
+
+  .section-title > div {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .section-title p {
+    max-width: calc(100vw - 54px);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .facts > div:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .facts {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: hidden;
+  }
+
+  .facts strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .check > button {
+    grid-template-columns: 23px minmax(0, 1fr) 18px;
+  }
+
+  .check-main {
+    min-width: 0;
+  }
+
+  .check-result,
+  .legend {
+    display: none;
+  }
+
+  .timeline {
+    overflow-x: auto;
+  }
+
+  .timeline-track,
+  .timeline-axis {
+    min-width: 520px;
+  }
+
+  .evidence-panel {
+    width: 100vw;
+    max-width: 100vw;
+  }
+}
