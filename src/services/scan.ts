@@ -18,12 +18,18 @@ async function enrichWithInvestigator(passport: Passport): Promise<Passport> {
       }),
       signal: controller.signal,
     })
-    if (!response.ok) return passport
-    const data = (await response.json()) as { brief?: string }
-    if (!data.brief) return passport
-    return { ...passport, brief: data.brief, reasoningMode: 'qwen' }
+    if (!response.ok) return { ...passport, reasoningNote: `Qwen request failed (${response.status}) · deterministic fallback retained` }
+    const data = (await response.json()) as { available?: boolean; brief?: string; evidenceIds?: string[]; model?: string; reason?: string }
+    if (!data.available || !data.brief) return { ...passport, reasoningNote: data.reason ?? 'Qwen unavailable · deterministic fallback retained' }
+    return {
+      ...passport,
+      brief: data.brief,
+      briefEvidenceIds: data.evidenceIds ?? [],
+      reasoningMode: 'qwen',
+      reasoningNote: `${data.model ?? 'Qwen'} · evidence citations verified`,
+    }
   } catch {
-    return passport
+    return { ...passport, reasoningNote: 'Qwen unreachable · deterministic fallback retained' }
   } finally {
     window.clearTimeout(timeout)
   }

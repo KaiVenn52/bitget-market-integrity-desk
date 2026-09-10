@@ -19,7 +19,9 @@ Can the current `rTSLAUSDT` market state be supported by fresh, internally consi
 7. Inspect **Corporate actions** and **Liquidity observability**. They must remain `UNVERIFIABLE` and `NOT OBSERVABLE` when the required endpoints are absent.
 8. Select an item in the **Evidence** rail. Confirm the source name, endpoint, retrieval timestamp, and recorded state.
 9. Open **Inspect provenance**. Confirm that the raw record agrees with the selected evidence item.
-10. Open **Methodology** and confirm the separation of Observe, Verify, Investigate, and Abstain.
+10. Read **Research action**. When reference evidence is missing, it must tell the researcher not to use the unavailable comparison and when to re-run the task.
+11. If the badge is `QWEN`, select a bracketed citation and confirm it opens an evidence item supplied to the model.
+12. Open **Methodology** and confirm the separation of Observe, Verify, Investigate, and Abstain.
 
 ## Expected conclusion
 

@@ -71,6 +71,68 @@
   grid-column: 1 / -1;
 }
 
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.reasoning-note {
+  margin: 8px 12px 0;
+  color: var(--muted);
+  font: 10px/1.4 'IBM Plex Mono', monospace;
+}
+
+.brief-citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 12px 0;
+}
+
+.brief-citations button {
+  border: 1px solid #23547a;
+  background: #0b1822;
+  color: var(--blue);
+  padding: 4px 7px;
+  font: 10px 'IBM Plex Mono', monospace;
+  cursor: pointer;
+}
+
+.research-action {
+  margin: 10px 12px 0;
+  padding: 10px;
+  border-left: 3px solid var(--amber);
+  background: #111a21;
+}
+
+.research-action span,
+.research-action strong {
+  display: block;
+}
+
+.research-action span {
+  margin-bottom: 5px;
+  color: var(--amber);
+  font: 10px 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.research-action strong {
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.ai-brief > p,
+.check-detail p,
+.check-main small,
+.evidence-list button small,
+.source-detail dl > div {
+  font-size: 11px;
+}
+
 @media (max-width: 760px) {
   html,
   body,
@@ -94,6 +156,24 @@
   .watch-rows {
     width: 100%;
     max-width: 100%;
+  }
+
+  .watch-row {
+    min-width: 205px;
+    grid-template-columns: 1.15fr .85fr;
+    row-gap: 3px;
+    height: 58px;
+    padding: 7px 12px;
+  }
+
+  .watch-row span:first-child {
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+
+  .watch-row span:not(:first-child) {
+    text-align: right;
+    font-size: 10px;
   }
 
   .desk-main {

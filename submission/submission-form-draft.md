@@ -36,7 +36,7 @@ This user currently has to compare exchange quotes, underlying-market timestamps
 
 ### Part 3 · Validation data and key metrics
 
-**Observed — developer QA:** 8/8 deterministic and natural-language routing unit tests passed; production TypeScript build and lint passed; 7/7 core walkthrough tasks completed in browser QA: natural-language instrument resolution, instrument switch, live/fallback scan, deterministic-row expansion, evidence selection, provenance reveal, and view navigation. Desktop and 390 × 844 responsive checks produced no document-level horizontal overflow.
+**Observed — developer QA:** 9/9 deterministic and natural-language routing unit tests passed; production TypeScript build and lint passed; the core browser walkthrough covers natural-language instrument resolution, instrument switch, live/fallback scan, deterministic-row expansion, evidence selection, provenance reveal, research action, and view navigation. Desktop and 390 × 844 responsive checks produced no document-level horizontal overflow.
 
 **Observed — evidence discipline:** every current Passport preserves source and retrieval timestamps; unavailable Reality depth is labeled `NOT OBSERVABLE`; unavailable corporate-action context is labeled `UNVERIFIABLE`; snapshot and rules-only modes are visibly labeled. These are implementation observations, not trading-performance claims.
 
@@ -46,9 +46,9 @@ This user currently has to compare exchange quotes, underlying-market timestamps
 
 ### Part 4 · Progress
 
-Built: natural-language research intake, responsive Live Desk, four-instrument watchlist, deterministic Passport engine, explicit failure states, expandable checks, evidence timeline, per-item provenance, Replay Lab, Methodology view, Vercel scan endpoint, and a bounded Qwen evidence endpoint. The Bitget integration targets UTA v3 market tickers and Stock+ quotes; the investigator targets the hackathon Qwen Responses endpoint with a server-side key.
+Built: natural-language research intake, responsive Live Desk, live-session watchlist, deterministic Passport engine, explicit failure states, actionable research handoff, expandable checks, evidence timeline, per-item provenance, Replay Lab, Methodology view, Vercel scan endpoint, and a bounded Qwen evidence endpoint with citation-ID validation. The Bitget integration targets UTA v3 market tickers and Stock+ quotes; the investigator targets the hackathon Qwen Responses endpoint with a server-side key.
 
-Problems solved: direct Bitget requests timed out in the initial local network, so the application now fails closed into a clearly labeled snapshot instead of presenting stale fixture data as live. The production deployment now returns a current Bitget rToken ticker while unavailable Stock+ reference data remains explicit. Reality order-book access was not assumed; the product returns `NOT OBSERVABLE`. Model output is accepted only when it cites IDs present in the supplied evidence set.
+Problems solved: direct Bitget requests timed out in the initial local network, so the application fails closed into a frozen, timestamped fixture instead of presenting stale data as live. The production deployment returns a current Bitget rToken ticker while unavailable Stock+ reference data remains explicit. Watchlist prices now update only from current-session live scans, and unverifiable session status no longer receives a positive visual treatment. Reality order-book access was not assumed; the product returns `NOT OBSERVABLE`. Model output is accepted only when bracketed citations resolve to IDs in the supplied evidence set.
 
 Not yet completed: deployment-environment verification of the authenticated Stock+ and Qwen paths, frozen historical benchmark, and external user testing. The public rToken path and natural-language workflow have been verified in production, and a 42-second public demo film has been rendered. Next: configure sponsor credentials if issued, publish the benchmark artifact, and run tester sessions.
 

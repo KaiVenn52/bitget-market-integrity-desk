@@ -58,4 +58,7 @@ export interface Passport {
   evidence: EvidenceItem[]
   timeline: TimelineEvent[]
   brief: string
+  briefEvidenceIds: string[]
+  researchAction: string
+  reasoningNote: string
 }

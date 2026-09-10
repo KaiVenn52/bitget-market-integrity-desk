@@ -26,7 +26,7 @@ function safeJson(text) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   const apiKey = process.env.BITGET_QWEN_API_KEY
-  if (!apiKey) return res.status(503).json({ error: 'Investigator is not configured' })
+  if (!apiKey) return res.status(200).json({ available: false, reason: 'Qwen not configured · deterministic fallback retained' })
 
   const serialized = JSON.stringify(req.body || {})
   if (Buffer.byteLength(serialized, 'utf8') > MAX_BODY_BYTES) return res.status(413).json({ error: 'Evidence payload too large' })
@@ -48,15 +48,18 @@ export default async function handler(req, res) {
       }),
       signal: controller.signal,
     })
-    if (!response.ok) return res.status(502).json({ error: 'Investigator request failed', upstreamStatus: response.status })
+    if (!response.ok) return res.status(200).json({ available: false, reason: `Qwen unavailable (${response.status}) · deterministic fallback retained` })
     const raw = await response.json()
     const result = safeJson(outputText(raw))
     const suppliedIds = new Set((req.body?.evidence || []).map((item) => item.id))
     const evidenceIds = result.evidenceIds.filter((id) => suppliedIds.has(id))
     if (!evidenceIds.length) throw new Error('Investigator returned no valid evidence IDs')
-    return res.status(200).json({ brief: result.brief.slice(0, 1200), evidenceIds, model: 'qwen3.8-max' })
-  } catch (error) {
-    return res.status(502).json({ error: 'Investigator unavailable', detail: error instanceof Error ? error.message : 'Unknown error' })
+    const citedIds = [...result.brief.matchAll(/\[([A-Za-z0-9_-]+)\]/g)].map((match) => match[1])
+    if (!citedIds.length || citedIds.some((id) => !suppliedIds.has(id))) throw new Error('Investigator brief contains missing or invalid citations')
+    if (evidenceIds.some((id) => !citedIds.includes(id))) throw new Error('Investigator evidence IDs are not cited in the brief')
+    return res.status(200).json({ available: true, brief: result.brief.slice(0, 1200), evidenceIds, model: 'qwen3.8-max' })
+  } catch {
+    return res.status(200).json({ available: false, reason: 'Qwen unavailable · deterministic fallback retained' })
   } finally {
     clearTimeout(timer)
   }

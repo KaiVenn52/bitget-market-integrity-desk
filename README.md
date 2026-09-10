@@ -24,6 +24,8 @@ The target user is a research-driven, medium-frequency Bitget rToken trader who 
 - Deterministic premium and freshness checks with published thresholds.
 - Explicit `UNVERIFIABLE` and `NOT OBSERVABLE` states.
 - Per-item provenance and evidence timestamps.
+- A synchronized watchlist that shows only quotes observed during the current session.
+- An explicit research action for every Passport, including when the correct action is to wait for missing evidence.
 - Responsive Live Desk, Replay Lab, and Methodology views.
 - A Vercel serverless endpoint that attempts parallel Bitget rToken and Stock+ retrieval.
 - A bounded Qwen investigator endpoint that can summarize only supplied evidence IDs.
@@ -58,7 +60,9 @@ npm.cmd run dev
 
 The Vite-only local run uses the snapshot fallback because `/api/scan` is a Vercel function. Use `vercel dev` to exercise the serverless route locally, or deploy to Vercel.
 
-Set `BITGET_QWEN_API_KEY` only in the server environment to enable the model-backed evidence brief. Without it, the UI remains fully functional and labels the deterministic fallback as `RULES`; the key is never shipped to the browser.
+Set `BITGET_QWEN_API_KEY` only in the server environment to enable the model-backed evidence brief. Qwen output is accepted only when its bracketed citations resolve to supplied evidence IDs; the UI exposes those IDs as selectable evidence links. Without the key, the UI remains functional, explains the deterministic fallback, and labels it `RULES`; the key is never shipped to the browser.
+
+For production, add the key as a Vercel **Production** environment variable in Project Settings, then redeploy. Do not place it in `.env`, commit history, screenshots, issue text, or client-side `VITE_*` variables. Confirm activation by running a scan and checking that the brief badge reads `LIVE · QWEN` and exposes clickable evidence citations.
 
 The public rToken ticker can run without exchange credentials. The Stock+ underlying quote is authenticated; optionally configure the read-only server variables `BITGET_ACCESS_KEY`, `BITGET_SECRET_KEY`, and `BITGET_PASSPHRASE`. If they are absent, the deployment returns a real partial-live Passport with the underlying and dependent checks marked `UNVERIFIABLE`—it never mixes the live rToken with a snapshot underlying.
 
@@ -74,7 +78,7 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 8/8 deterministic and natural-language routing unit tests pass.
+- 9/9 deterministic and natural-language routing unit tests pass.
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in the in-app browser.
@@ -90,7 +94,7 @@ The application never turns an unavailable endpoint into a negative fact. In par
 
 - The public rToken path is verified in production. The authenticated Stock+ reference path remains unverified because no read-only credential is configured.
 - Replay cases are demonstration fixtures until the frozen dataset and evaluator are published.
-- The model-backed path is implemented but was not exercised during local validation because no server-side Qwen credential was present.
+- The model-backed path is implemented; production `LIVE · QWEN` behavior still requires the sponsor-issued key to be configured and verified.
 - Research only; no order execution and no investment advice.
 
 ## Repository map

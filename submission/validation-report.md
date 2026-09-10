@@ -8,12 +8,12 @@ Operator: project developer
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic and query-routing unit tests | 8/8 passed | `npm.cmd test` |
+| Deterministic and query-routing unit tests | 9/9 passed | `npm.cmd test` |
 | Production build | Passed | `npm.cmd run build` |
 | Static lint | Passed | `npm.cmd run lint` |
 | API syntax checks | 2/2 passed | `node --check api/scan.js`, `node --check api/evidence.js` |
 | Core browser tasks | 7/7 completed | Natural-language query, instrument switch, live/fallback scan, row expansion, evidence selection, provenance reveal, navigation |
-| Desktop viewport | Passed | `design/implementation-desktop-final.png`, 1536 × 1024 |
+| Desktop viewport | Passed | `design/implementation-desktop-final.png`, 1440 × 1000 |
 | Mobile viewport | Passed | `design/implementation-mobile-final.png`, 390 × 844; no document-level horizontal overflow |
 | Public deployment | Passed | Stable Vercel URL returned HTTP 200 |
 | Public live rToken scan | Passed | Bitget returned a current rNVDAUSDT ticker; Passport labeled `LIVE · RULES` and underlying `Unavailable` |
@@ -27,11 +27,13 @@ Operator: project developer
 - The primary research workflow is operable in a real browser.
 - Failure states remain visible and inspectable.
 - The deployed server can retrieve the public Bitget rToken ticker and preserve an authenticated Stock+ failure as a partial-live `UNVERIFIABLE` Passport.
+- Watchlist quotes are populated only by current-session live scans; frozen fixtures no longer appear as live watchlist prices.
+- Snapshot evidence retains its frozen source timestamp and is never presented with a synthetic current quote age.
 
 ## What these results do not prove
 
 - Live Bitget availability from every deployment region.
-- Qwen output quality without a configured hackathon credential.
+- Qwen output quality until the sponsor-issued credential is configured and `LIVE · QWEN` is observed in production.
 - Historical classification accuracy, user adoption, retention, AUM, volume, fees, or investment performance.
 
 ## Next benchmark protocol
