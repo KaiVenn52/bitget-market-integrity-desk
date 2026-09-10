@@ -22,6 +22,16 @@ function outputText(payload) {
   return typeof chatContent === 'string' ? chatContent : ''
 }
 
+function responseShape(payload) {
+  const keys = payload && typeof payload === 'object' ? Object.keys(payload).slice(0, 12) : []
+  const output = Array.isArray(payload?.output) ? payload.output : []
+  const outputTypes = output.map((item) => item?.type || typeof item).slice(0, 8)
+  const contentKeys = output.flatMap((item) => Array.isArray(item?.content) ? item.content : [])
+    .map((item) => item && typeof item === 'object' ? Object.keys(item).slice(0, 8) : [typeof item])
+    .slice(0, 8)
+  return { keys, outputTypes, contentKeys, errorType: payload?.error?.type || payload?.error?.code || null }
+}
+
 function safeJson(text) {
   const candidate = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
   const parsed = JSON.parse(candidate)
@@ -57,7 +67,7 @@ export default async function handler(req, res) {
     if (!response.ok) return res.status(200).json({ available: false, reason: `Qwen unavailable (${response.status}) · deterministic fallback retained` })
     const raw = await response.json()
     const text = outputText(raw)
-    if (!text) return res.status(200).json({ available: false, reason: 'Qwen returned no readable answer · deterministic fallback retained' })
+    if (!text) return res.status(200).json({ available: false, reason: 'Qwen returned no readable answer · deterministic fallback retained', diagnostic: responseShape(raw) })
     let result
     try {
       result = safeJson(text)
