@@ -59,8 +59,9 @@ export default async function handler(req, res) {
           { role: 'system', content: [{ type: 'input_text', text: systemPrompt }] },
           { role: 'user', content: [{ type: 'input_text', text: serialized }] },
         ],
+        reasoning: { effort: 'low' },
         temperature: 0.1,
-        max_output_tokens: 350,
+        max_output_tokens: 900,
       }),
       signal: controller.signal,
     })
