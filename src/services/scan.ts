@@ -2,10 +2,11 @@ import { snapshotFor } from '../data/snapshots'
 import type { Passport } from '../types'
 
 const TIMEOUT_MS = 5500
+const INVESTIGATOR_TIMEOUT_MS = 28_000
 
 async function enrichWithInvestigator(passport: Passport): Promise<Passport> {
   const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), 8000)
+  const timeout = window.setTimeout(() => controller.abort(), INVESTIGATOR_TIMEOUT_MS)
   try {
     const response = await fetch('/api/evidence', {
       method: 'POST',
