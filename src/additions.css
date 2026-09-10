@@ -1,281 +1,51 @@
-.empty-watch {
-  padding: 20px 16px;
-  color: var(--muted);
-  font-size: 10px;
+/* Cross-component workbench ordering. */
+.workbench {
+  gap: 0 34px;
 }
 
-.benchmark-summary.checked {
-  box-shadow: inset 0 2px var(--mint);
+.workbench > .instrument-bar {
+  grid-column: 1;
+  grid-row: 1;
 }
 
-.raw-provenance {
-  overflow: auto;
-  margin: 10px 0 0;
-  padding: 9px;
-  border: 1px solid var(--line);
-  background: #081018;
-  color: #a9c5d8;
-  font: 8px/1.5 'IBM Plex Mono', monospace;
+.workbench > .passport-stack {
+  grid-column: 1;
+  grid-row: 2;
 }
 
-.protocol-note {
-  margin: 0 14px 14px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 9px;
-  line-height: 1.55;
-}
-
-.research-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 5px 10px;
-  margin-bottom: 9px;
-  padding: 10px 12px;
-}
-
-.research-bar > div {
-  min-width: 0;
-}
-
-.research-bar label,
-.research-bar small {
-  display: block;
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.research-bar input {
-  width: 100%;
-  margin-top: 4px;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--text);
-  font-size: 12px;
-}
-
-.research-bar button {
-  grid-row: 1 / 2;
+.workbench > .evidence-panel {
   grid-column: 2;
-  min-width: 88px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
-  background: var(--panel-2);
-  color: var(--blue);
-  cursor: pointer;
+  grid-row: 1 / 3;
 }
 
-.research-bar small {
-  grid-column: 1 / -1;
+@media (max-width: 1050px) {
+  .workbench {
+    gap: 28px;
+  }
+
+  .workbench > .instrument-bar {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .workbench > .evidence-panel {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .workbench > .passport-stack {
+    grid-column: 1;
+    grid-row: 3;
+    padding-top: 0;
+  }
 }
 
-button:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--blue);
-  outline-offset: 2px;
-}
-
-.reasoning-note {
-  margin: 8px 12px 0;
-  color: var(--muted);
-  font: 10px/1.4 'IBM Plex Mono', monospace;
-}
-
-.brief-citations {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 12px 0;
-}
-
-.brief-citations button {
-  border: 1px solid #23547a;
-  background: #0b1822;
-  color: var(--blue);
-  padding: 4px 7px;
-  font: 10px 'IBM Plex Mono', monospace;
-  cursor: pointer;
-}
-
-.research-action {
-  margin: 10px 12px 0;
-  padding: 10px;
-  border-left: 3px solid var(--amber);
-  background: #111a21;
-}
-
-.research-action span,
-.research-action strong {
-  display: block;
-}
-
-.research-action span {
-  margin-bottom: 5px;
-  color: var(--amber);
-  font: 10px 'IBM Plex Mono', monospace;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
-
-.research-action strong {
-  color: var(--text);
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.ai-brief > p,
-.check-detail p,
-.check-main small,
-.evidence-list button small,
-.source-detail dl > div {
-  font-size: 11px;
-}
-
-@media (max-width: 760px) {
-  html,
-  body,
-  #root,
-  .app-shell {
-    max-width: 100%;
-    overflow-x: hidden;
+@media (max-width: 720px) {
+  .workbench {
+    gap: 22px;
   }
 
-  .desk-grid {
-    width: 100vw;
-    max-width: 100vw;
-  }
-
-  .watchlist {
-    width: 100vw;
-    max-width: 100vw;
-    overflow: hidden;
-  }
-
-  .watch-rows {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .watch-row {
-    min-width: 205px;
-    grid-template-columns: 1.15fr .85fr;
-    row-gap: 3px;
-    height: 58px;
-    padding: 7px 12px;
-  }
-
-  .watch-row span:first-child {
-    grid-row: 1 / 3;
-    align-self: center;
-  }
-
-  .watch-row span:not(:first-child) {
-    text-align: right;
-    font-size: 10px;
-  }
-
-  .desk-main {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    padding: 10px !important;
-    overflow: hidden;
-  }
-
-  .desk-grid,
-  .passport-stack > .panel {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-  }
-
-  .passport-stack,
-  .instrument-bar,
-  .research-bar {
-    width: calc(100vw - 20px) !important;
-    max-width: calc(100vw - 20px) !important;
-  }
-
-  .instrument-bar {
-    height: auto;
-    align-items: stretch;
-    flex-direction: column;
-    gap: 12px;
-    padding: 14px 10px;
-  }
-
-  .instrument-bar .primary-button {
-    width: auto;
-    align-self: stretch;
-    justify-content: center;
-    padding: 0 11px;
-    font-size: 10px;
-  }
-
-  .passport .section-title {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .passport-state {
-    align-self: flex-start;
-  }
-
-  .section-title > div {
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  .section-title p {
-    max-width: calc(100vw - 54px);
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
-  .facts > div:last-child {
-    grid-column: 1 / -1;
-  }
-
-  .facts {
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    overflow: hidden;
-  }
-
-  .facts strong {
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
-  .check > button {
-    grid-template-columns: 23px minmax(0, 1fr) 18px;
-  }
-
-  .check-main {
-    min-width: 0;
-  }
-
-  .check-result,
-  .legend {
+  .scan-button span {
     display: none;
-  }
-
-  .timeline {
-    overflow-x: auto;
-  }
-
-  .timeline-track,
-  .timeline-axis {
-    min-width: 520px;
-  }
-
-  .evidence-panel {
-    width: 100vw;
-    max-width: 100vw;
-  }
-
-  .research-bar {
-    grid-template-columns: minmax(0, 1fr) 74px;
   }
 }
