@@ -10,9 +10,9 @@
 
 ## 0:45–1:25 — Live Desk
 
-Select `rTSLAUSDT`, then run the scan.
+Enter “Check Tesla market integrity and show me what is missing,” then choose **Ask Desk**.
 
-“First, read the mode label. LIVE versus SNAPSHOT identifies the data path; QWEN versus RULES identifies the reasoning path. The Desk never disguises fallback data as live AI output.”
+“The language layer resolves Tesla to rTSLAUSDT and starts the research workflow. First, read the mode label. LIVE versus SNAPSHOT identifies the data path; QWEN versus RULES identifies the reasoning path. The Desk never disguises fallback data as live AI output.”
 
 Expand Price alignment and Quote freshness.
 
@@ -33,4 +33,3 @@ Open Methodology.
 ## 2:20–2:30 — Close
 
 “The question is not whether AI can sound confident. It is whether an agent can prove what it knew, when it knew it, and what it could not verify.”
-

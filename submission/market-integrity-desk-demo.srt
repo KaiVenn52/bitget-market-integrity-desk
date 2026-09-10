@@ -1,0 +1,23 @@
+1
+00:00:00,000 --> 00:00:05,000
+Bitget AI Trading Desk: 24/7 markets. Partial information.
+
+2
+00:00:05,000 --> 00:00:10,700
+A price gap is not an explanation when token, underlying, and news clocks disagree.
+
+3
+00:00:10,700 --> 00:00:24,300
+Market Integrity Desk creates a Market State Passport with deterministic checks, explicit unknowns, and source provenance.
+
+4
+00:00:24,300 --> 00:00:31,300
+Data and reasoning remain separate. Missing reference data and liquidity evidence stay visibly unverified.
+
+5
+00:00:31,300 --> 00:00:36,700
+Observed developer QA: eight of eight tests passed, with a public live rToken scan.
+
+6
+00:00:36,700 --> 00:00:42,048
+Try the live evidence desk. Research only. Human decides.

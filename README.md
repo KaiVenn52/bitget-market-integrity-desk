@@ -64,6 +64,8 @@ The public rToken ticker can run without exchange credentials. The Stock+ underl
 
 ## Validation
 
+The 42-second submission film is available as an [MP4](submission/market-integrity-desk-demo.mp4), with a separate [caption file](submission/market-integrity-desk-demo.srt) and [thumbnail](submission/demo-thumbnail.png). It was rendered from the reproducible Remotion source in `video/`.
+
 ```powershell
 npm.cmd test
 npm.cmd run build
@@ -72,10 +74,11 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 4/4 deterministic unit tests pass.
+- 8/8 deterministic and natural-language routing unit tests pass.
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
-- Instrument switching, scan fallback, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in the in-app browser.
+- Natural-language instrument resolution, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in the in-app browser.
+- The submission film was verified as 1920 × 1080, 30 fps, H.264/AAC, 42.048 seconds.
 
 These are product QA observations, not user-adoption or trading-performance claims. A frozen point-in-time benchmark is the next validation layer; no fixture result is represented as historical accuracy.
 
@@ -85,7 +88,7 @@ The application never turns an unavailable endpoint into a negative fact. In par
 
 ## Current limitations
 
-- The local network used during initial development timed out connecting directly to `api.bitget.com`; live behavior must be verified from the deployment environment.
+- The public rToken path is verified in production. The authenticated Stock+ reference path remains unverified because no read-only credential is configured.
 - Replay cases are demonstration fixtures until the frozen dataset and evaluator are published.
 - The model-backed path is implemented but was not exercised during local validation because no server-side Qwen credential was present.
 - Research only; no order execution and no investment advice.

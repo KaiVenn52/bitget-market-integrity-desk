@@ -7,7 +7,7 @@ Can the current `rTSLAUSDT` market state be supported by fresh, internally consi
 ## Reproducible procedure
 
 1. Open the deployed Market Integrity Desk and remain on **Live Desk**.
-2. Select `rTSLAUSDT` from the watchlist. This triggers a new bounded scan.
+2. Enter `Check Tesla market integrity and show me what is missing` in **Research question**, then choose **Ask Desk**. The language layer resolves the supported instrument and triggers a bounded scan. The watchlist can be used as a deterministic alternative.
 3. Read the mode badge before interpreting the result:
    - `LIVE` means the server returned current Bitget source data.
    - `SNAPSHOT` means the live route was unavailable and the visible prices are demonstration data.
@@ -34,4 +34,3 @@ Block the live scan route or run the Vite-only local build. The UI must:
 - retain `UNVERIFIABLE` and `NOT OBSERVABLE` states;
 - avoid claiming that there is no corporate action or that liquidity is thin;
 - keep all provenance inspectable.
-

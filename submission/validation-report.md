@@ -8,15 +8,17 @@ Operator: project developer
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic unit tests | 4/4 passed | `npm.cmd test` |
+| Deterministic and query-routing unit tests | 8/8 passed | `npm.cmd test` |
 | Production build | Passed | `npm.cmd run build` |
 | Static lint | Passed | `npm.cmd run lint` |
 | API syntax checks | 2/2 passed | `node --check api/scan.js`, `node --check api/evidence.js` |
-| Core browser tasks | 6/6 completed | Instrument switch, scan fallback, row expansion, evidence selection, provenance reveal, navigation |
+| Core browser tasks | 7/7 completed | Natural-language query, instrument switch, live/fallback scan, row expansion, evidence selection, provenance reveal, navigation |
 | Desktop viewport | Passed | `design/implementation-desktop-final.png`, 1536 × 1024 |
 | Mobile viewport | Passed | `design/implementation-mobile-final.png`, 390 × 844; no document-level horizontal overflow |
 | Public deployment | Passed | Stable Vercel URL returned HTTP 200 |
 | Public live rToken scan | Passed | Bitget returned a current rNVDAUSDT ticker; Passport labeled `LIVE · RULES` and underlying `Unavailable` |
+| Public natural-language task | Passed | “Check Apple market integrity…” resolved to rAAPLUSDT and returned a current `LIVE · RULES` Passport |
+| Submission film | Passed | 42.048 s; 1920 × 1080; 30 fps; H.264 video and AAC audio; six representative frames visually inspected |
 
 ## What these results prove
 

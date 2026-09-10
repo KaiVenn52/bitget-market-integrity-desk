@@ -36,7 +36,7 @@ This user currently has to compare exchange quotes, underlying-market timestamps
 
 ### Part 3 · Validation data and key metrics
 
-**Observed — developer QA:** 4/4 deterministic unit tests passed; production TypeScript build and lint passed; 6/6 core walkthrough tasks completed in browser QA: instrument switch, scan/fallback, deterministic-row expansion, evidence selection, provenance reveal, and view navigation. Desktop and 390 × 844 responsive checks produced no document-level horizontal overflow.
+**Observed — developer QA:** 8/8 deterministic and natural-language routing unit tests passed; production TypeScript build and lint passed; 7/7 core walkthrough tasks completed in browser QA: natural-language instrument resolution, instrument switch, live/fallback scan, deterministic-row expansion, evidence selection, provenance reveal, and view navigation. Desktop and 390 × 844 responsive checks produced no document-level horizontal overflow.
 
 **Observed — evidence discipline:** every current Passport preserves source and retrieval timestamps; unavailable Reality depth is labeled `NOT OBSERVABLE`; unavailable corporate-action context is labeled `UNVERIFIABLE`; snapshot and rules-only modes are visibly labeled. These are implementation observations, not trading-performance claims.
 
@@ -46,11 +46,11 @@ This user currently has to compare exchange quotes, underlying-market timestamps
 
 ### Part 4 · Progress
 
-Built: responsive Live Desk, four-instrument watchlist, deterministic Passport engine, explicit failure states, expandable checks, evidence timeline, per-item provenance, Replay Lab, Methodology view, Vercel scan endpoint, and a bounded Qwen evidence endpoint. The Bitget integration targets UTA v3 market tickers and Stock+ quotes; the investigator targets the hackathon Qwen Responses endpoint with a server-side key.
+Built: natural-language research intake, responsive Live Desk, four-instrument watchlist, deterministic Passport engine, explicit failure states, expandable checks, evidence timeline, per-item provenance, Replay Lab, Methodology view, Vercel scan endpoint, and a bounded Qwen evidence endpoint. The Bitget integration targets UTA v3 market tickers and Stock+ quotes; the investigator targets the hackathon Qwen Responses endpoint with a server-side key.
 
-Problems solved: direct Bitget requests timed out in the initial local network, so the application now fails closed into a clearly labeled snapshot instead of presenting stale fixture data as live. Reality order-book access was not assumed; the product returns `NOT OBSERVABLE`. Model output is accepted only when it cites IDs present in the supplied evidence set.
+Problems solved: direct Bitget requests timed out in the initial local network, so the application now fails closed into a clearly labeled snapshot instead of presenting stale fixture data as live. The production deployment now returns a current Bitget rToken ticker while unavailable Stock+ reference data remains explicit. Reality order-book access was not assumed; the product returns `NOT OBSERVABLE`. Model output is accepted only when it cites IDs present in the supplied evidence set.
 
-Not yet completed: deployment-environment verification of the live Bitget and Qwen paths, frozen historical benchmark, external user testing, and the public three-minute walkthrough. Next: deploy, capture live-source behavior, publish the benchmark artifact, run tester sessions, and record the final walkthrough.
+Not yet completed: deployment-environment verification of the authenticated Stock+ and Qwen paths, frozen historical benchmark, and external user testing. The public rToken path and natural-language workflow have been verified in production, and a 42-second public demo film has been rendered. Next: configure sponsor credentials if issued, publish the benchmark artifact, and run tester sessions.
 
 Frameworks and APIs: React, TypeScript, Vite, Vitest, Vercel Functions, Bitget UTA v3 market ticker, Bitget Stock+ quote, and Qwen 3.8 Max through the Bitget hackathon endpoint.
 
@@ -67,7 +67,7 @@ Qwen 3.8 Max acts as a bounded evidence investigator. It receives the determinis
 - **Required · Project demo:** https://bitget-market-integrity-desk.vercel.app
 - **Required · Public GitHub repository:** https://github.com/KaiVenn52/bitget-market-integrity-desk
 - **Required · Full research-task walkthrough:** https://github.com/KaiVenn52/bitget-market-integrity-desk/blob/main/submission/walkthrough.md
-- **Recommended · Demo video, ≤3 minutes:** `[[PUBLIC X OR YOUTUBE URL]]`
+- **Recommended · Demo video, ≤3 minutes:** https://github.com/KaiVenn52/bitget-market-integrity-desk/raw/main/submission/market-integrity-desk-demo.mp4
 - **Validation report:** https://github.com/KaiVenn52/bitget-market-integrity-desk/blob/main/submission/validation-report.md
 - **Methodology and limitations:** https://github.com/KaiVenn52/bitget-market-integrity-desk/blob/main/README.md
 

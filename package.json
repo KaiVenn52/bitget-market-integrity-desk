@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "render:demo": "remotion render video/index.ts MarketIntegrityDemo submission/market-integrity-desk-demo.mp4 --codec h264 --crf 18 --color-space bt709 --browser-executable=\"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\""
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@eslint/js": "latest",
+    "@remotion/cli": "^4.0.523",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
@@ -26,6 +28,7 @@
     "eslint-plugin-react-hooks": "latest",
     "eslint-plugin-react-refresh": "latest",
     "globals": "latest",
+    "remotion": "^4.0.523",
     "typescript": "latest",
     "typescript-eslint": "latest",
     "vitest": "latest"
