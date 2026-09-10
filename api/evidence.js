@@ -65,8 +65,12 @@ export default async function handler(req, res) {
     } catch {
       return res.status(200).json({ available: false, reason: 'Qwen answer failed the evidence schema · deterministic fallback retained' })
     }
-    const suppliedIds = new Set((req.body?.evidence || []).map((item) => item.id))
-    const citedIds = [...result.brief.matchAll(/\[([A-Za-z0-9_-]+)\]/g)].map((match) => match[1])
+    const suppliedIds = new Set([
+      ...(req.body?.checks || []).map((item) => item.id),
+      ...(req.body?.evidence || []).map((item) => item.id),
+    ])
+    const citationGroups = [...result.brief.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1])
+    const citedIds = citationGroups.flatMap((group) => group.split(',').map((id) => id.trim()).filter(Boolean))
     if (!citedIds.length || citedIds.some((id) => !suppliedIds.has(id))) return res.status(200).json({ available: false, reason: 'Qwen citations failed verification · deterministic fallback retained' })
     const evidenceIds = [...new Set(citedIds)]
     return res.status(200).json({ available: true, brief: result.brief.slice(0, 1200), evidenceIds, model: 'qwen3.8-max' })
