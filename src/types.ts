@@ -43,6 +43,7 @@ export interface TimelineEvent {
 }
 
 export interface Passport {
+  researchQuestion?: string
   instrument: MarketInstrument
   state: PassportState
   mode: DataMode
