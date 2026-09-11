@@ -12,11 +12,11 @@ Market Integrity Desk creates a Market State Passport with deterministic checks,
 
 4
 00:00:24,300 --> 00:00:31,300
-Data and reasoning remain separate. Missing reference data and liquidity evidence stay visibly unverified.
+Qwen answers the submitted question with verified evidence IDs. Missing reference and liquidity data stay visibly unverified.
 
 5
 00:00:31,300 --> 00:00:36,700
-Observed developer QA: eight of eight tests passed, with a public live rToken scan.
+Observed production QA: nine of nine tests passed, with four of four cited Qwen runs verified live.
 
 6
 00:00:36,700 --> 00:00:42,048

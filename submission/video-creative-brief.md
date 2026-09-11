@@ -17,8 +17,8 @@ A 42-second 16:9 Twitter/X product clip using **Problem → Demo → Proof → C
 1. **Hook, 0–5s — hero.** Focal point: “24/7 markets. Partial information.” Dark radial depth, mint evidence line.
 2. **Problem, 5–11s — split.** Focal point: “A price gap is not an explanation.” Token time, underlying time, and news time arrive separately.
 3. **Product, 11–25s — browser frame.** The real implementation screenshot occupies 70%; three staggered annotations: deterministic checks, explicit unknowns, source provenance.
-4. **Integrity boundary, 25–32s — data frame.** `LIVE · RULES`, `UNVERIFIABLE`, and `NOT OBSERVABLE` show that partial evidence stays partial.
-5. **Proof, 32–37s — architecture.** Observe → Verify → Investigate → Abstain, plus “8/8 tests” and “Public live rToken.” Metrics are observed developer QA only.
+4. **Integrity boundary, 25–32s — data frame.** `LIVE · QWEN`, `UNVERIFIABLE`, and `NOT OBSERVABLE` show that cited AI output never hides partial evidence.
+5. **Proof, 32–37s — architecture.** Observe → Verify → Investigate → Abstain, plus “9/9 tests” and “4/4 cited Qwen runs.” Metrics are observed production QA only.
 6. **CTA, 37–42s — clean close.** “Try the live evidence desk” with the stable Vercel URL. One action, five-second hold.
 
 ## Preflight
@@ -30,4 +30,3 @@ A 42-second 16:9 Twitter/X product clip using **Problem → Demo → Proof → C
 - One effect family: depth shift with restrained glow emphasis.
 - Final CTA holds five seconds.
 - No unverified adoption, performance, or trading claims.
-

@@ -36,7 +36,9 @@ This user currently has to compare exchange quotes, underlying-market timestamps
 
 ### Part 3 · Validation data and key metrics
 
-**Observed — developer QA:** 9/9 deterministic and natural-language routing unit tests passed; production TypeScript build and lint passed; the core browser walkthrough covers natural-language instrument resolution, instrument switch, live/fallback scan, deterministic-row expansion, evidence selection, provenance reveal, research action, and view navigation. Desktop and 390 × 844 responsive checks produced no document-level horizontal overflow.
+**Observed — developer QA:** 9/9 deterministic and natural-language routing unit tests passed; production TypeScript build and lint passed; the core browser walkthrough covers natural-language instrument resolution, question-aware Qwen synthesis, instrument switch, live/fallback scan, deterministic-row expansion, evidence selection, provenance reveal, research action, and view navigation. Desktop and 390 × 844 responsive checks produced no document-level horizontal overflow.
+
+**Observed — production Qwen matrix (2026-09-11, one developer-operated run per instrument):** rNVDAUSDT, rAAPLUSDT, rTSLAUSDT, and rQQQUSDT all returned `LIVE · QWEN`. Each response's clickable evidence-ID set exactly matched the citations present in its brief. Investigator latency ranged from 7.42 to 12.85 seconds. This verifies runtime integration and citation enforcement, not research accuracy or user adoption.
 
 **Observed — evidence discipline:** every current Passport preserves source and retrieval timestamps; unavailable Reality depth is labeled `NOT OBSERVABLE`; unavailable corporate-action context is labeled `UNVERIFIABLE`; snapshot and rules-only modes are visibly labeled. These are implementation observations, not trading-performance claims.
 
@@ -46,11 +48,11 @@ This user currently has to compare exchange quotes, underlying-market timestamps
 
 ### Part 4 · Progress
 
-Built: natural-language research intake, responsive Live Desk, live-session watchlist, deterministic Passport engine, explicit failure states, actionable research handoff, expandable checks, evidence timeline, per-item provenance, Replay Lab, Methodology view, Vercel scan endpoint, and a bounded Qwen evidence endpoint with citation-ID validation. The Bitget integration targets UTA v3 market tickers and Stock+ quotes; the investigator targets the hackathon Qwen Responses endpoint with a server-side key.
+Built: natural-language research intake, question-aware Qwen answers, responsive Live Desk, live-session watchlist, deterministic Passport engine, explicit failure states, actionable research handoff, expandable checks, evidence timeline, per-item provenance, Replay Lab, Methodology view, Vercel scan endpoint, and a bounded Qwen evidence endpoint with citation-ID validation. The Bitget integration targets UTA v3 market tickers and Stock+ quotes; the investigator uses Qwen 3.8 Max through the hackathon Responses endpoint with a server-side key.
 
 Problems solved: direct Bitget requests timed out in the initial local network, so the application fails closed into a frozen, timestamped fixture instead of presenting stale data as live. The production deployment returns a current Bitget rToken ticker while unavailable Stock+ reference data remains explicit. Watchlist prices now update only from current-session live scans, and unverifiable session status no longer receives a positive visual treatment. Reality order-book access was not assumed; the product returns `NOT OBSERVABLE`. Model output is accepted only when bracketed citations resolve to IDs in the supplied evidence set.
 
-Not yet completed: deployment-environment verification of the authenticated Stock+ and Qwen paths, frozen historical benchmark, and external user testing. The public rToken path and natural-language workflow have been verified in production, and a 42-second public demo film has been rendered. Next: configure sponsor credentials if issued, publish the benchmark artifact, and run tester sessions.
+Not yet completed: deployment-environment verification of the authenticated Stock+ path, a frozen historical benchmark, and external user testing. The public rToken path, question-aware Qwen workflow, citation gate, and natural-language task have been verified in production, and a 42-second public demo film has been rendered. Next: add read-only Stock+ credentials if available, publish the benchmark artifact, and run tester sessions.
 
 Frameworks and APIs: React, TypeScript, Vite, Vitest, Vercel Functions, Bitget UTA v3 market ticker, Bitget Stock+ quote, and Qwen 3.8 Max through the Bitget hackathon endpoint.
 
@@ -60,7 +62,7 @@ In trading systems, the LLM should not be the calculator or an ungrounded price 
 
 ## Role of the LLM / AI
 
-Qwen 3.8 Max acts as a bounded evidence investigator. It receives the deterministic Passport checks and recorded evidence items, writes a compact market-state brief, and cites the supplied evidence IDs. It is prohibited from calculating premiums, predicting direction, recommending a trade, inventing missing facts, or treating unavailable data as a negative finding. If the endpoint is not configured or the response lacks valid evidence IDs, the product keeps the deterministic brief and labels it `RULES` rather than `QWEN`. AI coding assistance was also used during implementation, but the product's runtime AI role is the citation-preserving investigation step.
+Qwen 3.8 Max acts as a bounded evidence investigator. It receives the trader's exact research question together with deterministic Passport checks and recorded evidence items, answers the question directly, and cites only supplied source IDs. The question is treated as untrusted data and cannot override the model's evidence boundary. Qwen is prohibited from calculating premiums, predicting direction, recommending a trade, inventing missing facts, or treating unavailable data as a negative finding. If the endpoint is unavailable or the response lacks valid evidence IDs, the product keeps the deterministic brief and labels it `RULES` rather than `QWEN`. AI coding assistance was also used during implementation, but the product's runtime AI role is the citation-preserving investigation step.
 
 ## Submission Material Links
 

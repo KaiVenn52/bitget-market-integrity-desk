@@ -7,20 +7,20 @@ Can the current `rTSLAUSDT` market state be supported by fresh, internally consi
 ## Reproducible procedure
 
 1. Open the deployed Market Integrity Desk and remain on **Live Desk**.
-2. Enter `Check Tesla market integrity and show me what is missing` in **Research question**, then choose **Ask Desk**. The language layer resolves the supported instrument and triggers a bounded scan. The watchlist can be used as a deterministic alternative.
+2. Enter `Check Tesla market integrity and show me what is missing` in **Research question**, then choose **Investigate**. The language layer resolves the supported instrument, sends the exact question into the bounded research contract, and triggers a scan. The watchlist can be used as a deterministic alternative.
 3. Read the mode badge before interpreting the result:
    - `LIVE` means the server returned current Bitget source data.
    - `SNAPSHOT` means the live route was unavailable and the visible prices are demonstration data.
    - `QWEN` means the evidence brief passed the evidence-ID contract.
    - `RULES` means only deterministic synthesis is shown.
-4. Read the Passport state and each fact cell. The demonstration case shows a `CAUTION` state because the rToken/underlying relationship or freshness may require attention and material evidence fields remain unavailable.
-5. Expand **Price alignment**. Recompute the signed basis-point difference using `(token - underlying) / underlying × 10,000` and compare it with the published 20 bps pass threshold.
+4. Read the Passport state and each fact cell. In the current public deployment, the live rToken quote is available while the authenticated Stock+ reference is not configured, so the correct state is `UNVERIFIABLE`, not `PASS` or `CAUTION`.
+5. Expand **Price alignment**. Confirm that no premium is calculated from the token price alone. When both sources are available, the declared formula is `(token - underlying) / underlying × 10,000` with a 20 bps pass threshold.
 6. Expand **Quote freshness**. Compare each source age with the 30-second pass and 120-second caution boundaries.
 7. Inspect **Corporate actions** and **Liquidity observability**. They must remain `UNVERIFIABLE` and `NOT OBSERVABLE` when the required endpoints are absent.
 8. Select an item in the **Evidence** rail. Confirm the source name, endpoint, retrieval timestamp, and recorded state.
 9. Open **Inspect provenance**. Confirm that the raw record agrees with the selected evidence item.
 10. Read **Research action**. When reference evidence is missing, it must tell the researcher not to use the unavailable comparison and when to re-run the task.
-11. If the badge is `QWEN`, select a bracketed citation and confirm it opens an evidence item supplied to the model.
+11. If the badge is `QWEN`, confirm that the visible **Question answered** matches the submitted question. Select a bracketed citation and confirm it opens the corresponding evidence item supplied to the model.
 12. Open **Methodology** and confirm the separation of Observe, Verify, Investigate, and Abstain.
 
 ## Expected conclusion

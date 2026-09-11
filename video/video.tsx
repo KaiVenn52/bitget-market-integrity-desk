@@ -36,13 +36,13 @@ function BrowserFrame() {
 }
 
 function Boundary() {
-  const items = [{ value: 'LIVE · RULES', label: 'Data and reasoning are separate', tone: color.blue }, { value: 'UNVERIFIABLE', label: 'Missing reference stays missing', tone: color.amber }, { value: 'NOT OBSERVABLE', label: 'No invented liquidity claim', tone: color.amber }]
+  const items = [{ value: 'LIVE · QWEN', label: 'Live data, cited AI answer', tone: color.blue }, { value: 'UNVERIFIABLE', label: 'Missing reference stays missing', tone: color.amber }, { value: 'NOT OBSERVABLE', label: 'No invented liquidity claim', tone: color.amber }]
   return <FadeScene duration={210}><AbsoluteFill style={{ justifyContent: 'center', padding: '0 150px' }}><Rise><h2 style={{ fontSize: 64, margin: '0 0 52px' }}>Honesty is a product feature.</h2></Rise><div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }}>{items.map((item, index) => <Rise key={item.value} delay={18 + index * 10}><div style={{ minHeight: 210, border: `1px solid ${color.line}`, background: color.panel, padding: 34 }}><strong style={{ display: 'block', color: item.tone, font: '700 36px IBM Plex Mono, monospace', marginBottom: 34 }}>{item.value}</strong><span style={{ color: color.muted, fontSize: 29, lineHeight: 1.35 }}>{item.label}</span></div></Rise>)}</div></AbsoluteFill></FadeScene>
 }
 
 function Proof() {
   const steps = ['Observe', 'Verify', 'Investigate', 'Abstain']
-  return <FadeScene duration={150}><AbsoluteFill style={{ justifyContent: 'center', padding: '0 150px' }}><Rise><div style={{ color: color.mint, fontSize: 30, marginBottom: 28 }}>OBSERVED DEVELOPER QA</div><h2 style={{ fontSize: 68, margin: '0 0 48px' }}>8/8 tests · Public live rToken</h2></Rise><div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>{steps.map((step, index) => <Rise key={step} delay={18 + index * 8}><div style={{ display: 'flex', alignItems: 'center', gap: 18 }}><span style={{ border: `1px solid ${color.line}`, background: color.panel, padding: '20px 28px', fontSize: 31 }}>{step}</span>{index < steps.length - 1 ? <span style={{ color: color.mint, fontSize: 38 }}>→</span> : null}</div></Rise>)}</div></AbsoluteFill></FadeScene>
+  return <FadeScene duration={150}><AbsoluteFill style={{ justifyContent: 'center', padding: '0 150px' }}><Rise><div style={{ color: color.mint, fontSize: 30, marginBottom: 28 }}>OBSERVED PRODUCTION QA</div><h2 style={{ fontSize: 64, margin: '0 0 48px' }}>9/9 tests · 4/4 cited Qwen runs</h2></Rise><div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>{steps.map((step, index) => <Rise key={step} delay={18 + index * 8}><div style={{ display: 'flex', alignItems: 'center', gap: 18 }}><span style={{ border: `1px solid ${color.line}`, background: color.panel, padding: '20px 28px', fontSize: 31 }}>{step}</span>{index < steps.length - 1 ? <span style={{ color: color.mint, fontSize: 38 }}>→</span> : null}</div></Rise>)}</div></AbsoluteFill></FadeScene>
 }
 
 function CTA() {

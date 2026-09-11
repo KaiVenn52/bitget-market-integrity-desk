@@ -6,11 +6,11 @@
 
 ## 0:20–0:45 — Product thesis
 
-“Market Integrity Desk creates an auditable Market State Passport. Deterministic code owns arithmetic and thresholds. Qwen only investigates the supplied evidence and must cite its IDs. When data is unavailable, the product abstains.”
+“Market Integrity Desk creates an auditable Market State Passport. Deterministic code owns arithmetic and thresholds. Qwen answers the trader's exact question using only supplied evidence and must cite its IDs. When data is unavailable, the product abstains.”
 
 ## 0:45–1:25 — Live Desk
 
-Enter “Check Tesla market integrity and show me what is missing,” then choose **Ask Desk**.
+Enter “Check Tesla market integrity and show me what is missing,” then choose **Investigate**.
 
 “The language layer resolves Tesla to rTSLAUSDT and starts the research workflow. First, read the mode label. LIVE versus SNAPSHOT identifies the data path; QWEN versus RULES identifies the reasoning path. The Desk never disguises fallback data as live AI output.”
 

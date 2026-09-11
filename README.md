@@ -81,7 +81,8 @@ Current developer-observed validation:
 - 9/9 deterministic and natural-language routing unit tests pass.
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
-- Natural-language instrument resolution, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in the in-app browser.
+- Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.
+- A 2026-09-11 production matrix verified `LIVE · QWEN` for all four supported instruments; all four returned citation sets that exactly matched the evidence IDs present in their briefs, with investigator latency from 7.42 to 12.85 seconds.
 - The submission film was verified as 1920 × 1080, 30 fps, H.264/AAC, 42.048 seconds.
 
 These are product QA observations, not user-adoption or trading-performance claims. A frozen point-in-time benchmark is the next validation layer; no fixture result is represented as historical accuracy.
@@ -94,7 +95,7 @@ The application never turns an unavailable endpoint into a negative fact. In par
 
 - The public rToken path is verified in production. The authenticated Stock+ reference path remains unverified because no read-only credential is configured.
 - Replay cases are demonstration fixtures until the frozen dataset and evaluator are published.
-- The model-backed path is implemented; production `LIVE · QWEN` behavior still requires the sponsor-issued key to be configured and verified.
+- The sponsor Qwen path is verified in production. External user testing and the frozen historical benchmark remain outstanding.
 - Research only; no order execution and no investment advice.
 
 ## Repository map
