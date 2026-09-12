@@ -9,6 +9,11 @@
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint .",
+    "benchmark:collect": "node scripts/collect-benchmark.mjs",
+    "benchmark:evaluate": "node scripts/evaluate-benchmark.mjs",
+    "benchmark:report": "node scripts/build-benchmark-report.mjs",
+    "stockplus:verify": "node scripts/verify-stockplus.mjs",
+    "signal:probe": "node scripts/probe-bitget-signal.mjs",
     "render:demo": "remotion render video/index.ts MarketIntegrityDemo submission/market-integrity-desk-demo.mp4 --codec h264 --crf 18 --color-space bt709 --browser-executable=\"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\""
   },
   "dependencies": {

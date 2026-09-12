@@ -22,6 +22,7 @@ Can the current `rTSLAUSDT` market state be supported by fresh, internally consi
 10. Read **Research action**. When reference evidence is missing, it must tell the researcher not to use the unavailable comparison and when to re-run the task.
 11. If the badge is `QWEN`, confirm that the visible **Question answered** matches the submitted question. Select a bracketed citation and confirm it opens the corresponding evidence item supplied to the model.
 12. Open **Methodology** and confirm the separation of Observe, Verify, Investigate, and Abstain.
+13. Open **Replay Lab** and choose **Inspect protocol**. Confirm that 16 observed instrument-time cases appear, the protocol disclosure expands, and the note identifies this as a missing-reference abstention slice rather than a balanced accuracy result.
 
 ## Expected conclusion
 

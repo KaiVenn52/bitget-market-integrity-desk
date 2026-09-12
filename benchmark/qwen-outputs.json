@@ -1,0 +1,178 @@
+[
+  {
+    "id": "rNVDAUSDT-2026-09-11T10:35:00.000Z",
+    "available": true,
+    "brief": "The UNVERIFIABLE state for rNVDAUSDT at the 2026-09-11T10:40:00.000Z cutoff is consistent with the frozen evidence. The rToken candle confirms a close of 220.2475 USDT [token], but no authenticated Stock+ reference candle was present in the frozen bundle [underlying], making price alignment impossible to calculate. The absence of the underlying reference directly supports the UNVERIFIABLE classification rather than contradicting it.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 10141
+  },
+  {
+    "id": "rNVDAUSDT-2026-09-11T10:40:00.000Z",
+    "available": true,
+    "brief": "The frozen evidence cannot fully support rNVDAUSDT's market state at the 2026-09-11T10:45:00.000Z cutoff. While the rToken candle is present showing a close of 220.178 USDT [token], no authenticated Stock+ reference candle was available in the frozen evidence bundle [underlying], making price-alignment verification impossible. The UNVERIFIABLE state is therefore consistent with the available evidence.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 7788
+  },
+  {
+    "id": "rNVDAUSDT-2026-09-11T10:45:00.000Z",
+    "available": true,
+    "brief": "The UNVERIFIABLE state is supported by the frozen evidence. The rToken candle for rNVDAUSDT exists and shows a close of 220.2482 USDT at the cutoff [token], but no authenticated Stock+ reference candle was available in the frozen bundle [underlying]. Without the underlying reference, the alignment check cannot be computed, which is consistent with the UNVERIFIABLE result.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 9182
+  },
+  {
+    "id": "rNVDAUSDT-2026-09-11T10:50:00.000Z",
+    "available": true,
+    "brief": "Yes, the UNVERIFIABLE state is supported by the frozen evidence. The rToken candle for rNVDAUSDT is present and shows a close of 220.239 USDT for the interval ending at the cutoff [token], but no authenticated Stock+ reference candle was available in the frozen evidence bundle [underlying]. Because the underlying reference is missing, price alignment cannot be calculated, which directly substantiates the UNVERIFIABLE classification.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 8571
+  },
+  {
+    "id": "rAAPLUSDT-2026-09-11T10:35:00.000Z",
+    "available": true,
+    "brief": "The frozen evidence cannot fully support rAAPLUSDT's market state at the 2026-09-11T10:40:00.000Z cutoff. While a valid rToken candle exists showing a close of 325.9557 USDT [token], no authenticated Stock+ reference candle was available in the frozen bundle [underlying], making price-alignment verification impossible. The UNVERIFIABLE state is therefore consistent with the evidence: the rToken side is present but the underlying benchmark required for alignment is absent.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 8983
+  },
+  {
+    "id": "rAAPLUSDT-2026-09-11T10:40:00.000Z",
+    "available": true,
+    "brief": "The frozen evidence cannot fully support rAAPLUSDT's market state at the 2026-09-11T10:45:00.000Z cutoff. While a frozen rToken candle confirms a close of 326.28 USDT for the five-minute interval ending at the cutoff [token], no authenticated Stock+ reference candle was available in the frozen evidence bundle [underlying]. Without the underlying reference, price alignment cannot be calculated, leaving the overall state as UNVERIFIABLE.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 7312
+  },
+  {
+    "id": "rAAPLUSDT-2026-09-11T10:45:00.000Z",
+    "available": true,
+    "brief": "The frozen evidence cannot fully support rAAPLUSDT's market state at the 2026-09-11T10:50:00.000Z cutoff. While the rToken candle confirms a close of 326.2888 USDT for the relevant five-minute interval [token], no authenticated Stock+ reference candle was available in the frozen evidence bundle [underlying]. Without the underlying reference, price alignment cannot be calculated, leaving the overall state correctly classified as UNVERIFIABLE.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 8713
+  },
+  {
+    "id": "rAAPLUSDT-2026-09-11T10:50:00.000Z",
+    "available": true,
+    "brief": "The frozen evidence cannot fully support rAAPLUSDT's market state at the 2026-09-11T10:55:00.000Z cutoff. While the rToken candle is present showing a close of 326.3044 USDT [token], the authenticated Stock+ reference candle is absent from the frozen evidence bundle, making price alignment impossible to calculate [underlying]. The state is therefore UNVERIFIABLE due to the missing reference data.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 7551
+  },
+  {
+    "id": "rTSLAUSDT-2026-09-11T10:35:00.000Z",
+    "available": true,
+    "brief": "The frozen evidence partially supports rTSLAUSDT's state: a valid rToken candle exists showing a close of 364.705 USDT at the cutoff [token], but no authenticated Stock+ reference candle was available in the frozen bundle [underlying], making price alignment impossible to calculate. Because the alignment check cannot be resolved, the overall market state remains UNVERIFIABLE.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 8176
+  },
+  {
+    "id": "rTSLAUSDT-2026-09-11T10:40:00.000Z",
+    "available": true,
+    "brief": "The frozen evidence cannot support rTSLAUSDT's market state at the 2026-09-11T10:45:00.000Z cutoff. While the rToken candle is present and shows a close of 364.785 USDT [token], no authenticated Stock+ reference candle was available in the frozen bundle [underlying]. Without the underlying reference, price alignment between the rToken and its underlying cannot be calculated, rendering the state UNVERIFIABLE as reported.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 9277
+  },
+  {
+    "id": "rTSLAUSDT-2026-09-11T10:45:00.000Z",
+    "available": true,
+    "brief": "The frozen evidence cannot fully support rTSLAUSDT's market state at the 2026-09-11T10:50:00.000Z cutoff. While an rToken candle is present showing a close of 364.75 USDT [token], no authenticated Stock+ reference candle was available in the frozen evidence bundle [underlying]. Without the underlying reference, price alignment cannot be calculated, leaving the overall state correctly classified as UNVERIFIABLE.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 8530
+  },
+  {
+    "id": "rTSLAUSDT-2026-09-11T10:50:00.000Z",
+    "available": true,
+    "brief": "The market state of rTSLAUSDT at the 2026-09-11T10:55:00.000Z cutoff cannot be supported by the frozen evidence. While the rToken candle is present and shows a close of 364.8922 USDT [token], no authenticated Stock+ reference candle was available in the frozen evidence bundle [underlying]. Without the underlying reference, price alignment cannot be calculated, leaving the state UNVERIFIABLE.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 7419
+  },
+  {
+    "id": "rQQQUSDT-2026-09-11T10:35:00.000Z",
+    "available": true,
+    "brief": "The frozen evidence cannot fully support rQQQUSDT's market state at the 2026-09-11T10:40:00.000Z cutoff. While the rToken candle is present and records a close of 713.25 USDT [token], the authenticated Stock+ reference candle is absent from the frozen bundle [underlying]. Without the underlying reference, the price-alignment check cannot be computed, leaving the overall state as UNVERIFIABLE. The declared state is therefore consistent with the available evidence but remains unsupported in the sense that no positive confirmation of alignment can be made.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 8590
+  },
+  {
+    "id": "rQQQUSDT-2026-09-11T10:40:00.000Z",
+    "available": true,
+    "brief": "The frozen evidence supports the UNVERIFIABLE state for rQQQUSDT at the 2026-09-11T10:45:00.000Z cutoff. The rToken candle is present, showing a close of 713.166 USDT [token], but no authenticated Stock+ reference candle was available in the frozen bundle [underlying]. Because the reference candle is missing, the price-alignment check cannot be computed, which is consistent with the UNVERIFIABLE designation. No contradiction exists between the evidence and the stated market state.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 10781
+  },
+  {
+    "id": "rQQQUSDT-2026-09-11T10:45:00.000Z",
+    "available": true,
+    "brief": "At the 2026-09-11T10:50:00.000Z cutoff, rQQQUSDT's market state cannot be confirmed or refuted by the frozen evidence. The rToken candle shows a close of 713 USDT [token], but no authenticated Stock+ reference candle was available in the frozen bundle [underlying], making the price-alignment check UNVERIFIABLE. Because the underlying reference is absent, the alignment between the rToken and its underlying cannot be assessed, and the state remains unsupported by the available evidence.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 8916
+  },
+  {
+    "id": "rQQQUSDT-2026-09-11T10:50:00.000Z",
+    "available": true,
+    "brief": "At the 2026-09-11T10:55:00.000Z cutoff, rQQQUSDT's market state cannot be fully supported by the frozen evidence. While the rToken candle is present (closing at 713.06 USDT) [token], no authenticated Stock+ reference candle was available in the frozen evidence bundle [underlying]. Without the underlying reference, price alignment cannot be calculated, and the state remains UNVERIFIABLE.",
+    "evidenceIds": [
+      "token",
+      "underlying"
+    ],
+    "model": "qwen3.8-max",
+    "latencyMs": 7529
+  }
+]

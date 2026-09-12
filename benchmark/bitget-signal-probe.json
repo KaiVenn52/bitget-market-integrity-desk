@@ -1,0 +1,36 @@
+{
+  "probedAt": "2026-09-12T09:46:12.476Z",
+  "server": "https://datahub.noxiaohao.com/mcp",
+  "package": "@bitget-ai/bitget-signal",
+  "probes": [
+    {
+      "tool": "global_assets",
+      "latencyMs": 15155,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Error executing tool global_assets: "
+          }
+        ],
+        "isError": true
+      }
+    },
+    {
+      "tool": "news_feed",
+      "latencyMs": 20186,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[{\"feed\": \"cnbc\", \"error\": \"\", \"items\": []}, {\"feed\": \"techcrunch\", \"error\": \"\", \"items\": []}]"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ],
+  "usableProbeCount": 0,
+  "productionIntegrationDecision": "withheld",
+  "decisionReason": "At least one required tool timed out, errored, or returned no usable source data. The live desk remains unchanged to protect latency and evidence quality."
+}

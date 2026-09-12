@@ -30,6 +30,7 @@ The target user is a research-driven, medium-frequency Bitget rToken trader who 
 - A Vercel serverless endpoint that attempts parallel Bitget rToken and Stock+ retrieval.
 - A bounded Qwen investigator endpoint that can summarize only supplied evidence IDs.
 - A clearly labeled snapshot fallback when live sources cannot be reached.
+- A published 16-case frozen benchmark with separate labels, saved Qwen outputs, SHA-256 evidence digests, evaluator code, and a portable report.
 
 ## Judge walkthrough
 
@@ -64,7 +65,7 @@ Set `BITGET_QWEN_API_KEY` only in the server environment to enable the model-bac
 
 For production, add the key as a Vercel **Production** environment variable in Project Settings, then redeploy. Do not place it in `.env`, commit history, screenshots, issue text, or client-side `VITE_*` variables. Confirm activation by running a scan and checking that the brief badge reads `LIVE · QWEN` and exposes clickable evidence citations.
 
-The public rToken ticker can run without exchange credentials. The Stock+ underlying quote is authenticated; optionally configure the read-only server variables `BITGET_ACCESS_KEY`, `BITGET_SECRET_KEY`, and `BITGET_PASSPHRASE`. If they are absent, the deployment returns a real partial-live Passport with the underlying and dependent checks marked `UNVERIFIABLE`—it never mixes the live rToken with a snapshot underlying.
+The public rToken ticker can run without exchange credentials. The Stock+ underlying quote is authenticated; optionally configure the read-only server variables `BITGET_ACCESS_KEY`, `BITGET_SECRET_KEY`, and `BITGET_PASSPHRASE`. If they are absent, the deployment returns a real partial-live Passport with the underlying and dependent checks marked `UNVERIFIABLE`—it never mixes the live rToken with a snapshot underlying. Follow the [read-only Stock+ setup](docs/stockplus-read-only-setup.md) without exposing the key to the repository or browser.
 
 ## Validation
 
@@ -83,9 +84,10 @@ Current developer-observed validation:
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.
 - A 2026-09-11 production matrix verified `LIVE · QWEN` for all four supported instruments; all four returned citation sets that exactly matched the evidence IDs present in their briefs, with investigator latency from 7.42 to 12.85 seconds.
+- A second frozen benchmark captured 16 instrument-time cases across four closed five-minute cutoffs. Deterministic state accuracy, Qwen availability, citation validity, and bounded-abstention rate were 100%; directional-claim rate was 0%; median Qwen latency was 8.581 seconds.
 - The submission film was verified as 1920 × 1080, 30 fps, H.264/AAC, 42.048 seconds.
 
-These are product QA observations, not user-adoption or trading-performance claims. A frozen point-in-time benchmark is the next validation layer; no fixture result is represented as historical accuracy.
+These are product QA observations, not user-adoption or trading-performance claims. The first benchmark slice contains 16 instrument-time cases but only four unique clock cutoffs, and every case tests the missing-Stock+ path. It proves abstention discipline, not balanced classification or trading accuracy.
 
 ## Data policy
 
@@ -94,16 +96,23 @@ The application never turns an unavailable endpoint into a negative fact. In par
 ## Current limitations
 
 - The public rToken path is verified in production. The authenticated Stock+ reference path remains unverified because no read-only credential is configured.
-- Replay cases are demonstration fixtures until the frozen dataset and evaluator are published.
-- The sponsor Qwen path is verified in production. External user testing and the frozen historical benchmark remain outstanding.
+- The frozen benchmark is published, but matched Stock+ cases remain absent until read-only credentials are configured and verified.
+- The official `bitget-signal` MCP was investigated as a macro/news perception layer. Its current stock-price and selected-news probes were slow and returned errors or empty data, so it is not represented as a production integration.
+- The sponsor Qwen path and first frozen benchmark slice are verified in production. External user testing and a balanced matched-source benchmark remain outstanding.
 - Research only; no order execution and no investment advice.
 
 ## Repository map
 
 - `api/scan.js` — allowlisted, bounded live-source scan.
 - `api/evidence.js` — server-only Qwen investigator with evidence-ID validation.
+- `api/benchmark-source.js` — allowlisted source capture for closed rToken and optional Stock+ candles.
 - `src/lib/integrity.ts` — published deterministic rules.
 - `src/data/snapshots.ts` — labeled product demonstration snapshots.
+- `benchmark/` — immutable cases, separate labels, Qwen outputs, evaluator results, and portable report.
+- `benchmark/bitget-signal-probe.json` — saved decision gate for the optional official macro/news perception layer.
+- `docs/stockplus-read-only-setup.md` — least-privilege credential setup and verification procedure.
+- `scripts/verify-stockplus.mjs` — read-only Stock+ entitlement check that never prints credentials.
+- `scripts/probe-bitget-signal.mjs` — reproducible health and usefulness gate for the optional official Signal layer.
 - `design/fidelity-ledger.md` — concept-to-implementation comparison and intentional deviations.
 - `submission/` — judge walkthrough, submission-form draft, validation record, and recording script.
 

@@ -1,0 +1,530 @@
+[
+  {
+    "id": "rNVDAUSDT-2026-09-11T10:35:00.000Z",
+    "symbol": "rNVDAUSDT",
+    "underlyingSymbol": "NVDA.US",
+    "company": "NVIDIA",
+    "cutoff": "2026-09-11T10:40:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789122900000,
+      "open": 220.2672,
+      "high": 220.2695,
+      "low": 220.1503,
+      "close": 220.2475,
+      "volume": 1712.791414,
+      "turnover": 377172.6378051236
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.386Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.298Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "16ec591785cc6af560eca3a377bc0c8b2c11bd02b36376a142db5a19e80a4d6b"
+  },
+  {
+    "id": "rNVDAUSDT-2026-09-11T10:40:00.000Z",
+    "symbol": "rNVDAUSDT",
+    "underlyingSymbol": "NVDA.US",
+    "company": "NVIDIA",
+    "cutoff": "2026-09-11T10:45:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123200000,
+      "open": 220.2,
+      "high": 220.2572,
+      "low": 220.11,
+      "close": 220.178,
+      "volume": 4624.807966,
+      "turnover": 1018250.9308013894
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.386Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.298Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "119823218aced36ae6cd3163b0177b14cb527419cc960dff978a4815dec192be"
+  },
+  {
+    "id": "rNVDAUSDT-2026-09-11T10:45:00.000Z",
+    "symbol": "rNVDAUSDT",
+    "underlyingSymbol": "NVDA.US",
+    "company": "NVIDIA",
+    "cutoff": "2026-09-11T10:50:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123500000,
+      "open": 220.178,
+      "high": 220.2672,
+      "low": 220.1,
+      "close": 220.2482,
+      "volume": 1815,
+      "turnover": 399563.6805
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.386Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.298Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "dd69fa4cd26c26c98a6fea54db57ce1d4159ccd436e613f8f54f9f19bcb9f56c"
+  },
+  {
+    "id": "rNVDAUSDT-2026-09-11T10:50:00.000Z",
+    "symbol": "rNVDAUSDT",
+    "underlyingSymbol": "NVDA.US",
+    "company": "NVIDIA",
+    "cutoff": "2026-09-11T10:55:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123800000,
+      "open": 220.2482,
+      "high": 220.27,
+      "low": 220.1237,
+      "close": 220.239,
+      "volume": 3408.642093,
+      "turnover": 750694.11682046
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.386Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.298Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "caba9e5963fae57fa8d47af3748f29e478ca4529d077b4a75b607c89f1b893fd"
+  },
+  {
+    "id": "rAAPLUSDT-2026-09-11T10:35:00.000Z",
+    "symbol": "rAAPLUSDT",
+    "underlyingSymbol": "AAPL.US",
+    "company": "Apple",
+    "cutoff": "2026-09-11T10:40:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789122900000,
+      "open": 325.93,
+      "high": 325.98,
+      "low": 325.79,
+      "close": 325.9557,
+      "volume": 2021.153472,
+      "turnover": 658741.3876222336
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.398Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.307Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "4dd299fbbf66eb63cc827e2f45e6eb50784b94ee823baf29a9ff6a8917795ed7"
+  },
+  {
+    "id": "rAAPLUSDT-2026-09-11T10:40:00.000Z",
+    "symbol": "rAAPLUSDT",
+    "underlyingSymbol": "AAPL.US",
+    "company": "Apple",
+    "cutoff": "2026-09-11T10:45:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123200000,
+      "open": 325.7942,
+      "high": 326.3225,
+      "low": 325.7942,
+      "close": 326.28,
+      "volume": 5366.517056,
+      "turnover": 1749380.5894451905
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.398Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.307Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "7b0eda0a9517dd28390cedadc045ec14ef2d8a92f909b5227ad9fd5053c9f3f8"
+  },
+  {
+    "id": "rAAPLUSDT-2026-09-11T10:45:00.000Z",
+    "symbol": "rAAPLUSDT",
+    "underlyingSymbol": "AAPL.US",
+    "company": "Apple",
+    "cutoff": "2026-09-11T10:50:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123500000,
+      "open": 326.2832,
+      "high": 326.3288,
+      "low": 326.0132,
+      "close": 326.2888,
+      "volume": 260,
+      "turnover": 84802.4487
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.398Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.307Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "3943e6d2a7aaa43e217391a05b8c2cc99cf25e6bd52067185c03c99339db1863"
+  },
+  {
+    "id": "rAAPLUSDT-2026-09-11T10:50:00.000Z",
+    "symbol": "rAAPLUSDT",
+    "underlyingSymbol": "AAPL.US",
+    "company": "Apple",
+    "cutoff": "2026-09-11T10:55:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123800000,
+      "open": 326.15,
+      "high": 326.3217,
+      "low": 326.0012,
+      "close": 326.3044,
+      "volume": 316,
+      "turnover": 103074.5664
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.398Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.307Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "a4986014188b0f3685a236620e4d7d1df9877541a85e5a5655a00799840dfad0"
+  },
+  {
+    "id": "rTSLAUSDT-2026-09-11T10:35:00.000Z",
+    "symbol": "rTSLAUSDT",
+    "underlyingSymbol": "TSLA.US",
+    "company": "Tesla",
+    "cutoff": "2026-09-11T10:40:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789122900000,
+      "open": 364.9,
+      "high": 364.92,
+      "low": 364.68,
+      "close": 364.705,
+      "volume": 199,
+      "turnover": 72591.0028
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.414Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.329Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "4b58de5ec13238e95ef22d5bf0223f17a8fe4b2630da397ea9586631593311f3"
+  },
+  {
+    "id": "rTSLAUSDT-2026-09-11T10:40:00.000Z",
+    "symbol": "rTSLAUSDT",
+    "underlyingSymbol": "TSLA.US",
+    "company": "Tesla",
+    "cutoff": "2026-09-11T10:45:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123200000,
+      "open": 364.7,
+      "high": 364.81,
+      "low": 364.6906,
+      "close": 364.785,
+      "volume": 679.079502,
+      "turnover": 247693.6377187686
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.414Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.329Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "38077e3ca7c30cb7f08f2a8358683291adef09b4b035eb099c033148e06edeee"
+  },
+  {
+    "id": "rTSLAUSDT-2026-09-11T10:45:00.000Z",
+    "symbol": "rTSLAUSDT",
+    "underlyingSymbol": "TSLA.US",
+    "company": "Tesla",
+    "cutoff": "2026-09-11T10:50:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123500000,
+      "open": 364.8,
+      "high": 364.913,
+      "low": 364.62,
+      "close": 364.75,
+      "volume": 478,
+      "turnover": 174331.1172
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.414Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.329Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "1c7183120bed19207d21d521238145c66408e06cc9b2403389ccdefbefbc657e"
+  },
+  {
+    "id": "rTSLAUSDT-2026-09-11T10:50:00.000Z",
+    "symbol": "rTSLAUSDT",
+    "underlyingSymbol": "TSLA.US",
+    "company": "Tesla",
+    "cutoff": "2026-09-11T10:55:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123800000,
+      "open": 364.7389,
+      "high": 364.92,
+      "low": 364.7389,
+      "close": 364.8922,
+      "volume": 808,
+      "turnover": 294826.3913
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.414Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.329Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "d62fe8e2f30816357b43d672d058b37d9da9e7d11ae022a4493042fcca901f08"
+  },
+  {
+    "id": "rQQQUSDT-2026-09-11T10:35:00.000Z",
+    "symbol": "rQQQUSDT",
+    "underlyingSymbol": "QQQ.US",
+    "company": "Invesco QQQ",
+    "cutoff": "2026-09-11T10:40:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789122900000,
+      "open": 713.37,
+      "high": 713.41,
+      "low": 713.19,
+      "close": 713.25,
+      "volume": 1312,
+      "turnover": 935849.339
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.496Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.385Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "4f4fe102db563580252171dfd37255a0030a2bfa7a4d30b55f1244862e362c18"
+  },
+  {
+    "id": "rQQQUSDT-2026-09-11T10:40:00.000Z",
+    "symbol": "rQQQUSDT",
+    "underlyingSymbol": "QQQ.US",
+    "company": "Invesco QQQ",
+    "cutoff": "2026-09-11T10:45:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123200000,
+      "open": 713.2004,
+      "high": 713.31,
+      "low": 713.166,
+      "close": 713.166,
+      "volume": 586,
+      "turnover": 417933.4437
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.496Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.385Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "d301496ac68f8c7ea76388083b185064520cfc54931551fbf60e6c6ebf9d870e"
+  },
+  {
+    "id": "rQQQUSDT-2026-09-11T10:45:00.000Z",
+    "symbol": "rQQQUSDT",
+    "underlyingSymbol": "QQQ.US",
+    "company": "Invesco QQQ",
+    "cutoff": "2026-09-11T10:50:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123500000,
+      "open": 713.1449,
+      "high": 713.2,
+      "low": 712.94,
+      "close": 713,
+      "volume": 8017,
+      "turnover": 5716492.922
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.496Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.385Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "a0c7eec85ce2e300bdc5d4381348d9efaa8a7d1294b2c8c0a9a63c90ac7c7ecc"
+  },
+  {
+    "id": "rQQQUSDT-2026-09-11T10:50:00.000Z",
+    "symbol": "rQQQUSDT",
+    "underlyingSymbol": "QQQ.US",
+    "company": "Invesco QQQ",
+    "cutoff": "2026-09-11T10:55:00.000Z",
+    "interval": "5m",
+    "tokenCandle": {
+      "timestamp": 1789123800000,
+      "open": 713.05,
+      "high": 713.22,
+      "low": 713.0412,
+      "close": 713.06,
+      "volume": 3570.017256,
+      "turnover": 2545562.4316420592
+    },
+    "underlyingCandle": null,
+    "stockSourceStatus": "credentials_missing",
+    "sourceRetrievedAt": "2026-09-11T10:59:15.496Z",
+    "sources": [
+      {
+        "name": "Bitget UTA v3",
+        "endpoint": "/api/v3/market/candles",
+        "requestTime": "2026-09-11T10:59:15.385Z"
+      },
+      {
+        "name": "Bitget Stock+",
+        "endpoint": "/api/v3/stockplus/market/candlestick",
+        "status": "credentials_missing"
+      }
+    ],
+    "sha256": "33c9534984a7568240bdb5d69424c51a057bf0128a8bb0f86d9a66393b1c8399"
+  }
+]

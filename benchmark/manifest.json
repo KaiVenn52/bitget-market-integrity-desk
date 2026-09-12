@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-11T10:59:54.764Z",
+  "caseCount": 16,
+  "instruments": [
+    "rNVDAUSDT",
+    "rAAPLUSDT",
+    "rTSLAUSDT",
+    "rQQQUSDT"
+  ],
+  "interval": "5m",
+  "cutoffDefinition": "The end of a fully closed five-minute rToken candle.",
+  "evidencePolicy": "Only evidence timestamped at or before the cutoff is included. Labels are stored separately.",
+  "sourceBaseUrl": "https://bitget-market-integrity-desk.vercel.app"
+}

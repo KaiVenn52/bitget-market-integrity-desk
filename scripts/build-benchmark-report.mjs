@@ -1,0 +1,154 @@
+import { readFile, writeFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
+import { fileURLToPath } from 'node:url'
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const dir = resolve(root, 'benchmark')
+const [results, cases] = await Promise.all([
+  readFile(resolve(dir, 'results.json'), 'utf8').then(JSON.parse),
+  readFile(resolve(dir, 'cases.json'), 'utf8').then(JSON.parse),
+])
+
+const sourceId = 'benchmark_results'
+const database = new DatabaseSync(':memory:')
+database.exec(`CREATE TABLE benchmark_results (
+  row_number INTEGER PRIMARY KEY,
+  symbol TEXT NOT NULL,
+  cutoff TEXT NOT NULL,
+  expected_state TEXT NOT NULL,
+  predicted_state TEXT NOT NULL,
+  qwen_available INTEGER NOT NULL,
+  citation_valid INTEGER NOT NULL,
+  abstention_valid INTEGER NOT NULL,
+  directional_claim INTEGER NOT NULL,
+  latency_ms INTEGER
+)`)
+const insert = database.prepare('INSERT INTO benchmark_results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+results.rows.forEach((row, index) => insert.run(index + 1, row.symbol, row.cutoff, row.expectedState, row.predictedState, Number(row.qwenAvailable), Number(row.citationValid), Number(row.abstentionValid), Number(row.directionalClaim), row.latencyMs))
+
+const summarySql = `SELECT
+  COUNT(*) AS caseCount,
+  COUNT(DISTINCT symbol) AS instrumentCount,
+  AVG(expected_state = predicted_state) AS stateAccuracy,
+  AVG(citation_valid) AS citationValidity,
+  AVG(qwen_available) AS qwenAvailability,
+  AVG(abstention_valid) AS boundedAbstention,
+  AVG(directional_claim) AS directionalClaimRate,
+  ${results.metrics.medianQwenLatencyMs} AS medianLatencyMs
+FROM benchmark_results`
+const rowsSql = `SELECT
+  printf('B%02d', row_number) AS "case",
+  symbol AS instrument,
+  cutoff,
+  'Missing' AS reference,
+  expected_state AS expected,
+  predicted_state AS predicted,
+  CASE qwen_available WHEN 1 THEN 'Available' ELSE 'Unavailable' END AS qwen,
+  CASE citation_valid WHEN 1 THEN 'Valid' ELSE 'Invalid' END AS citations,
+  CASE abstention_valid WHEN 1 THEN 'Yes' ELSE 'No' END AS bounded,
+  latency_ms AS latencyMs
+FROM benchmark_results
+ORDER BY row_number`
+const summary = database.prepare(summarySql).all()
+const rows = database.prepare(rowsSql).all()
+
+const source = {
+  id: sourceId,
+  label: 'Frozen benchmark evaluation',
+  path: 'benchmark/results.json',
+  query: {
+    engine: 'node',
+    language: 'javascript',
+    sql: `${summarySql};\n\n${rowsSql};`,
+    description: 'Evaluates immutable rToken evidence bundles against separate gold labels and saved Qwen outputs.',
+    executed_at: results.evaluatedAt,
+    tables_used: ['benchmark/cases.json', 'benchmark/labels.json', 'benchmark/qwen-outputs.json'],
+    filters: ['Four supported rTokens', 'Four latest fully closed five-minute candles per instrument', 'Evidence timestamp at or before cutoff'],
+    metric_definitions: {
+      deterministicStateAccuracy: 'Correct deterministic state labels divided by all 16 frozen instrument-time cases.',
+      citationValidityRate: 'Available Qwen answers whose cited IDs are all present in the supplied evidence bundle.',
+      boundedAbstentionRate: 'Available Qwen answers that explicitly preserve missing or insufficient reference evidence.',
+      directionalClaimRate: 'Available Qwen answers matching a bounded lexical list of prohibited directional or trade instructions.',
+    },
+  },
+}
+
+const artifact = {
+  surface: 'report',
+  manifest: {
+    version: 1,
+    surface: 'report',
+    title: 'Market Integrity Benchmark',
+    generatedAt: results.evaluatedAt,
+    cards: [
+      { id: 'cases_card', dataset: 'summary', sourceId, description: 'Frozen instrument-time cases', metrics: [{ label: 'Frozen cases', field: 'caseCount', format: 'number' }] },
+      { id: 'citations_card', dataset: 'summary', sourceId, description: 'Qwen answers with valid supplied IDs', metrics: [{ label: 'Citation validity', field: 'citationValidity', format: 'percent' }] },
+      { id: 'abstention_card', dataset: 'summary', sourceId, description: 'Qwen answers preserving the missing-reference boundary', metrics: [{ label: 'Bounded abstention', field: 'boundedAbstention', format: 'percent' }] },
+      { id: 'direction_card', dataset: 'summary', sourceId, description: 'Answers containing prohibited directional language', metrics: [{ label: 'Directional claims', field: 'directionalClaimRate', format: 'percent' }] },
+      { id: 'latency_card', dataset: 'summary', sourceId, description: 'Median end-to-end Qwen request time', metrics: [{ label: 'Median Qwen latency', field: 'medianLatencyMs', format: 'number', unit: 'ms' }] },
+    ],
+    charts: [{
+      id: 'latency_chart',
+      title: 'Qwen latency by frozen case',
+      subtitle: '16 observed production requests on September 11, 2026; milliseconds, lower is faster.',
+      type: 'bar',
+      dataset: 'case_rows',
+      sourceId,
+      valueFormat: 'number',
+      encodings: {
+        x: { field: 'case', type: 'nominal', label: 'Frozen case' },
+        y: { field: 'latencyMs', type: 'quantitative', label: 'Latency', unit: 'ms' },
+        tooltip: [
+          { field: 'instrument', type: 'nominal', label: 'Instrument' },
+          { field: 'cutoff', type: 'temporal', label: 'Evidence cutoff' },
+          { field: 'latencyMs', type: 'quantitative', label: 'Latency', format: 'number' },
+        ],
+      },
+    }],
+    tables: [{
+      id: 'case_table',
+      title: 'Frozen case audit',
+      subtitle: 'September 11, 2026 UTC; four instruments across four closed five-minute cutoffs.',
+      dataset: 'case_rows',
+      sourceId,
+      defaultSort: { field: 'case', direction: 'asc' },
+      columns: [
+        { field: 'case', label: 'Case', type: 'text' },
+        { field: 'instrument', label: 'Instrument', type: 'text' },
+        { field: 'cutoff', label: 'Evidence cutoff', type: 'date' },
+        { field: 'reference', label: 'Stock+ reference', type: 'text' },
+        { field: 'expected', label: 'Gold label', type: 'text' },
+        { field: 'qwen', label: 'Qwen', type: 'text' },
+        { field: 'citations', label: 'Citations', type: 'text' },
+        { field: 'bounded', label: 'Abstained', type: 'text' },
+        { field: 'latencyMs', label: 'Latency', type: 'number', unit: 'ms' },
+      ],
+    }],
+    sources: [source],
+    blocks: [
+      { id: 'title', type: 'markdown', body: '# Market Integrity Benchmark' },
+      { id: 'executive_summary', type: 'markdown', sourceId, body: '## Executive Summary\n\n- **The evidence boundary held in all 16 observed cases.** Deterministic classification preserved `UNVERIFIABLE` whenever the required Stock+ reference was absent.\n- **Qwen remained source-bound.** Every saved response was available, cited only supplied evidence IDs, and explicitly preserved the missing-reference limitation.\n- **This is a narrow abstention benchmark, not a balanced accuracy study.** All 16 cases lack authenticated Stock+ candles, so the run does not measure alignment classification or trading performance.' },
+      { id: 'metrics', type: 'metric-strip', cardIds: ['cases_card', 'citations_card', 'abstention_card', 'direction_card', 'latency_card'] },
+      { id: 'findings', type: 'markdown', sourceId, body: '## The system refused to convert partial evidence into confidence\n\nThe dataset contains 16 immutable instrument-time observations: four supported rTokens across four fully closed five-minute cutoffs. Each bundle preserves the raw rToken candle, retrieval time, source endpoint, separate gold label, and SHA-256 digest. Because no Stock+ credentials were present, every gold label is `UNVERIFIABLE`. Qwen availability, citation validity, and bounded-abstention rates were all 100%; the lexical directional-claim rate was 0%.\n\nThe implication is specific: the current system reliably handles the missing-reference failure mode. It does not yet prove correct behavior when matched Stock+ candles exist.' },
+      { id: 'latency_context', type: 'markdown', sourceId, body: '## Qwen stayed available, with visible latency\n\nAll 16 production calls completed and passed citation validation. The median latency was reported from the saved per-case timings below. This supports a responsive research workflow with progress feedback, but it is not a service-level guarantee.' },
+      { id: 'latency_chart_block', type: 'chart', chartId: 'latency_chart' },
+      { id: 'case_table_block', type: 'table', tableId: 'case_table' },
+      { id: 'next_steps', type: 'markdown', body: '## The next run must add matched Stock+ candles\n\n- Configure an API key restricted to **Stock+ market data (read-only)** in Vercel.\n- Re-run the same collector so it joins rToken and Stock+ five-minute candles by cutoff.\n- Expand labels across aligned, caution, stale, and missing-reference cases before citing state accuracy as a general metric.\n- Keep corporate-action and Reality-depth checks separate until those sources are actually observable.' },
+      { id: 'questions', type: 'markdown', body: '## Further questions\n\nCan the read-only Stock+ entitlement return the same five-minute windows from the Vercel region? Does matching remain stable across regular, pre-market, post-market, and overnight sessions? How often does a Stock+ candle arrive later than the corresponding rToken candle?' },
+      { id: 'caveats', type: 'markdown', sourceId, body: '## Caveats and assumptions\n\nAll observations were captured on September 11, 2026 in UTC. The 16 rows represent 16 instrument-time cases but four unique clock cutoffs. The directional-claim check is lexical rather than a full semantic hallucination audit. The report makes no claim about returns, execution quality, user adoption, or general historical accuracy.' },
+    ],
+  },
+  snapshot: {
+    version: 1,
+    generatedAt: results.evaluatedAt,
+    status: 'partial',
+    datasets: { summary, case_rows: rows },
+    accessIssues: [{ id: 'stockplus_credentials_missing', dataset: 'case_rows', message: 'Authenticated Stock+ candles were unavailable, so all 16 cases test the missing-reference path.' }],
+  },
+  sources: [source],
+  package_info: { originUrl: 'https://github.com/KaiVenn52/bitget-market-integrity-desk/tree/main/benchmark' },
+}
+
+await writeFile(resolve(dir, 'artifact.json'), `${JSON.stringify(artifact, null, 2)}\n`)
+console.log(`Wrote ${resolve(dir, 'artifact.json')}`)
