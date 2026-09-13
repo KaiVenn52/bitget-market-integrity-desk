@@ -98,10 +98,20 @@ export default async function handler(req, res) {
     const stockPromise = stockHeaders
       ? getJson(`${stockPath}?${stockQuery}`, controller.signal, stockHeaders).catch((error) => ({ sourceError: safeSourceError(error) }))
       : Promise.resolve(null)
-    const [tokenResult, stockResult] = await Promise.all([
+    const [tokenResult, currentStockResult] = await Promise.all([
       getJson(tokenPath, controller.signal),
       stockPromise,
     ])
+    let stockResult = currentStockResult
+    let resolvedStockPath = stockPath
+    if (stockHeaders && currentStockResult?.data && !(currentStockResult.data.list || []).length) {
+      const historyPath = '/api/v3/stockplus/market/history-candlestick'
+      const historyQuery = `${stockQuery}&time=${Math.floor(Date.now() / 1000)}`
+      const historyHeaders = stockAuthHeaders(historyPath, historyQuery)
+      stockResult = await getJson(`${historyPath}?${historyQuery}`, controller.signal, historyHeaders)
+        .catch((error) => ({ sourceError: safeSourceError(error) }))
+      resolvedStockPath = historyPath
+    }
 
     const capturedAtMs = Date.now()
     const tokenCandles = (tokenResult.data || [])
@@ -129,7 +139,7 @@ export default async function handler(req, res) {
       },
       stockSource: {
         name: 'Bitget Stock+',
-        endpoint: stockPath,
+        endpoint: resolvedStockPath,
         status: stockHeaders ? (stockResult?.data ? 'available' : 'request_failed') : 'credentials_missing',
         ...(stockResult?.sourceError ? { diagnostic: stockResult.sourceError } : {}),
       },
