@@ -116,7 +116,8 @@ export default async function handler(req, res) {
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 4)
       .sort((a, b) => a.timestamp - b.timestamp)
-    const stockCandles = (stockResult?.data?.list || [])
+    const stockRows = Array.isArray(stockResult?.data) ? stockResult.data : (stockResult?.data?.list || [])
+    const stockCandles = stockRows
       .map(normalizeStockCandle)
       .filter((row) => Number.isFinite(row.timestamp))
       .sort((a, b) => a.timestamp - b.timestamp)
