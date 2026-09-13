@@ -64,6 +64,30 @@ function latestWeekdaySeconds(nowMs) {
   return Math.floor(date.getTime() / 1000)
 }
 
+function previousCompletedWeekdaySeconds(nowMs, hourUtc) {
+  const date = new Date(nowMs)
+  date.setUTCDate(date.getUTCDate() - 1)
+  while (date.getUTCDay() === 0 || date.getUTCDay() === 6) date.setUTCDate(date.getUTCDate() - 1)
+  date.setUTCHours(hourUtc, 0, 0, 0)
+  return Math.floor(date.getTime() / 1000)
+}
+
+const stockRowsFrom = (result) => Array.isArray(result?.data) ? result.data : (result?.data?.list || [])
+
+async function getStockHistory(path, queries, signal) {
+  let lastResult = null
+  for (const query of queries) {
+    try {
+      const result = await getJson(`${path}?${query}`, signal, stockAuthHeaders(path, query))
+      lastResult = result
+      if (stockRowsFrom(result).length) return result
+    } catch (error) {
+      return { sourceError: safeSourceError(error) }
+    }
+  }
+  return lastResult
+}
+
 function normalizeTokenCandle(row) {
   return {
     timestamp: numeric(row[0]),
@@ -99,10 +123,15 @@ export default async function handler(req, res) {
   try {
     const tokenPath = `/api/v3/market/candles?category=SPOT&symbol=${symbol}&interval=5m&limit=8`
     const stockPath = '/api/v3/stockplus/market/history-candlestick'
-    const stockQuery = `symbol=${encodeURIComponent(meta.underlyingSymbol)}&period=Min_5&count=20&adjustType=NoAdjust&time=${latestWeekdaySeconds(Date.now())}`
-    const stockHeaders = stockAuthHeaders(stockPath, stockQuery)
+    const stockQueryBase = `symbol=${encodeURIComponent(meta.underlyingSymbol)}&period=Min_5&count=20&adjustType=NoAdjust`
+    const stockQueries = [
+      `${stockQueryBase}&time=${latestWeekdaySeconds(Date.now())}`,
+      `${stockQueryBase}&forward=true&time=${previousCompletedWeekdaySeconds(Date.now(), 15)}&tradeSessions=Intraday`,
+      `${stockQueryBase}&forward=false&time=${previousCompletedWeekdaySeconds(Date.now(), 20)}&tradeSessions=Intraday`,
+    ]
+    const stockHeaders = stockAuthHeaders(stockPath, stockQueries[0])
     const stockPromise = stockHeaders
-      ? getJson(`${stockPath}?${stockQuery}`, controller.signal, stockHeaders).catch((error) => ({ sourceError: safeSourceError(error) }))
+      ? getStockHistory(stockPath, stockQueries, controller.signal)
       : Promise.resolve(null)
     const [tokenResult, stockResult] = await Promise.all([
       getJson(tokenPath, controller.signal),
@@ -116,7 +145,7 @@ export default async function handler(req, res) {
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 4)
       .sort((a, b) => a.timestamp - b.timestamp)
-    const stockRows = Array.isArray(stockResult?.data) ? stockResult.data : (stockResult?.data?.list || [])
+    const stockRows = stockRowsFrom(stockResult)
     const stockCandles = stockRows
       .map(normalizeStockCandle)
       .filter((row) => Number.isFinite(row.timestamp))
