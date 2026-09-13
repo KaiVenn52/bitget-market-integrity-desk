@@ -19,8 +19,22 @@ async function getJson(path, signal, headers = {}) {
   const text = await response.text()
   let json
   try { json = JSON.parse(text) } catch { throw new Error('Source returned non-JSON') }
-  if (!response.ok || json.code !== '00000') throw new Error(json.msg || 'Bitget API error')
+  if (!response.ok || json.code !== '00000') {
+    const error = new Error(json.msg || 'Bitget API error')
+    error.sourceCode = String(json.code || response.status)
+    throw error
+  }
   return json
+}
+
+function safeSourceError(error) {
+  const secrets = [process.env.BITGET_ACCESS_KEY, process.env.BITGET_SECRET_KEY, process.env.BITGET_PASSPHRASE].filter(Boolean)
+  let message = error instanceof Error ? error.message : 'Bitget API error'
+  for (const secret of secrets) message = message.replaceAll(secret, '[redacted]')
+  return {
+    code: String(error?.sourceCode || 'request_failed').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32),
+    message: message.replace(/[\r\n]/g, ' ').slice(0, 160),
+  }
 }
 
 function stockAuthHeaders(path, query) {
@@ -82,7 +96,7 @@ export default async function handler(req, res) {
     const stockQuery = `symbol=${encodeURIComponent(meta.underlyingSymbol)}&period=Min_5&count=20&adjustType=NoAdjust`
     const stockHeaders = stockAuthHeaders(stockPath, stockQuery)
     const stockPromise = stockHeaders
-      ? getJson(`${stockPath}?${stockQuery}`, controller.signal, stockHeaders).catch(() => null)
+      ? getJson(`${stockPath}?${stockQuery}`, controller.signal, stockHeaders).catch((error) => ({ sourceError: safeSourceError(error) }))
       : Promise.resolve(null)
     const [tokenResult, stockResult] = await Promise.all([
       getJson(tokenPath, controller.signal),
@@ -116,7 +130,8 @@ export default async function handler(req, res) {
       stockSource: {
         name: 'Bitget Stock+',
         endpoint: stockPath,
-        status: stockHeaders ? (stockResult ? 'available' : 'request_failed') : 'credentials_missing',
+        status: stockHeaders ? (stockResult?.data ? 'available' : 'request_failed') : 'credentials_missing',
+        ...(stockResult?.sourceError ? { diagnostic: stockResult.sourceError } : {}),
       },
       tokenCandles,
       stockCandles,
