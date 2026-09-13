@@ -58,6 +58,12 @@ function stockAuthHeaders(path, query) {
 const numeric = (value) => Number(value)
 const timestampMs = (value) => Number(value) < 1_000_000_000_000 ? Number(value) * 1000 : Number(value)
 
+function latestWeekdaySeconds(nowMs) {
+  const date = new Date(nowMs)
+  while (date.getUTCDay() === 0 || date.getUTCDay() === 6) date.setUTCDate(date.getUTCDate() - 1)
+  return Math.floor(date.getTime() / 1000)
+}
+
 function normalizeTokenCandle(row) {
   return {
     timestamp: numeric(row[0]),
@@ -93,7 +99,7 @@ export default async function handler(req, res) {
   try {
     const tokenPath = `/api/v3/market/candles?category=SPOT&symbol=${symbol}&interval=5m&limit=8`
     const stockPath = '/api/v3/stockplus/market/history-candlestick'
-    const stockQuery = `symbol=${encodeURIComponent(meta.underlyingSymbol)}&period=Min_5&count=20&adjustType=NoAdjust&time=${Math.floor(Date.now() / 1000)}`
+    const stockQuery = `symbol=${encodeURIComponent(meta.underlyingSymbol)}&period=Min_5&count=20&adjustType=NoAdjust&time=${latestWeekdaySeconds(Date.now())}`
     const stockHeaders = stockAuthHeaders(stockPath, stockQuery)
     const stockPromise = stockHeaders
       ? getJson(`${stockPath}?${stockQuery}`, controller.signal, stockHeaders).catch((error) => ({ sourceError: safeSourceError(error) }))
