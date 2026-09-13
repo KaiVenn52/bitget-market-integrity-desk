@@ -92,26 +92,16 @@ export default async function handler(req, res) {
   const timer = setTimeout(() => controller.abort(), 10_000)
   try {
     const tokenPath = `/api/v3/market/candles?category=SPOT&symbol=${symbol}&interval=5m&limit=8`
-    const stockPath = '/api/v3/stockplus/market/candlestick'
-    const stockQuery = `symbol=${encodeURIComponent(meta.underlyingSymbol)}&period=Min_5&count=20&adjustType=NoAdjust`
+    const stockPath = '/api/v3/stockplus/market/history-candlestick'
+    const stockQuery = `symbol=${encodeURIComponent(meta.underlyingSymbol)}&period=Min_5&count=20&adjustType=NoAdjust&time=${Math.floor(Date.now() / 1000)}`
     const stockHeaders = stockAuthHeaders(stockPath, stockQuery)
     const stockPromise = stockHeaders
       ? getJson(`${stockPath}?${stockQuery}`, controller.signal, stockHeaders).catch((error) => ({ sourceError: safeSourceError(error) }))
       : Promise.resolve(null)
-    const [tokenResult, currentStockResult] = await Promise.all([
+    const [tokenResult, stockResult] = await Promise.all([
       getJson(tokenPath, controller.signal),
       stockPromise,
     ])
-    let stockResult = currentStockResult
-    let resolvedStockPath = stockPath
-    if (stockHeaders && currentStockResult?.data && !(currentStockResult.data.list || []).length) {
-      const historyPath = '/api/v3/stockplus/market/history-candlestick'
-      const historyQuery = `${stockQuery}&time=${Math.floor(Date.now() / 1000)}`
-      const historyHeaders = stockAuthHeaders(historyPath, historyQuery)
-      stockResult = await getJson(`${historyPath}?${historyQuery}`, controller.signal, historyHeaders)
-        .catch((error) => ({ sourceError: safeSourceError(error) }))
-      resolvedStockPath = historyPath
-    }
 
     const capturedAtMs = Date.now()
     const tokenCandles = (tokenResult.data || [])
@@ -139,7 +129,7 @@ export default async function handler(req, res) {
       },
       stockSource: {
         name: 'Bitget Stock+',
-        endpoint: resolvedStockPath,
+        endpoint: stockPath,
         status: stockHeaders ? (stockResult?.data ? 'available' : 'request_failed') : 'credentials_missing',
         ...(stockResult?.sourceError ? { diagnostic: stockResult.sourceError } : {}),
       },
