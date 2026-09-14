@@ -101,4 +101,17 @@
   .proof-stack { grid-template-columns: 1fr; }
   .proof-stack > div { padding: 11px 12px; }
   .benchmark-disclosure { grid-template-columns: 1fr; }
+  .replay-table { overflow: visible; border: 0; background: transparent; }
+  .replay-table table { display: block; min-width: 0; }
+  .replay-table thead { display: none; }
+  .replay-table tbody { display: grid; gap: 10px; }
+  .replay-table tr { display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  .replay-table td { min-width: 0; display: grid; gap: 6px; padding: 13px 14px; border-right: 1px solid var(--line); font-size: 11px; overflow-wrap: anywhere; }
+  .replay-table td:nth-child(even) { border-right: 0; }
+  .replay-table td:nth-child(3) { grid-column: 1 / -1; border-right: 0; }
+  .replay-table td:nth-child(4) { border-right: 1px solid var(--line); }
+  .replay-table td:nth-child(5) { border-right: 0; }
+  .replay-table td:nth-last-child(-n + 2) { border-bottom: 0; }
+  .replay-table td::before { content: attr(data-label); color: var(--muted); font: 600 9px var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+  .replay-table .table-note, .replay-table .protocol-note { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 }
