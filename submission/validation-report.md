@@ -1,6 +1,6 @@
 # Validation Record
 
-Date: 2026-09-14
+Date: 2026-09-15
 Scope: local engine plus public production workflow
 Operator: project developer
 
@@ -8,7 +8,7 @@ Operator: project developer
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic and query-routing unit tests | 9/9 passed | `npm.cmd test` |
+| Deterministic and query-routing unit tests | 27/27 passed | Published ±20/±100 bps and 30/120-second boundaries, state degradation, missing checks, and natural-language routing |
 | Production build | Passed | `npm.cmd run build` |
 | Static lint | Passed | `npm.cmd run lint` |
 | API syntax checks | 2/2 passed | `node --check api/scan.js`, `node --check api/evidence.js` |
@@ -19,7 +19,8 @@ Operator: project developer
 | Public deployment | Passed | Stable Vercel URL returned HTTP 200 |
 | Public live rToken scan | Passed | Bitget returned current rToken tickers |
 | Authenticated Stock+ quote | Passed | AAPL returned a real Stock+ reference price; production calculated a deterministic +14 bps comparison and preserved the stale-quote caution |
-| Authenticated Stock+ historical candles | Partial | Authentication succeeded, but the official history endpoint returned an empty list for the probed non-trading window; no matched cases were fabricated |
+| Authenticated Stock+ candles | Partial | Both current and historical official endpoints authenticated but returned empty lists across all four supported symbols, including a U.S. intraday probe; no matched cases were fabricated |
+| Immediate research entry | Passed | Initial automatic Qwen scan removed; the primary action was enabled after DOM load at 1440 × 1000 and 390 × 844 |
 | Public natural-language task | Passed | An Apple question resolved to rAAPLUSDT; the exact question appeared in the result and Qwen answered it directly |
 | Production Qwen matrix | 4/4 passed | NVDA, AAPL, TSLA, and QQQ returned `LIVE · QWEN`; returned evidence IDs exactly matched brief citations |
 | Production Qwen latency | 7.42–12.85 s | One developer-operated run per supported instrument on 2026-09-11 |
@@ -34,6 +35,7 @@ Operator: project developer
 ## What these results prove
 
 - The deterministic calculations and state thresholds behave as tested.
+- Controlled boundary tests cover both signs of price divergence, exact threshold transitions, source-age degradation, and the minimum observable-check rule. These are rule tests, not historical-market accuracy claims.
 - The production client compiles and the current code passes static checks.
 - The primary research workflow is operable in a real browser.
 - The submitted natural-language question reaches the bounded Qwen investigator rather than serving only as a symbol selector.
@@ -55,7 +57,7 @@ Operator: project developer
 
 ## Benchmark protocol and next slice
 
-The first slice freezes 16 instrument-time cases with immutable evidence bundles and keeps labels separate. The next slice must add matched Stock+ candles and balanced aligned, caution, stale, and missing-reference cases. Continue evaluating:
+The first slice freezes 16 instrument-time cases with immutable evidence bundles and keeps labels separate. Both official current and historical Stock+ candle routes were retried on 2026-09-15 and returned successful empty lists for all four instruments despite the quote entitlement working. A balanced matched-source slice therefore remains blocked by source availability and is not substituted with synthetic history. If source rows become available, continue evaluating:
 
 1. state accuracy;
 2. unsupported-claim rate;
