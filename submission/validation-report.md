@@ -40,6 +40,7 @@ Operator: project developer
 - The production sponsor endpoint can return citation-verified briefs for every supported instrument.
 - The frozen missing-reference slice is reproducible and the hybrid workflow abstains consistently when Stock+ evidence is absent.
 - Failure states remain visible and inspectable.
+- The live Stock+ path records corporate-action unavailability as its own source item, so Qwen can cite the missing-evidence boundary instead of relying on an uncited check label.
 - The deployed server can retrieve both the public Bitget rToken ticker and authenticated Stock+ quote, calculate their signed basis-point difference, and preserve independent source ages.
 - A judge can reach the validation record, frozen benchmark, and public source repository from the production interface without relying on the submission description.
 - Watchlist quotes are populated only by current-session live scans; frozen fixtures no longer appear as live watchlist prices.
