@@ -1,6 +1,7 @@
 import { ArrowRight, RefreshCw, ScanLine, ShieldCheck } from 'lucide-react'
 import { startTransition, useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { EvidenceInspector } from './components/EvidenceInspector'
+import { JudgeProof } from './components/JudgeProof'
 import { Methodology } from './components/Methodology'
 import { PassportPanel } from './components/PassportPanel'
 import { ReplayLab } from './components/ReplayLab'
@@ -80,6 +81,7 @@ export default function App() {
         <div className="hero-heading"><span className="eyebrow"><ScanLine size={14} /> Live market research</span><h1>Ask the market.<br /><em>Audit the answer.</em></h1><p>Verify whether a tokenized U.S. equity is fresh, aligned, and supported by observable evidence.</p></div>
         <form className="research-bar" onSubmit={submitResearchQuestion}><label htmlFor="research-question">Research question</label><div className="question-control"><input id="research-question" value={researchQuestion} onChange={(event) => setResearchQuestion(event.target.value)} autoComplete="off" /><button type="submit" disabled={scanning}>{scanning ? <RefreshCw className="spin" size={18} /> : <ArrowRight size={18} />}<span>{scanning ? 'Checking' : 'Investigate'}</span></button></div><small aria-live="polite">{queryNote}</small></form>
       </section>
+      <JudgeProof />
       <Watchlist selected={symbol} liveQuotes={liveQuotes} onSelect={selectSymbol} />
       <section className="workbench">
         <div className="instrument-bar"><div><span>Current passport</span><h2>{passport.instrument.symbol}</h2><p>{passport.instrument.company} · tokenized U.S. equity</p></div><button className="scan-button" aria-label={scanning ? 'Scanning evidence' : 'Refresh evidence'} disabled={scanning} onClick={() => void scan(symbol, passport.researchQuestion ?? researchQuestion)}>{scanning ? <RefreshCw className="spin" size={16} /> : <ScanLine size={16} />}<span>{scanning ? 'Scanning evidence' : 'Refresh evidence'}</span></button></div>

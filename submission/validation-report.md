@@ -13,6 +13,7 @@ Operator: project developer
 | Static lint | Passed | `npm.cmd run lint` |
 | API syntax checks | 2/2 passed | `node --check api/scan.js`, `node --check api/evidence.js` |
 | Core browser tasks | Passed | Natural-language query, question-aware Qwen answer, instrument switch, live/fallback scan, row expansion, evidence selection, provenance reveal, Replay and Method navigation |
+| Judge proof discoverability | Passed | Live Desk names the Bitget rToken, read-only Stock+, and bounded Qwen layers and links directly to validation, benchmark, and source artifacts |
 | Desktop viewport | Passed | `design/implementation-desktop-final.png`, 1440 × 1000 |
 | Mobile viewport | Passed | `design/implementation-mobile-final.png`, 390 × 844; no document-level horizontal overflow |
 | Public deployment | Passed | Stable Vercel URL returned HTTP 200 |
@@ -40,6 +41,7 @@ Operator: project developer
 - The frozen missing-reference slice is reproducible and the hybrid workflow abstains consistently when Stock+ evidence is absent.
 - Failure states remain visible and inspectable.
 - The deployed server can retrieve both the public Bitget rToken ticker and authenticated Stock+ quote, calculate their signed basis-point difference, and preserve independent source ages.
+- A judge can reach the validation record, frozen benchmark, and public source repository from the production interface without relying on the submission description.
 - Watchlist quotes are populated only by current-session live scans; frozen fixtures no longer appear as live watchlist prices.
 - Snapshot evidence retains its frozen source timestamp and is never presented with a synthetic current quote age.
 

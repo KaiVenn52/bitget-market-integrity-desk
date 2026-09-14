@@ -5,5 +5,26 @@ import { useState } from 'react'
 export function ReplayLab() {
   const [checked, setChecked] = useState(false)
   const metrics = benchmarkResults.metrics
-  return <main className="content-view replay-view"><div className="view-heading"><div><h1>Replay Lab</h1><p>Observed point-in-time benchmark. Models see only evidence available at the frozen cutoff.</p></div><button className="primary-button" onClick={() => setChecked(true)}>{checked ? 'Protocol disclosed' : 'Inspect protocol'}</button></div><section className={`panel benchmark-summary ${checked ? 'checked' : ''}`}><div><strong>{benchmarkResults.caseCount}</strong><span>frozen instrument-time cases</span></div><div><strong>{benchmarkResults.coverage.instruments}</strong><span>supported instruments</span></div><div><strong>{Math.round(metrics.citationValidityRate * 100)}%</strong><span>valid Qwen citations</span></div><div><strong>{Math.round(metrics.directionalClaimRate * 100)}%</strong><span>directional claims</span></div></section><section className="panel replay-table"><table><thead><tr><th>Case</th><th>Instrument</th><th>Evidence cutoff</th><th>Reference</th><th>Observed result</th></tr></thead><tbody>{benchmarkResults.rows.map((item, index) => <tr key={item.id}><td>B{String(index + 1).padStart(2, '0')}</td><td>{item.symbol}</td><td>{new Date(item.cutoff).toISOString().slice(11, 16)} UTC</td><td className="caution-text">MISSING</td><td>{item.predictedState}</td></tr>)}</tbody></table><p className="table-note">Observed on {new Date(benchmarkResults.evaluatedAt).toISOString().slice(0, 10)} UTC. All {benchmarkCases.length} immutable bundles preserve a closed rToken candle and SHA-256 digest; Stock+ was unavailable, so this slice measures abstention discipline rather than balanced classification accuracy.</p>{checked ? <p className="protocol-note">Cutoff: end of a closed five-minute candle. Labels are stored separately. Results: {Math.round(metrics.abstentionPrecision * 100)}% abstention precision, {Math.round(metrics.boundedAbstentionRate * 100)}% bounded Qwen responses, median Qwen latency {(metrics.medianQwenLatencyMs / 1000).toFixed(2)}s. Full cases, labels, outputs, evaluator, and portable report are published in <code>benchmark/</code>.</p> : null}</section></main>
+
+  return <main className="content-view replay-view">
+    <div className="view-heading">
+      <div><h1>Replay Lab</h1><p>Observed point-in-time benchmark. Models see only evidence available at the frozen cutoff.</p></div>
+      <button className="primary-button" onClick={() => setChecked(true)}>{checked ? 'Protocol disclosed' : 'Inspect protocol'}</button>
+    </div>
+    <div className="benchmark-disclosure">
+      <strong>Scope, not a victory lap.</strong>
+      <span>This frozen slice predates the verified Stock+ production path. It tests whether the desk abstains safely when the reference is absent—not trading performance or balanced classification.</span>
+    </div>
+    <section className={`panel benchmark-summary ${checked ? 'checked' : ''}`}>
+      <div><strong>{benchmarkResults.caseCount}</strong><span>frozen instrument-time cases</span></div>
+      <div><strong>{benchmarkResults.coverage.instruments}</strong><span>supported instruments</span></div>
+      <div><strong>{Math.round(metrics.citationValidityRate * 100)}%</strong><span>valid Qwen citations</span></div>
+      <div><strong>{Math.round(metrics.directionalClaimRate * 100)}%</strong><span>directional claims</span></div>
+    </section>
+    <section className="panel replay-table">
+      <table><thead><tr><th>Case</th><th>Instrument</th><th>Evidence cutoff</th><th>Reference</th><th>Observed result</th></tr></thead><tbody>{benchmarkResults.rows.map((item, index) => <tr key={item.id}><td>B{String(index + 1).padStart(2, '0')}</td><td>{item.symbol}</td><td>{new Date(item.cutoff).toISOString().slice(11, 16)} UTC</td><td className="caution-text">MISSING</td><td>{item.predictedState}</td></tr>)}</tbody></table>
+      <p className="table-note">Observed on {new Date(benchmarkResults.evaluatedAt).toISOString().slice(0, 10)} UTC. All {benchmarkCases.length} immutable bundles preserve a closed rToken candle and SHA-256 digest; Stock+ was unavailable at capture time, so this slice measures abstention discipline rather than balanced classification accuracy. The current Live Desk uses the separately verified read-only Stock+ quote path.</p>
+      {checked ? <p className="protocol-note">Cutoff: end of a closed five-minute candle. Labels are stored separately. Results: {Math.round(metrics.abstentionPrecision * 100)}% abstention precision, {Math.round(metrics.boundedAbstentionRate * 100)}% bounded Qwen responses, median Qwen latency {(metrics.medianQwenLatencyMs / 1000).toFixed(2)}s. Full cases, labels, outputs, evaluator, and portable report are published in <code>benchmark/</code>.</p> : null}
+    </section>
+  </main>
 }
