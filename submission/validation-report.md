@@ -11,7 +11,7 @@ Operator: project developer
 | Deterministic and query-routing unit tests | 27/27 passed | Published ±20/±100 bps and 30/120-second boundaries, state degradation, missing checks, and natural-language routing |
 | Production build | Passed | `npm.cmd run build` |
 | Static lint | Passed | `npm.cmd run lint` |
-| API syntax checks | 2/2 passed | `node --check api/scan.js`, `node --check api/evidence.js` |
+| API syntax checks | 3/3 passed | `node --check api/scan.js`, `node --check api/evidence.js`, `node --check api/benchmark-source.js` |
 | Core browser tasks | Passed | Natural-language query, question-aware Qwen answer, instrument switch, live/fallback scan, row expansion, evidence selection, provenance reveal, Replay and Method navigation |
 | Judge proof discoverability | Passed | Live Desk names the Bitget rToken, read-only Stock+, and bounded Qwen layers and links directly to validation, benchmark, and source artifacts |
 | Desktop viewport | Passed | `design/implementation-desktop-final.png`, 1440 × 1000 |

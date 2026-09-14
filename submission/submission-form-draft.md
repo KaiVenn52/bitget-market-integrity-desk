@@ -44,9 +44,9 @@ This user currently has to compare exchange quotes, underlying-market timestamps
 
 **Observed — evidence discipline:** every current Passport preserves source and retrieval timestamps; unavailable Reality depth is labeled `NOT OBSERVABLE`; unavailable corporate-action context is labeled `UNVERIFIABLE`; snapshot and rules-only modes are visibly labeled. These are implementation observations, not trading-performance claims.
 
-**Not yet observed:** external user activation, retention, trading volume, AUM, incremental fee, and balanced historical classification accuracy. The next validation slice adds matched Stock+ candles and aligned/caution/stale cases, then compares rules-only, LLM-only, and hybrid outputs on state accuracy, unsupported-claim rate, temporal-contradiction catch rate, abstention precision, and median task time.
+**Not yet observed:** external user activation, retention, trading volume, AUM, incremental fee, and balanced historical classification accuracy. If Stock+ candle rows become available, the next benchmark slice will add matched aligned/caution/stale cases and compare rules-only, LLM-only, and hybrid outputs on state accuracy, unsupported-claim rate, temporal-contradiction catch rate, abstention precision, and median task time.
 
-**Targeted distribution metrics:** 10 qualified tester walkthroughs, at least 80% unaided task completion, median Passport comprehension under 90 seconds, and at least 30% seven-day return usage among testers. Any downstream trading-volume or fee effect will be reported only after observed, never inferred from demo usage.
+External user-testing and retention metrics are not claimed in this submission. The submitted validation scope is developer-operated production QA, controlled boundary tests, cited live Qwen runs, and a frozen replay benchmark. Any downstream trading-volume or fee effect will be reported only after it is directly observed, never inferred from demo usage.
 
 ### Part 4 · Progress
 

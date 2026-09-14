@@ -79,7 +79,7 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 9/9 deterministic and natural-language routing unit tests pass.
+- 27/27 deterministic and natural-language routing tests pass, including exact price/freshness thresholds and evidence-coverage degradation.
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.
@@ -96,7 +96,7 @@ The application never turns an unavailable endpoint into a negative fact. In par
 ## Current limitations
 
 - The public rToken path and authenticated Stock+ quote path are verified in production. A 2026-09-14 AAPL run returned both prices and a deterministic +14 bps comparison.
-- The frozen benchmark is published, but matched Stock+ candle cases remain absent. The authenticated historical-candlestick endpoint currently returns a successful empty list outside the U.S. trading session, so the original missing-reference slice has not been overwritten.
+- The frozen benchmark is published, but matched Stock+ candle cases remain absent. On 2026-09-15, both official current and historical Stock+ candle endpoints authenticated but returned empty lists across all four supported symbols during a U.S. intraday probe, so the original missing-reference slice has not been overwritten or replaced with synthetic history.
 - The official `bitget-signal` MCP was investigated as a macro/news perception layer. Its current stock-price and selected-news probes were slow and returned errors or empty data, so it is not represented as a production integration.
 - The sponsor Qwen path and first frozen benchmark slice are verified in production. External user testing and a balanced matched-source benchmark remain outstanding.
 - Research only; no order execution and no investment advice.

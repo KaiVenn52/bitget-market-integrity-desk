@@ -16,7 +16,7 @@ Qwen answers the submitted question with verified evidence IDs. Missing referenc
 
 5
 00:00:31,300 --> 00:00:36,700
-Observed production QA: nine of nine tests passed, with four of four cited Qwen runs verified live.
+Observed production QA: twenty-seven of twenty-seven tests passed, with four of four cited Qwen runs verified live.
 
 6
 00:00:36,700 --> 00:00:42,048
