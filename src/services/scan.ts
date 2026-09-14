@@ -3,8 +3,12 @@ import type { Passport } from '../types'
 
 const TIMEOUT_MS = 5500
 const INVESTIGATOR_TIMEOUT_MS = 28_000
+export type ScanProgress = (message: string) => void
 
-async function enrichWithInvestigator(passport: Passport, researchQuestion: string): Promise<Passport> {
+async function enrichWithInvestigator(passport: Passport, researchQuestion: string, onProgress?: ScanProgress): Promise<Passport> {
+  onProgress?.(passport.mode === 'live'
+    ? 'Bitget evidence retrieved. Qwen is auditing the bounded record.'
+    : 'Timestamped fixture loaded. Qwen is auditing the bounded record.')
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), INVESTIGATOR_TIMEOUT_MS)
   try {
@@ -38,16 +42,16 @@ async function enrichWithInvestigator(passport: Passport, researchQuestion: stri
   }
 }
 
-export async function runScan(symbol: string, researchQuestion = `Can I trust ${symbol} right now?`): Promise<Passport> {
+export async function runScan(symbol: string, researchQuestion = `Can I trust ${symbol} right now?`, onProgress?: ScanProgress): Promise<Passport> {
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), TIMEOUT_MS)
   try {
     const response = await fetch(`/api/scan?symbol=${encodeURIComponent(symbol)}`, { signal: controller.signal })
     if (!response.ok) throw new Error(`Scan API returned ${response.status}`)
-    return await enrichWithInvestigator((await response.json()) as Passport, researchQuestion)
+    return await enrichWithInvestigator((await response.json()) as Passport, researchQuestion, onProgress)
   } catch {
     await new Promise((resolve) => window.setTimeout(resolve, 480))
-    return await enrichWithInvestigator(snapshotFor(symbol), researchQuestion)
+    return await enrichWithInvestigator(snapshotFor(symbol), researchQuestion, onProgress)
   } finally {
     window.clearTimeout(timeout)
   }

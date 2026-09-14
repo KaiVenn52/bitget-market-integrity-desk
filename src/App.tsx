@@ -1,5 +1,5 @@
 import { ArrowRight, RefreshCw, ScanLine, ShieldCheck } from 'lucide-react'
-import { startTransition, useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { startTransition, useCallback, useRef, useState, type FormEvent } from 'react'
 import { EvidenceInspector } from './components/EvidenceInspector'
 import { JudgeProof } from './components/JudgeProof'
 import { Methodology } from './components/Methodology'
@@ -20,7 +20,7 @@ export default function App() {
   const [symbol, setSymbol] = useState('rNVDAUSDT')
   const [passport, setPassport] = useState<Passport>(() => snapshotFor(symbol))
   const [liveQuotes, setLiveQuotes] = useState<Record<string, Passport['instrument']>>({})
-  const [scanning, setScanning] = useState(true)
+  const [scanning, setScanning] = useState(false)
   const [researchQuestion, setResearchQuestion] = useState('Can I trust rNVDAUSDT right now?')
   const [queryNote, setQueryNote] = useState('Ask about NVDA, AAPL, TSLA, or QQQ.')
   const scanRequest = useRef(0)
@@ -29,7 +29,7 @@ export default function App() {
     const requestId = ++scanRequest.current
     setScanning(true)
     setQueryNote('Checking Bitget sources, then asking Qwen to audit the evidence.')
-    const result = await runScan(nextSymbol, question)
+    const result = await runScan(nextSymbol, question, setQueryNote)
     if (requestId !== scanRequest.current) return
     startTransition(() => {
       setPassport(result)
@@ -37,22 +37,6 @@ export default function App() {
       setQueryNote(completionNote(result))
       setScanning(false)
     })
-  }, [])
-
-  useEffect(() => {
-    let active = true
-    const question = 'Can I trust rNVDAUSDT right now?'
-    const requestId = ++scanRequest.current
-    void runScan('rNVDAUSDT', question).then((result) => {
-      if (!active || requestId !== scanRequest.current) return
-      startTransition(() => {
-        setPassport(result)
-        if (result.mode === 'live') setLiveQuotes({ [result.instrument.symbol]: result.instrument })
-        setQueryNote(completionNote(result))
-        setScanning(false)
-      })
-    })
-    return () => { active = false }
   }, [])
 
   const selectSymbol = (next: string) => {
