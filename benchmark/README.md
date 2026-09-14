@@ -12,6 +12,8 @@ This directory contains the first reproducible Market Integrity Desk benchmark s
 
 The first slice covers four supported rTokens across four fully closed five-minute cutoffs on September 11, 2026 UTC. Stock+ credentials were not present, so all cases test missing-reference abstention. The slice can validate evidence-boundary behavior, citation integrity, and runtime availability; it cannot establish balanced classification accuracy or trading performance.
 
+Subsequent production verification on September 14 confirmed the authenticated Stock+ quote path. The historical-candlestick endpoint authenticated successfully but returned no rows for the probed non-trading window, so this immutable first slice remains unchanged rather than being retroactively relabeled.
+
 Regenerate after deploying `api/benchmark-source.js`:
 
 ```powershell

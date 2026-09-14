@@ -9,3 +9,4 @@
 - Qwen policy: exact frozen question plus two evidence records; every cited ID must exist in the supplied evidence array.
 - Chart map: the report uses one single-series categorical bar chart of saved Qwen latency by case (`case` × `latencyMs`). It answers whether production latency varied materially across the 16 requests without implying a time trend from only four unique clock cutoffs. One blue palette root plus neutral axes is sufficient; case and instrument remain available in the audit table and tooltip.
 - Classification limitation: this slice tests abstention precision, not balanced state accuracy.
+- Post-capture status: the Stock+ quote entitlement was verified in production on September 14, 2026. This does not alter the evidence available to the September 11 frozen cases.

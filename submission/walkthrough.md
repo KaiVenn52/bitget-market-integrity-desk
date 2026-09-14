@@ -13,7 +13,7 @@ Can the current `rTSLAUSDT` market state be supported by fresh, internally consi
    - `SNAPSHOT` means the live route was unavailable and the visible prices are demonstration data.
    - `QWEN` means the evidence brief passed the evidence-ID contract.
    - `RULES` means only deterministic synthesis is shown.
-4. Read the Passport state and each fact cell. In the current public deployment, the live rToken quote is available while the authenticated Stock+ reference is not configured, so the correct state is `UNVERIFIABLE`, not `PASS` or `CAUTION`.
+4. Read the Passport state and each fact cell. The current public deployment can return both the live rToken quote and authenticated Stock+ reference. Interpret the state from the displayed alignment and independent source ages; during the 2026-09-14 verification run, AAPL was `CAUTION` because the weekend Stock+ quote was stale even though price alignment passed.
 5. Expand **Price alignment**. Confirm that no premium is calculated from the token price alone. When both sources are available, the declared formula is `(token - underlying) / underlying × 10,000` with a 20 bps pass threshold.
 6. Expand **Quote freshness**. Compare each source age with the 30-second pass and 120-second caution boundaries.
 7. Inspect **Corporate actions** and **Liquidity observability**. They must remain `UNVERIFIABLE` and `NOT OBSERVABLE` when the required endpoints are absent.

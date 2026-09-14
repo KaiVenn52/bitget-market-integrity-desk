@@ -1,6 +1,6 @@
 # Validation Record
 
-Date: 2026-09-12
+Date: 2026-09-14
 Scope: local engine plus public production workflow
 Operator: project developer
 
@@ -16,7 +16,9 @@ Operator: project developer
 | Desktop viewport | Passed | `design/implementation-desktop-final.png`, 1440 × 1000 |
 | Mobile viewport | Passed | `design/implementation-mobile-final.png`, 390 × 844; no document-level horizontal overflow |
 | Public deployment | Passed | Stable Vercel URL returned HTTP 200 |
-| Public live rToken scan | Passed | Bitget returned current rToken tickers; missing Stock+ remained explicit |
+| Public live rToken scan | Passed | Bitget returned current rToken tickers |
+| Authenticated Stock+ quote | Passed | AAPL returned a real Stock+ reference price; production calculated a deterministic +14 bps comparison and preserved the stale-quote caution |
+| Authenticated Stock+ historical candles | Partial | Authentication succeeded, but the official history endpoint returned an empty list for the probed non-trading window; no matched cases were fabricated |
 | Public natural-language task | Passed | An Apple question resolved to rAAPLUSDT; the exact question appeared in the result and Qwen answered it directly |
 | Production Qwen matrix | 4/4 passed | NVDA, AAPL, TSLA, and QQQ returned `LIVE · QWEN`; returned evidence IDs exactly matched brief citations |
 | Production Qwen latency | 7.42–12.85 s | One developer-operated run per supported instrument on 2026-09-11 |
@@ -37,7 +39,7 @@ Operator: project developer
 - The production sponsor endpoint can return citation-verified briefs for every supported instrument.
 - The frozen missing-reference slice is reproducible and the hybrid workflow abstains consistently when Stock+ evidence is absent.
 - Failure states remain visible and inspectable.
-- The deployed server can retrieve the public Bitget rToken ticker and preserve an authenticated Stock+ failure as a partial-live `UNVERIFIABLE` Passport.
+- The deployed server can retrieve both the public Bitget rToken ticker and authenticated Stock+ quote, calculate their signed basis-point difference, and preserve independent source ages.
 - Watchlist quotes are populated only by current-session live scans; frozen fixtures no longer appear as live watchlist prices.
 - Snapshot evidence retains its frozen source timestamp and is never presented with a synthetic current quote age.
 
@@ -45,7 +47,7 @@ Operator: project developer
 
 - Live Bitget availability from every deployment region.
 - Historical classification accuracy, user adoption, retention, AUM, volume, fees, or investment performance.
-- Balanced state-classification accuracy: all 16 benchmark cases currently share the `UNVERIFIABLE` gold label because Stock+ credentials were absent.
+- Balanced state-classification accuracy: all 16 frozen benchmark cases still share the `UNVERIFIABLE` gold label because Stock+ credentials were absent when that immutable slice was captured.
 - Qwen availability or latency outside the 20 observed production calls (four live workflow checks plus 16 frozen benchmark requests).
 
 ## Benchmark protocol and next slice

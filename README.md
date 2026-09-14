@@ -95,8 +95,8 @@ The application never turns an unavailable endpoint into a negative fact. In par
 
 ## Current limitations
 
-- The public rToken path is verified in production. The authenticated Stock+ reference path remains unverified because no read-only credential is configured.
-- The frozen benchmark is published, but matched Stock+ cases remain absent until read-only credentials are configured and verified.
+- The public rToken path and authenticated Stock+ quote path are verified in production. A 2026-09-14 AAPL run returned both prices and a deterministic +14 bps comparison.
+- The frozen benchmark is published, but matched Stock+ candle cases remain absent. The authenticated historical-candlestick endpoint currently returns a successful empty list outside the U.S. trading session, so the original missing-reference slice has not been overwritten.
 - The official `bitget-signal` MCP was investigated as a macro/news perception layer. Its current stock-price and selected-news probes were slow and returned errors or empty data, so it is not represented as a production integration.
 - The sponsor Qwen path and first frozen benchmark slice are verified in production. External user testing and a balanced matched-source benchmark remain outstanding.
 - Research only; no order execution and no investment advice.
