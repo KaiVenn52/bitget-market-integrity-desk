@@ -1,5 +1,6 @@
 import { ArrowRight, RefreshCw, ScanLine, ShieldCheck } from 'lucide-react'
 import { startTransition, useCallback, useRef, useState, type FormEvent } from 'react'
+import { CatalystPanel } from './components/CatalystPanel'
 import { EvidenceInspector } from './components/EvidenceInspector'
 import { JudgeProof } from './components/JudgeProof'
 import { Methodology } from './components/Methodology'
@@ -8,17 +9,27 @@ import { ReplayLab } from './components/ReplayLab'
 import { Watchlist } from './components/Watchlist'
 import { snapshotFor } from './data/snapshots'
 import { resolveInstrument } from './lib/query'
+import { runAnalysis } from './services/analyze'
 import { runScan } from './services/scan'
-import type { Passport } from './types'
+import type { MoveAnalysis, Passport } from './types'
 
 type View = 'live' | 'replay' | 'methodology'
 
-const completionNote = (result: Passport) => `${result.mode === 'live' ? 'Live' : 'Snapshot'} research complete · ${result.reasoningMode === 'qwen' ? 'Qwen evidence brief verified.' : 'deterministic fallback retained.'}`
+const catalystNote = (analysis: MoveAnalysis) => analysis.verdicts.likelyCatalyst.state === 'NEWS_TIMED'
+  ? 'timing-consistent catalyst found'
+  : analysis.verdicts.likelyCatalyst.state === 'NO_STRONG_CATALYST'
+    ? 'no timing-consistent catalyst'
+    : 'no material repricing'
+
+const completionNote = (result: Passport, analysis: MoveAnalysis | null) => analysis
+  ? `${result.mode === 'live' ? 'Live' : 'Snapshot'} passport · ${catalystNote(analysis)} · ${analysis.reasoningMode === 'qwen' ? 'Qwen narrative verified.' : 'deterministic narrative retained.'}`
+  : `${result.mode === 'live' ? 'Live' : 'Snapshot'} passport ready · move analysis unavailable.`
 
 export default function App() {
   const [view, setView] = useState<View>('live')
   const [symbol, setSymbol] = useState('rNVDAUSDT')
   const [passport, setPassport] = useState<Passport>(() => snapshotFor(symbol))
+  const [analysis, setAnalysis] = useState<MoveAnalysis | null>(null)
   const [liveQuotes, setLiveQuotes] = useState<Record<string, Passport['instrument']>>({})
   const [scanning, setScanning] = useState(false)
   const [researchQuestion, setResearchQuestion] = useState('Can I trust rNVDAUSDT right now?')
@@ -28,13 +39,18 @@ export default function App() {
   const scan = useCallback(async (nextSymbol: string, question = `Can I trust ${nextSymbol} right now?`) => {
     const requestId = ++scanRequest.current
     setScanning(true)
-    setQueryNote('Checking Bitget sources, then asking Qwen to audit the evidence.')
+    setQueryNote('Checking Bitget sources for the integrity passport.')
     const result = await runScan(nextSymbol, question, setQueryNote)
     if (requestId !== scanRequest.current) return
     startTransition(() => {
       setPassport(result)
       if (result.mode === 'live') setLiveQuotes((current) => ({ ...current, [result.instrument.symbol]: result.instrument }))
-      setQueryNote(completionNote(result))
+    })
+    const next = await runAnalysis(nextSymbol, question, setQueryNote)
+    if (requestId !== scanRequest.current) return
+    startTransition(() => {
+      setAnalysis(next)
+      setQueryNote(completionNote(result, next))
       setScanning(false)
     })
   }, [])
@@ -62,7 +78,7 @@ export default function App() {
     <header className="topbar"><button className="brand" onClick={() => setView('live')} aria-label="Open Live Desk"><span className="brand-mark"><ShieldCheck size={18} /></span><span className="brand-copy"><strong>Market Integrity</strong><small>Evidence desk</small></span></button><nav aria-label="Primary navigation"><button className={view === 'live' ? 'active' : ''} onClick={() => setView('live')}>Desk</button><button className={view === 'replay' ? 'active' : ''} onClick={() => setView('replay')}>Replay</button><button className={view === 'methodology' ? 'active' : ''} onClick={() => setView('methodology')}>Method</button></nav><div className="system-status"><span className="pulse" />Read-only</div></header>
     {view === 'live' ? <main className={`live-view ${scanning ? 'is-scanning' : ''}`}>
       <section className="research-hero">
-        <div className="hero-heading"><span className="eyebrow"><ScanLine size={14} /> Live market research</span><h1>Ask the market.<br /><em>Audit the answer.</em></h1><p>Verify whether a tokenized U.S. equity is fresh, aligned, and supported by observable evidence.</p></div>
+        <div className="hero-heading"><span className="eyebrow"><ScanLine size={14} /> Live market research</span><h1>AI explains the move.<br /><em>The desk proves what supports it.</em></h1><p>Rank the catalysts behind a tokenized U.S. equity repricing by publication time, market response, and rejected explanations.</p></div>
         <form className="research-bar" onSubmit={submitResearchQuestion}><label htmlFor="research-question">Research question</label><div className="question-control"><input id="research-question" value={researchQuestion} onChange={(event) => setResearchQuestion(event.target.value)} autoComplete="off" /><button type="submit" disabled={scanning}>{scanning ? <RefreshCw className="spin" size={18} /> : <ArrowRight size={18} />}<span>{scanning ? 'Checking' : 'Investigate'}</span></button></div><small aria-live="polite">{queryNote}</small></form>
       </section>
       <JudgeProof />
@@ -70,6 +86,7 @@ export default function App() {
       <section className="workbench">
         <div className="instrument-bar"><div><span>Current passport</span><h2>{passport.instrument.symbol}</h2><p>{passport.instrument.company} · tokenized U.S. equity</p></div><button className="scan-button" aria-label={scanning ? 'Scanning evidence' : 'Refresh evidence'} disabled={scanning} onClick={() => void scan(symbol, passport.researchQuestion ?? researchQuestion)}>{scanning ? <RefreshCw className="spin" size={16} /> : <ScanLine size={16} />}<span>{scanning ? 'Scanning evidence' : 'Refresh evidence'}</span></button></div>
         <PassportPanel passport={passport} />
+        {analysis ? <CatalystPanel analysis={analysis} /> : null}
         <EvidenceInspector key={`${passport.instrument.symbol}-${passport.scannedAt}`} passport={passport} />
       </section>
     </main> : view === 'replay' ? <ReplayLab /> : <Methodology />}

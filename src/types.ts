@@ -42,8 +42,79 @@ export interface TimelineEvent {
   offset: number
 }
 
+export type CatalystState = 'NEWS_TIMED' | 'NO_STRONG_CATALYST' | 'NO_MATERIAL_MOVE'
+export type HeadlineTiming = 'POSSIBLE' | 'POSSIBLE_CONTRIBUTING' | 'TIME_UNKNOWN' | 'DISTANT' | 'TIMING_INCONSISTENT' | 'NO_MOVE_BOUNDARY'
+
+export interface HeadlineCandidate {
+  id: string
+  title: string
+  publisher: string
+  link: string
+  publishedMs: number | null
+  source: string
+  timing: HeadlineTiming
+  deltaMinutes: number | null
+  reason: string
+}
+
+export interface ExplanationItem {
+  id: string
+  label: string
+  detail: string
+}
+
+export interface MoveMetrics {
+  detected: boolean
+  reason: string
+  direction?: 'up' | 'down'
+  moveBps?: number
+  windowMinutes?: number
+  startMs?: number
+  sustained?: boolean
+  candlesUsed?: number
+}
+
+export interface MoveAnalysis {
+  symbol: string
+  question: string
+  generatedAt: string
+  session: string
+  sessionLabel: string
+  reference: {
+    chosen: { price: number; ageSeconds: number; session: string; label?: string } | null
+    stale: boolean
+    underlyingTradable: boolean
+    note: string
+  }
+  metrics: {
+    move: MoveMetrics
+    drift: { currentBps: number | null; priorBps: number | null; deltaBps: number | null; trend: string; lookbackMinutes: number }
+    spread: { spreadBps: number | null; bid: number | null; ask: number | null; bidSize: number | null; askSize: number | null; state: CheckState; note: string }
+    turnover: { ratio: number | null; state: CheckState; note: string }
+  }
+  verdicts: {
+    likelyCatalyst: { state: CatalystState; title: string; detail: string; evidenceIds: string[] }
+    supporting: ExplanationItem[]
+    alternatives: ExplanationItem[]
+    rejected: ExplanationItem[]
+    confidence: { level: 'LOW' | 'MEDIUM' | 'HIGH'; rule: string }
+    whatWouldChange: string[]
+    candidateCount: number
+    headlines: HeadlineCandidate[]
+  }
+  news: { status: 'available' | 'unavailable'; retrieved: number; note: string }
+  evidence: EvidenceItem[]
+  brief: string
+  briefEvidenceIds: string[]
+  reasoningMode: ReasoningMode
+  reasoningNote: string
+  token: { lastPrice: number; change24h: number; platformTurnover24h: number; turnover24h: number } | null
+  sourceErrors: string[]
+}
+
 export interface Passport {
   researchQuestion?: string
+  analysis?: MoveAnalysis
   instrument: MarketInstrument
   state: PassportState
   mode: DataMode
