@@ -2,6 +2,7 @@ import { ArrowRight, RefreshCw, ScanLine, ShieldCheck } from 'lucide-react'
 import { startTransition, useCallback, useRef, useState, type FormEvent } from 'react'
 import { CatalystPanel } from './components/CatalystPanel'
 import { EvidenceInspector } from './components/EvidenceInspector'
+import { IntegrityGate } from './components/IntegrityGate'
 import { JudgeProof } from './components/JudgeProof'
 import { Methodology } from './components/Methodology'
 import { PassportPanel } from './components/PassportPanel'
@@ -13,7 +14,7 @@ import { runAnalysis } from './services/analyze'
 import { runScan } from './services/scan'
 import type { MoveAnalysis, Passport } from './types'
 
-type View = 'live' | 'replay' | 'methodology'
+type View = 'live' | 'gate' | 'replay' | 'methodology'
 
 const catalystNote = (analysis: MoveAnalysis) => analysis.verdicts.likelyCatalyst.state === 'NEWS_TIMED'
   ? 'timing-consistent catalyst found'
@@ -74,8 +75,15 @@ export default function App() {
     void scan(nextSymbol, researchQuestion)
   }
 
+  // A gate verdict is a starting point, not an answer: the flow leads from the
+  // sweep into the full attribution for the instrument the gate flagged.
+  const inspectFromGate = (next: string) => {
+    setView('live')
+    selectSymbol(next)
+  }
+
   return <div className="app-shell">
-    <header className="topbar"><button className="brand" onClick={() => setView('live')} aria-label="Open Live Desk"><span className="brand-mark"><ShieldCheck size={18} /></span><span className="brand-copy"><strong>Market Integrity</strong><small>Evidence desk</small></span></button><nav aria-label="Primary navigation"><button className={view === 'live' ? 'active' : ''} onClick={() => setView('live')}>Desk</button><button className={view === 'replay' ? 'active' : ''} onClick={() => setView('replay')}>Replay</button><button className={view === 'methodology' ? 'active' : ''} onClick={() => setView('methodology')}>Method</button></nav><div className="system-status"><span className="pulse" />Read-only</div></header>
+    <header className="topbar"><button className="brand" onClick={() => setView('live')} aria-label="Open Live Desk"><span className="brand-mark"><ShieldCheck size={18} /></span><span className="brand-copy"><strong>Market Integrity</strong><small>Evidence desk</small></span></button><nav aria-label="Primary navigation"><button className={view === 'live' ? 'active' : ''} onClick={() => setView('live')}>Desk</button><button className={view === 'gate' ? 'active' : ''} onClick={() => setView('gate')}>Gate</button><button className={view === 'replay' ? 'active' : ''} onClick={() => setView('replay')}>Replay</button><button className={view === 'methodology' ? 'active' : ''} onClick={() => setView('methodology')}>Method</button></nav><div className="system-status"><span className="pulse" />Read-only</div></header>
     {view === 'live' ? <main className={`live-view ${scanning ? 'is-scanning' : ''}`}>
       <section className="research-hero">
         <div className="hero-heading"><span className="eyebrow"><ScanLine size={14} /> Live market research</span><h1>AI explains the move.<br /><em>The desk proves what supports it.</em></h1><p>Rank the catalysts behind a tokenized U.S. equity repricing by publication time, market response, and rejected explanations.</p></div>
@@ -89,7 +97,7 @@ export default function App() {
         {analysis ? <CatalystPanel analysis={analysis} /> : null}
         <EvidenceInspector key={`${passport.instrument.symbol}-${passport.scannedAt}`} passport={passport} />
       </section>
-    </main> : view === 'replay' ? <ReplayLab /> : <Methodology />}
+    </main> : view === 'gate' ? <IntegrityGate onInspect={inspectFromGate} /> : view === 'replay' ? <ReplayLab /> : <Methodology />}
     <footer><div><b>Market Integrity Desk</b><span>Built for transparent tokenized markets.</span></div><div>Source-bound · Reproducible · Read-only</div><div>Research only. Not investment advice.</div></footer>
   </div>
 }

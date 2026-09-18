@@ -72,13 +72,42 @@ describe('reference selection', () => {
       { id: 'afterhours', price: 366.4, timestampMs: AFTERHOURS - 60_000, session: 'afterhours' },
     ], AFTERHOURS)
     expect(result.stale).toBe(false)
+    expect(result.staleReason).toBeNull()
     expect(result.note).toMatch(/current/i)
+  })
+
+  // A session label is not freshness. A stalled feed keeps reporting the current
+  // session for hours, and treating that as a live basis would price-verify a
+  // token against a quote that stopped updating.
+  it('treats a stalled same-session quote as unable to price-verify', () => {
+    const result = pickReference([
+      { id: 'afterhours', price: 366.4, timestampMs: AFTERHOURS - 20 * 60_000, session: 'afterhours' },
+    ], AFTERHOURS)
+    expect(result.chosen.id).toBe('afterhours')
+    expect(result.stale).toBe(true)
+    expect(result.staleReason).toBe('quote-age')
+    expect(result.note).toMatch(/1200s old/)
+  })
+
+  it('keeps a quote inside the staleness ceiling as live', () => {
+    const result = pickReference([
+      { id: 'afterhours', price: 366.4, timestampMs: AFTERHOURS - 299_000, session: 'afterhours' },
+    ], AFTERHOURS)
+    expect(result.stale).toBe(false)
+  })
+
+  it('names why a reference is not live, so a stalled feed is not called a closed market', () => {
+    const closed = pickReference([{ id: 'regular', price: 366, timestampMs: WEEKEND - 40 * 60 * 60_000, session: 'regular' }], WEEKEND)
+    const mismatched = pickReference([{ id: 'regular', price: 366, timestampMs: AFTERHOURS - 300 * 60_000, session: 'regular' }], AFTERHOURS)
+    expect(closed.staleReason).toBe('market-closed')
+    expect(mismatched.staleReason).toBe('session-mismatch')
   })
 
   it('abstains when no reference quote was retrieved', () => {
     const result = pickReference([], AFTERHOURS)
     expect(result.chosen).toBeNull()
     expect(result.stale).toBe(true)
+    expect(result.staleReason).toBe('missing')
   })
 })
 

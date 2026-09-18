@@ -7,14 +7,27 @@
 const BPS = 10000
 const MINUTE = 60 * 1000
 
+// Published alignment thresholds. These are the single source of truth on the
+// server; the browser mirror in src/lib/integrity.ts must match them.
+export const ALIGNMENT_PASS_BPS = 20
+export const ALIGNMENT_FAIL_BPS = 100
 // A repricing smaller than this is not treated as an event worth explaining.
-// Deliberately the same number as the passport's price-alignment pass threshold:
-// a move that would break alignment is a move worth explaining.
-export const MOVE_THRESHOLD_BPS = 20
+// Deliberately the same number as the alignment pass threshold: a move that
+// would break alignment is a move worth explaining.
+export const MOVE_THRESHOLD_BPS = ALIGNMENT_PASS_BPS
 // A headline published inside this window before the move started is a candidate.
 export const CATALYST_WINDOW_MS = 45 * MINUTE
 // A headline published this long after the move started cannot explain its start.
 export const REINFORCEMENT_WINDOW_MS = 15 * MINUTE
+
+/** Alignment state from a signed premium, using the published thresholds. */
+export function alignmentStateOf(premiumBps) {
+  if (!Number.isFinite(premiumBps)) return 'unknown'
+  const distance = Math.abs(premiumBps)
+  if (distance <= ALIGNMENT_PASS_BPS) return 'pass'
+  if (distance <= ALIGNMENT_FAIL_BPS) return 'caution'
+  return 'fail'
+}
 
 const WEEKEND = new Set(['Sat', 'Sun'])
 
@@ -57,33 +70,50 @@ export function sessionLabel(session) {
 
 export const isReferenceLive = (session) => session === 'regular'
 
+// A quote older than this cannot price-verify anything, even inside a session
+// whose label matches. Session labels alone are not freshness: a stalled feed
+// still reports "Intraday" hours later.
+export const REFERENCE_STALE_SECONDS = 300
+
 /**
  * Choose the reference price a trader should actually compare against.
  * Preference order: a quote from the session we are in, then the freshest quote
- * available. The returned `stale` flag drives the drift-versus-basis wording.
+ * available. The returned `stale` flag drives the drift-versus-basis wording, and
+ * `staleReason` says *why* it is not live so the UI cannot call a stalled feed a
+ * closed market.
  */
 export function pickReference(candidates, nowMs) {
   const usable = (candidates ?? [])
     .filter((item) => item && Number.isFinite(item.price) && Number.isFinite(item.timestampMs))
     .map((item) => ({ ...item, ageSeconds: Math.max(0, Math.round((nowMs - item.timestampMs) / 1000)), session: item.session ?? sessionOf(item.timestampMs) }))
-  if (!usable.length) return { chosen: null, candidates: [], stale: true, note: 'No reference quote was retrieved; alignment is not calculated.' }
+  if (!usable.length) return { chosen: null, candidates: [], stale: true, staleReason: 'missing', note: 'No reference quote was retrieved; alignment is not calculated.' }
   const current = sessionOf(nowMs)
   const sameSession = usable.filter((item) => item.session === current).sort((a, b) => a.ageSeconds - b.ageSeconds)
   const chosen = sameSession[0] ?? [...usable].sort((a, b) => a.ageSeconds - b.ageSeconds)[0]
   // The underlying can only reprice while an equity session is open. Outside one,
-  // a gap is token-side drift; inside one, a gap from an earlier session is an
-  // outdated reference. Both cases must be labelled, neither may be called a basis.
+  // a gap is token-side drift; inside one, a gap from an earlier session or from a
+  // stalled feed is an outdated reference. All three must be labelled, and none
+  // may be called a tradable basis.
   const underlyingTradable = current !== 'overnight'
-  const stale = !underlyingTradable || chosen.session !== current
-  const note = !underlyingTradable
-    ? `The underlying market is closed (${sessionLabel(current)}), so any gap is token-side drift rather than a tradable basis.`
+  const staleReason = !underlyingTradable
+    ? 'market-closed'
     : chosen.session !== current
+      ? 'session-mismatch'
+      : chosen.ageSeconds > REFERENCE_STALE_SECONDS
+        ? 'quote-age'
+        : null
+  const note = staleReason === 'market-closed'
+    ? `The underlying market is closed (${sessionLabel(current)}), so any gap is token-side drift rather than a tradable basis.`
+    : staleReason === 'session-mismatch'
       ? `The freshest reference comes from the ${sessionLabel(chosen.session)} window, not the current ${sessionLabel(current)} window.`
-      : `Reference belongs to the current ${sessionLabel(current)} window.`
+      : staleReason === 'quote-age'
+        ? `The freshest reference quote is ${chosen.ageSeconds}s old, beyond the ${REFERENCE_STALE_SECONDS}s ceiling for a live basis, so the reference cannot price-verify this token right now.`
+        : `Reference belongs to the current ${sessionLabel(current)} window.`
   return {
     chosen,
     candidates: usable.sort((a, b) => a.ageSeconds - b.ageSeconds),
-    stale,
+    stale: staleReason !== null,
+    staleReason,
     underlyingTradable,
     currentSession: current,
     note,
@@ -278,7 +308,14 @@ export function buildVerdicts(input) {
 
   if (spread?.state === 'fail') alternatives.push({ id: 'liquidity', label: 'Thin top-of-book', detail: `${spread.note} A wide quoted spread can amplify a move that a deeper book would absorb.` })
   else if (spread?.state === 'caution') alternatives.push({ id: 'liquidity', label: 'Moderate quoted spread', detail: `${spread.note} Liquidity may have contributed to the size of the move.` })
-  if (reference?.stale) alternatives.push({ id: 'reference', label: 'Closed reference market', detail: reference.note })
+  if (reference?.stale) {
+    const label = reference.staleReason === 'market-closed'
+      ? 'Closed reference market'
+      : reference.staleReason === 'quote-age'
+        ? 'Stalled reference quote'
+        : 'Reference from an earlier session'
+    alternatives.push({ id: 'reference', label, detail: reference.note })
+  }
   if (contributing.length) alternatives.push({ id: contributing[0].id, label: 'Possible contributing headline', detail: contributing[0].reason })
   if (!alternatives.length) alternatives.push({ id: 'unobserved', label: 'Unobserved factors', detail: 'Depth beyond top-of-book, order flow, and off-venue activity were not observable to this desk, so no alternative explanation is claimed.' })
 

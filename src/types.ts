@@ -134,3 +134,68 @@ export interface Passport {
   researchAction: string
   reasoningNote: string
 }
+
+// --- Pre-trade integrity gate -------------------------------------------------
+
+export type GateDecision = 'CLEAR' | 'INVESTIGATE' | 'WAIT' | 'BLOCKED'
+
+export interface GateVerdict {
+  decision: GateDecision
+  code: string
+  headline: string
+  reason: string
+  meaning: string
+  evidenceIds: string[]
+  conditions: string[]
+  nextStep: string
+}
+
+export interface SweepEntry {
+  symbol: string
+  company: string
+  underlyingSymbol: string
+  at: string
+  session: string
+  sessionLabel: string
+  tokenPrice: number | null
+  tokenQuoteAge: number | null
+  premiumBps: number | null
+  alignmentState: CheckState
+  referencePrice: number | null
+  referenceStale: boolean
+  gate: GateVerdict
+  unresolvedEvidenceIds: string[]
+  metrics: {
+    move: MoveMetrics
+    drift: { currentBps: number | null; priorBps: number | null; deltaBps: number | null; trend: string; lookbackMinutes: number }
+    spread: { spreadBps: number | null; bid: number | null; ask: number | null; bidSize: number | null; askSize: number | null; state: CheckState }
+    turnover: { ratio: number | null; state: CheckState }
+  } | null
+  sourceErrors: string[]
+  evidence: EvidenceItem[]
+}
+
+export interface SweepResult {
+  ranAt: string
+  mode: DataMode
+  reasoningMode: ReasoningMode
+  sweepLabel: string
+  summary: {
+    worst: GateDecision
+    counts: Record<GateDecision, number>
+    headline: string
+    detail: string
+    integrityWarning?: string
+  }
+  entries: SweepEntry[]
+}
+
+/** One line of the desk's own audit trail, kept in the browser only. */
+export interface DeskLogEntry {
+  ranAt: string
+  sweepLabel: string
+  worst: GateDecision
+  headline: string
+  detail: string
+  verdicts: { symbol: string; decision: GateDecision; code: string; headline: string }[]
+}
