@@ -355,3 +355,17 @@
   .study-facts > div:last-child { border-bottom: 0; }
   .topbar nav button { min-width: 0; padding: 0 10px; font-size: 12px; }
 }
+
+/* Methodology: reference tiers ---------------------------------------------- */
+
+.reference-tiers { margin-bottom: 18px; padding: 26px 28px; }
+.reference-tiers h2, .limitations h2 { display: flex; align-items: center; gap: 8px; }
+.tier-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 20px; }
+.tier-grid > div { padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: #f7f5ef; }
+.tier-grid p { margin: 13px 0 0; color: var(--text); font-size: 12px; line-height: 1.65; }
+.tier-grid em { font-family: var(--serif); font-style: italic; }
+.reference-tiers .mode-badge { display: inline-block; }
+
+@media (max-width: 1050px) {
+  .tier-grid { grid-template-columns: 1fr; }
+}
