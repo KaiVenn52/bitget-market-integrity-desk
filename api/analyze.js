@@ -105,6 +105,16 @@ async function fetchReferenceQuotes(meta, signal) {
   return results.filter((item) => item && Number.isFinite(item.price) && Number.isFinite(item.timestampMs))
 }
 
+/** A headline only counts when it names the instrument in its own text. */
+const escapeRe = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+function isRelevant(title, meta) {
+  if (!title) return false
+  const ticker = new RegExp(`\\b${escapeRe(meta.ticker)}\\b`, 'i')
+  const company = new RegExp(escapeRe(meta.company), 'i')
+  return ticker.test(title) || company.test(title)
+}
+
 /** Keyless headline retrieval. Relevance-filtered: an unrelated headline is not evidence. */
 async function fetchHeadlines(meta) {
   const controller = new AbortController()
@@ -117,19 +127,21 @@ async function fetchHeadlines(meta) {
     if (response.ok) {
       const json = await response.json()
       for (const item of json?.news ?? []) {
-        const related = Array.isArray(item.relatedTickers) ? item.relatedTickers.map((t) => String(t).toUpperCase()) : []
-        const relevant = related.includes(meta.ticker) || new RegExp(meta.company, 'i').test(item.title ?? '')
-        if (!relevant) continue
+        // Relevance is decided by the headline text, not by the provider's
+        // relatedTickers tag: that tag is attached broadly and would let an
+        // unrelated article be presented as a catalyst candidate.
+        const title = String(item.title ?? '')
+        if (!isRelevant(title, meta)) continue
         collected.push({
           id: `news-${collected.length + 1}`,
-          title: String(item.title ?? '').slice(0, 200),
+          title: title.slice(0, 200),
           publisher: String(item.publisher ?? 'Unknown publisher').slice(0, 60),
           link: String(item.link ?? ''),
           publishedMs: Number.isFinite(Number(item.providerPublishTime)) ? Number(item.providerPublishTime) * 1000 : null,
           source: 'Yahoo Finance search',
         })
       }
-      notes.push(`Yahoo Finance search returned ${(json?.news ?? []).length} items, ${collected.length} relevant to ${meta.ticker}.`)
+      notes.push(`Yahoo Finance search returned ${(json?.news ?? []).length} items, ${collected.length} named ${meta.company} or ${meta.ticker} in the headline.`)
     } else {
       notes.push(`Yahoo Finance search returned HTTP ${response.status}.`)
     }
@@ -148,10 +160,10 @@ async function fetchHeadlines(meta) {
           const source = /<source[^>]*>(.*?)<\/source>/s.exec(chunk)?.[1] ?? 'Google News'
           const link = /<link>(.*?)<\/link>/s.exec(chunk)?.[1] ?? ''
           const publishedMs = pubDate ? Date.parse(pubDate) : NaN
-          if (!title || !new RegExp(meta.company, 'i').test(title)) continue
+          if (!isRelevant(title, meta)) continue
           collected.push({ id: `news-${collected.length + 1}`, title: title.replace(/<[^>]+>/g, '').slice(0, 200), publisher: source.slice(0, 60), link, publishedMs: Number.isFinite(publishedMs) ? publishedMs : null, source: 'Google News RSS' })
         }
-        notes.push(`Google News RSS supplied ${collected.length} relevant fallback item(s).`)
+        notes.push(`Google News RSS supplied ${collected.length} headline(s) naming ${meta.company}.`)
       } else {
         notes.push(`Google News RSS returned HTTP ${response.status}.`)
       }
@@ -212,7 +224,10 @@ export default async function handler(req, res) {
     const move = detectMove(candles)
     const drift = driftSeries(candles, referencePrice)
     const turnover = turnoverAcceleration(candles)
-    const ranked = rankHeadlines(news.headlines, move.detected ? move.startMs : null)
+    // With no move boundary to time headlines against, a long candidate list is
+    // noise rather than evidence, so only a short context sample is kept.
+    const headlineSet = move.detected ? news.headlines : news.headlines.slice(0, 3)
+    const ranked = rankHeadlines(headlineSet, move.detected ? move.startMs : null)
 
     // Evidence is built here, from server-side records only.
     const evidence = []
@@ -277,7 +292,7 @@ export default async function handler(req, res) {
       })
     }
 
-    const verdicts = buildVerdicts({ move, drift, spread, turnover, headlines: news.headlines, reference, session })
+    const verdicts = buildVerdicts({ move, drift, spread, turnover, headlines: headlineSet, reference, session })
 
     let brief = null
     let briefEvidenceIds = []

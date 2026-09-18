@@ -8,7 +8,9 @@ const BPS = 10000
 const MINUTE = 60 * 1000
 
 // A repricing smaller than this is not treated as an event worth explaining.
-export const MOVE_THRESHOLD_BPS = 30
+// Deliberately the same number as the passport's price-alignment pass threshold:
+// a move that would break alignment is a move worth explaining.
+export const MOVE_THRESHOLD_BPS = 20
 // A headline published inside this window before the move started is a candidate.
 export const CATALYST_WINDOW_MS = 45 * MINUTE
 // A headline published this long after the move started cannot explain its start.
@@ -278,7 +280,7 @@ export function buildVerdicts(input) {
   else if (spread?.state === 'caution') alternatives.push({ id: 'liquidity', label: 'Moderate quoted spread', detail: `${spread.note} Liquidity may have contributed to the size of the move.` })
   if (reference?.stale) alternatives.push({ id: 'reference', label: 'Closed reference market', detail: reference.note })
   if (contributing.length) alternatives.push({ id: contributing[0].id, label: 'Possible contributing headline', detail: contributing[0].reason })
-  if (!alternatives.length) alternatives.push({ id: 'unobserved', label: 'No alternative explanation retrieved', detail: 'Depth beyond top-of-book, order flow, and off-venue activity were not observable to this desk.' })
+  if (!alternatives.length) alternatives.push({ id: 'unobserved', label: 'Unobserved factors', detail: 'Depth beyond top-of-book, order flow, and off-venue activity were not observable to this desk, so no alternative explanation is claimed.' })
 
   for (const item of late) rejected.push({ id: item.id, label: 'Timing rejected', detail: `${item.title} — ${item.reason}` })
 

@@ -1,10 +1,11 @@
 # Market Integrity Desk
 
-A read-only, evidence-first AI Trading Desk for Bitget tokenized U.S. equities. It produces a reproducible Market State Passport rather than a trading signal.
+A read-only, evidence-first AI Trading Desk for Bitget tokenized U.S. equities. It produces a reproducible Market State Passport, and explains a repricing by ranking candidate catalysts against publication time — then rejecting the ones whose timing cannot explain the move.
 
 **Live demo:** https://bitget-market-integrity-desk.vercel.app
 
 > Can the current state of a 24/7 tokenized-equity market be supported by fresh, internally consistent evidence?
+> And when it reprices, which explanation is actually supported by the record?
 
 ![Market Integrity Desk](design/implementation-desktop-final.png)
 
@@ -12,12 +13,12 @@ A read-only, evidence-first AI Trading Desk for Bitget tokenized U.S. equities. 
 
 A tokenized U.S. equity can trade while its underlying market is closed, stale, or reacting to information published on a different timeline. A price dashboard shows the numbers but does not tell a researcher which facts are fresh, which claims conflict with timestamps, or which questions cannot be answered with the available endpoints. Market Integrity Desk separates those responsibilities:
 
-1. **Observe:** retrieve Bitget rToken and Stock+ values with source timestamps.
-2. **Verify:** calculate premium, freshness, and session consistency in deterministic code.
-3. **Investigate:** let Qwen summarize only the supplied evidence records and cite their IDs.
-4. **Abstain:** expose `UNVERIFIABLE` and `NOT OBSERVABLE` instead of inventing confidence.
+1. **Observe:** retrieve Bitget rToken and Stock+ values, plus timestamped headlines.
+2. **Verify:** calculate premium, freshness, session consistency, move start, drift, turnover and spread in deterministic code.
+3. **Explain:** rank only headlines that name the instrument, by publication time against the detected move start.
+4. **Abstain:** expose `UNVERIFIABLE`, `NOT OBSERVABLE` and `NO_STRONG_CATALYST` instead of inventing confidence or a cause.
 
-The target user is a research-driven, medium-frequency Bitget rToken trader who checks a small watchlist before acting and values evidence quality over directional predictions.
+The target user is a research-driven, medium-frequency Bitget rToken trader who checks a small watchlist before acting, trades while the U.S. market is closed, and values evidence quality over directional predictions.
 
 ## What is real today
 
@@ -28,7 +29,8 @@ The target user is a research-driven, medium-frequency Bitget rToken trader who 
 - An explicit research action for every Passport, including when the correct action is to wait for missing evidence.
 - Responsive Live Desk, Replay Lab, and Methodology views.
 - A Vercel serverless endpoint that attempts parallel Bitget rToken and Stock+ retrieval.
-- A bounded Qwen investigator endpoint that can summarize only supplied evidence IDs.
+- **A move-explanation endpoint** that measures the repricing, locates where it began, retrieves headlines, and ranks them by publication time into `POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT` and `DISTANT` buckets with an explicit confidence rule and a "what would change this conclusion" list.
+- A bounded Qwen investigator that narrates only supplied evidence IDs.
 - A clearly labeled snapshot fallback when live sources cannot be reached.
 - A published 16-case frozen benchmark with separate labels, saved Qwen outputs, SHA-256 evidence digests, evaluator code, and a portable report.
 
@@ -37,20 +39,26 @@ The target user is a research-driven, medium-frequency Bitget rToken trader who 
 1. Open **Live Desk** and choose `rTSLAUSDT` to show that each instrument creates a new Passport.
 2. Run the integrity scan. The badge explicitly distinguishes `LIVE` from `SNAPSHOT` and `QWEN` from `RULES`.
 3. Expand **Quote freshness** to audit thresholds and source ages.
-4. Select an evidence item and open **Inspect provenance** to reveal its endpoint and retrieval timestamp.
-5. Open **Replay Lab** to inspect frozen cases and **Methodology** to see the Observe → Verify → Investigate → Abstain boundary.
+4. Read the **Move explanation** panel: likely catalyst, supporting evidence, alternative explanations, and headlines rejected on timing.
+5. Select an evidence item and open **Inspect provenance** to reveal its endpoint and retrieval timestamp.
+6. Open **Replay Lab** to inspect frozen cases and **Methodology** to see the Observe → Verify → Explain → Abstain boundary.
 
 ## Architecture
 
 ```text
 Bitget rToken ticker ─┐
-                     ├─> deterministic checks ─> Market State Passport
-Bitget Stock+ quote ─┘             │                       │
-                                   └─> bounded evidence ─> Qwen brief
-                                                (server-side key, cited IDs only)
+                      ├─> deterministic checks ─> Market State Passport
+Bitget Stock+ quote ─┘            │
+                                  ├─> move start + drift + turnover + spread ─┐
+                                  │                                           ├─> verdict buckets ─> Qwen narrative
+keyless headline feeds ───────────┴─> publication-time classification ────────┘   (cited IDs only, server-side key)
 ```
 
-The model does not calculate premiums, decide freshness, fabricate unavailable liquidity, predict returns, or execute orders.
+The browser sends only a symbol and a question to `/api/analyze`. Every record the
+answer rests on is retrieved, timestamped and ranked server-side, so a client can
+never supply its own evidence and have the model endorse it. The model does not
+calculate premiums, drift or timing, does not rank catalysts, does not predict
+returns, and does not execute orders.
 
 ## Run locally
 
@@ -79,10 +87,11 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 27/27 deterministic and natural-language routing tests pass, including exact price/freshness thresholds and evidence-coverage degradation.
+- 54/54 tests pass: deterministic and natural-language routing (27), plus 27 move-explanation tests covering session labelling, session-aware reference selection, move detection and start location, the 20 bps event boundary, headline timing verdicts (`POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT`, `DISTANT`, `TIME_UNKNOWN`), drift, turnover acceleration, top-of-book spread, verdict assembly, confidence rules, and the citation gate.
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.
+- The move-explanation endpoint was exercised end to end against live Bitget candles and live headline feeds: a quiet tape produced `NO_MATERIAL_MOVE` with no catalyst named, and a +180 bps repricing with six retrieved headlines all published 57–270 minutes earlier produced `NO_STRONG_CATALYST` with `MEDIUM` confidence rather than a fabricated cause.
 - A 2026-09-11 production matrix verified `LIVE · QWEN` for all four supported instruments; all four returned citation sets that exactly matched the evidence IDs present in their briefs, with investigator latency from 7.42 to 12.85 seconds.
 - A second frozen benchmark captured 16 instrument-time cases across four closed five-minute cutoffs. Deterministic state accuracy, Qwen availability, citation validity, and bounded-abstention rate were 100%; directional-claim rate was 0%; median Qwen latency was 8.581 seconds.
 - The submission film was verified as 1920 × 1080, 30 fps, H.264/AAC, 42.048 seconds.
@@ -98,6 +107,9 @@ The application never turns an unavailable endpoint into a negative fact. In par
 - The public rToken path and authenticated Stock+ quote path are verified in production. A 2026-09-14 AAPL run returned both prices and a deterministic +14 bps comparison.
 - The frozen benchmark is published, but matched Stock+ candle cases remain absent. On 2026-09-15, both official current and historical Stock+ candle endpoints authenticated but returned empty lists across all four supported symbols during a U.S. intraday probe, so the original missing-reference slice has not been overwritten or replaced with synthetic history.
 - The official `bitget-signal` MCP was investigated as a macro/news perception layer. Its current stock-price and selected-news probes were slow and returned errors or empty data, so it is not represented as a production integration.
+- Headlines come from keyless public feeds (Yahoo Finance search, with Google News RSS as fallback) and are accepted only when the headline names the instrument. A genuine catalyst that never names it will be missed, and the lookback window is bounded at 8 hours.
+- Catalyst ranking is a timing verdict, not a causal proof. A headline published inside the catalyst window is reported as consistent with the move; the desk never states that it caused the move.
+- The move-explanation window is the most recent 200 closed five-minute candles, so an event older than roughly 16 hours is out of scope.
 - The sponsor Qwen path and first frozen benchmark slice are verified in production. External user testing and a balanced matched-source benchmark remain outstanding.
 - Research only; no order execution and no investment advice.
 

@@ -95,7 +95,7 @@ describe('move detection', () => {
   it('reports no event when the market simply did not move', () => {
     const move = detectMove(quiet)
     expect(move.detected).toBe(false)
-    expect(move.reason).toMatch(/below the 30 bps event threshold/i)
+    expect(move.reason).toMatch(/below the 20 bps event threshold/i)
   })
 
   it('detects the repricing and locates where it began', () => {
@@ -112,6 +112,13 @@ describe('move detection', () => {
     const move = detectMove([bar(0, 100), bar(5, 100)])
     expect(move.detected).toBe(false)
     expect(move.reason).toMatch(/not enough closed rToken candles/i)
+  })
+
+  it('uses the alignment threshold as the event boundary', () => {
+    const justOver = [...Array.from({ length: 13 }, (_, i) => bar(i * 5, 100)), bar(65, 100.25), bar(70, 100.25)]
+    const justUnder = [...Array.from({ length: 13 }, (_, i) => bar(i * 5, 100)), bar(65, 100.15), bar(70, 100.15)]
+    expect(detectMove(justOver).detected).toBe(true)
+    expect(detectMove(justUnder).detected).toBe(false)
   })
 })
 
