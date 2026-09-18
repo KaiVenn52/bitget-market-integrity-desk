@@ -16,9 +16,49 @@ A tokenized U.S. equity can trade while its underlying market is closed, stale, 
 1. **Observe:** retrieve Bitget rToken and Stock+ values, plus timestamped headlines.
 2. **Verify:** calculate premium, freshness, session consistency, move start, drift, turnover and spread in deterministic code.
 3. **Explain:** rank only headlines that name the instrument, by publication time against the detected move start.
-4. **Abstain:** expose `UNVERIFIABLE`, `NOT OBSERVABLE` and `NO_STRONG_CATALYST` instead of inventing confidence or a cause.
+4. **Gate:** decide whether the market state can be trusted at all, and record the refusals.
+5. **Abstain:** expose `UNVERIFIABLE`, `NOT OBSERVABLE` and `NO_STRONG_CATALYST` instead of inventing confidence or a cause.
 
-The target user is a research-driven, medium-frequency Bitget rToken trader who checks a small watchlist before acting, trades while the U.S. market is closed, and values evidence quality over directional predictions.
+The target user is a research-driven, medium-frequency Bitget rToken trader who checks a small watchlist before acting, trades while the U.S. market is closed, and values evidence quality over directional predictions. The desk presents analysis; the human makes the decision. It places no orders.
+
+## The four workspaces
+
+| Workspace | Question it answers |
+| --- | --- |
+| **Desk** (`#live`) | Why did this instrument move, and which explanation does the record actually support? |
+| **Gate** (`#gate`) | Can I trust this market state at all, right now, and what exactly blocks it? |
+| **Stress** (`#stress`) | When this token drifted like this before, what did the following session do? |
+| **Replay / Method** (`#replay`, `#method`) | Frozen cases, and the boundary the desk refuses to cross. |
+
+Views are deep-linkable, so any workspace can be cited or linked directly.
+
+## The pre-trade integrity gate
+
+The desk gates its own watchlist in one sweep and writes down what it refused.
+
+- **Deterministic and ordered.** The first matching rule wins, so the same evidence always produces the same verdict, and any desk-log entry can be reproduced by re-running it.
+- **Four decisions:** `CLEAR`, `INVESTIGATE`, `WAIT`, `BLOCKED`. A desk is only as clear as its least verifiable instrument, so the sweep headline is the worst verdict rather than an average.
+- **Every verdict names what it rests on:** the evidence ids it cites, the conditions that would change it, and the next research step. The gate never says buy or sell.
+- **A refusal is an outcome.** The desk log records refusals and reports the rate, because "the gate withheld a clear verdict on 4 of 4 observations" is a result, not a failure.
+- **It checks itself.** Each sweep verifies that every verdict cites evidence the sweep actually holds, and says so when a verdict cites something it did not retrieve.
+
+### The reference is two-tier, and the desk says which tier it used
+
+Every premium and drift claim is a comparison against a reference price. Which price counts depends on whether the underlying can trade:
+
+- **Live quote** — while the underlying's main session runs, only a fresh authenticated quote from that same session is a basis. A quote from an earlier session, or one past the freshness ceiling, is not a basis, and the desk reports which of those it was rather than calling a stalled feed a closed market.
+- **Last official close** — while the main session is not running, the price the underlying last traded at *is* the correct basis, and it is retrievable keylessly. This is why the desk's central case, an overnight drift nothing can confirm, does not depend on a credential. A gap against this tier is **drift, not an alignment break**: there is no live underlying price for the token to disagree with.
+
+Both tiers are labelled in the interface and repeated in every verdict that rests on them.
+
+## The historical stress test
+
+The gate can say "the reference cannot confirm this, and the token has moved 478 bps". That is useless unless a human can ask the obvious follow-up. The stress test builds closed-market episodes from hourly rToken candles, anchors each to the last session close, measures what the following session actually did, and reports the base rate with its sample size attached.
+
+- **Measured on the underlying, not only the token.** Official daily closes are retrieved when available and used for the statistics; where they are missing the rToken's own session close is used and labelled a proxy.
+- **A flat close is not a confirmation.** A +108 bps drift that resolves to +5 bps is reported as `closed flat`, excluded from the rate and shown separately, so the headline number cannot be inflated by immaterial closes.
+- **It refuses to answer when there is nothing to test.** A drift inside the 20 bps alignment threshold is not an event, so the desk declines to compare it to history rather than dressing up a meaningless match.
+- **It is a base rate, not a forecast.** The sample is weeks of hourly candles, no significance is claimed, and the declared limits are printed on the page.
 
 ## What is real today
 
@@ -31,6 +71,10 @@ The target user is a research-driven, medium-frequency Bitget rToken trader who 
 - A Vercel serverless endpoint that attempts parallel Bitget rToken and Stock+ retrieval.
 - **A move-explanation endpoint** that measures the repricing, locates where it began, retrieves headlines, and ranks them by publication time into `POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT` and `DISTANT` buckets with an explicit confidence rule and a "what would change this conclusion" list.
 - A bounded Qwen investigator that narrates only supplied evidence IDs.
+- **A pre-trade integrity gate** with ordered deterministic rules, four decisions, evidence citations, change conditions and a next step for every verdict, plus a self-check that a verdict never cites evidence the sweep did not retrieve.
+- **A historical stress test** that builds closed-market episodes, measures the drift distribution, and matches comparable episodes to what the following session actually did — using official underlying closes where available and labelling the proxy where not.
+- **A browser-local desk log** that records every sweep including refusals, and reports the refusal rate.
+- **A two-tier reference** so the desk's central case works without an authenticated feed.
 - A clearly labeled snapshot fallback when live sources cannot be reached.
 - A published 16-case frozen benchmark with separate labels, saved Qwen outputs, SHA-256 evidence digests, evaluator code, and a portable report.
 
@@ -41,18 +85,31 @@ The target user is a research-driven, medium-frequency Bitget rToken trader who 
 3. Expand **Quote freshness** to audit thresholds and source ages.
 4. Read the **Move explanation** panel: likely catalyst, supporting evidence, alternative explanations, and headlines rejected on timing.
 5. Select an evidence item and open **Inspect provenance** to reveal its endpoint and retrieval timestamp.
-6. Open **Replay Lab** to inspect frozen cases and **Methodology** to see the Observe → Verify → Explain → Abstain boundary.
+6. Open **Gate** and run the integrity sweep: four verdicts, each naming its evidence, its conditions and its next step. Expand one to audit the evidence provenance, then open the flagged instrument in the Desk.
+7. Open **Stress** to see the closed-market drift distribution for an instrument, the comparable historical episodes, and what the following session did in each.
+8. Open **Replay Lab** to inspect frozen cases and **Methodology** to see the Observe → Verify → Explain → Gate → Abstain boundary and the declared limits.
 
 ## Architecture
 
 ```text
-Bitget rToken ticker ─┐
-                      ├─> deterministic checks ─> Market State Passport
-Bitget Stock+ quote ─┘            │
-                                  ├─> move start + drift + turnover + spread ─┐
-                                  │                                           ├─> verdict buckets ─> Qwen narrative
-keyless headline feeds ───────────┴─> publication-time classification ────────┘   (cited IDs only, server-side key)
+Bitget rToken ticker ─┬─> deterministic checks ─> Market State Passport
+Bitget Stock+ quote ──┤            │
+official daily closes ┘            ├─> move start + drift + turnover + spread ─┐
+                                   │                                           ├─> verdict buckets ─> Qwen narrative
+keyless headline feeds ────────────┴─> publication-time classification ────────┘   (cited IDs only, server-side key)
+
+rToken hourly candles ─┬─> session-boundary episodes ─> drift distribution ─┐
+official daily closes ─┘                                                    ├─> /api/study
+                                                                            └─> matched episodes ─> base rate (no model)
+
+ticker + candles + reference ─> measured state ─> ordered gate rules ─> /api/sweep
+                                                          │
+                                                          └─> verdict + evidence ids + conditions ─> desk log
 ```
+
+Retrieval lives in `api/_lib/sources.js`; the deterministic modules (`analysis.js`,
+`gate.js`, `study.js`) retrieve nothing and call no model, which is what makes every
+verdict reproducible from the evidence it cites.
 
 The browser sends only a symbol and a question to `/api/analyze`. Every record the
 answer rests on is retrieved, timestamped and ranked server-side, so a client can
@@ -87,7 +144,7 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 54/54 tests pass: deterministic and natural-language routing (27), plus 27 move-explanation tests covering session labelling, session-aware reference selection, move detection and start location, the 20 bps event boundary, headline timing verdicts (`POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT`, `DISTANT`, `TIME_UNKNOWN`), drift, turnover acceleration, top-of-book spread, verdict assembly, confidence rules, and the citation gate.
+- 123/123 tests pass: query and instrument resolution (5), published deterministic integrity rules (22), session labelling, session-aware two-tier reference selection, move detection and start location, the 20 bps event boundary, headline timing verdicts (`POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT`, `DISTANT`, `TIME_UNKNOWN`), drift, turnover acceleration, top-of-book spread, verdict assembly, confidence rules and the citation gate (36), the ordered gate rules with pipeline contract tests that feed real `pickReference` output into `evaluateGate` (34), and episode construction, drift distribution, scenario matching, underlying-close attachment, outcome classification and the stress-test verdict (26).
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.
@@ -105,6 +162,9 @@ The application never turns an unavailable endpoint into a negative fact. In par
 ## Current limitations
 
 - The public rToken path and authenticated Stock+ quote path are verified in production. A 2026-09-14 AAPL run returned both prices and a deterministic +14 bps comparison.
+- **While the underlying's main session is running, the gate needs the authenticated Stock+ quote.** If that credential is absent or the endpoint fails, every instrument is blocked as `UNVERIFIABLE_REFERENCE` — correctly, because a live basis cannot be established without it — and the desk reports the retrieval layer's own account of why rather than a market finding. Outside the main session the official-close tier keeps the desk fully functional without credentials.
+- The stress test covers the retrieved window only: 500 hourly candles, roughly three weeks and a dozen or so closed-market episodes. It claims no statistical significance, and its excursion figures come from hourly highs and lows.
+- The desk log is stored in the browser, so it is per-device and does not survive clearing site data. It is an audit trail, not a server-side record, and it holds no positions because the desk places no orders.
 - The frozen benchmark is published, but matched Stock+ candle cases remain absent. On 2026-09-15, both official current and historical Stock+ candle endpoints authenticated but returned empty lists across all four supported symbols during a U.S. intraday probe, so the original missing-reference slice has not been overwritten or replaced with synthetic history.
 - The official `bitget-signal` MCP was investigated as a macro/news perception layer. Its current stock-price and selected-news probes were slow and returned errors or empty data, so it is not represented as a production integration.
 - Headlines come from keyless public feeds (Yahoo Finance search, with Google News RSS as fallback) and are accepted only when the headline names the instrument. A genuine catalyst that never names it will be missed, and the lookback window is bounded at 8 hours.
@@ -115,10 +175,15 @@ The application never turns an unavailable endpoint into a negative fact. In par
 
 ## Repository map
 
-- `api/scan.js` — allowlisted, bounded live-source scan.
-- `api/evidence.js` — server-only Qwen investigator with evidence-ID validation.
-- `api/benchmark-source.js` — allowlisted source capture for closed rToken and optional Stock+ candles.
+- `api/analyze.js` — the Desk: retrieval plus move explanation and the Qwen investigator.
+- `api/sweep.js` — the Gate: one pass over the watchlist, gated verdicts, and a self-check that every verdict cites evidence the sweep holds.
+- `api/study.js` — the Stress test: closed-market episodes, the drift distribution and matched historical outcomes.
+- `api/_lib/sources.js` — the only file that talks to an external source: Bitget endpoints, HMAC signing, headline feeds, official daily closes.
+- `api/_lib/analysis.js` — pure measurement: sessions, the two-tier reference, move detection, drift, turnover, spread.
+- `api/_lib/gate.js` — pure, ordered gate rules and the sweep summary.
+- `api/_lib/study.js` — pure episode construction, outcome classification and scenario matching.
 - `src/lib/integrity.ts` — published deterministic rules.
+- `src/lib/desklog.ts` — the browser-local audit trail and its refusal statistics.
 - `src/data/snapshots.ts` — labeled product demonstration snapshots.
 - `benchmark/` — immutable cases, separate labels, Qwen outputs, evaluator results, and portable report.
 - `benchmark/bitget-signal-probe.json` — saved decision gate for the optional official macro/news perception layer.
