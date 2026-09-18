@@ -46,7 +46,17 @@ describe('gate rules', () => {
     const result = gate({ reference: { ...liveReference, chosen: null }, premiumBps: null, alignmentState: 'unknown' })
     expect(result.decision).toBe('BLOCKED')
     expect(result.code).toBe('UNVERIFIABLE_REFERENCE')
-    expect(result.reason).toMatch(/missing source, not a finding/i)
+    expect(result.reason).toMatch(/missing or unusable source, not a finding/i)
+  })
+
+  // The verdict must repeat the retrieval layer's own account of the failure. An
+  // earlier version asserted its own cause and told the reader that no official
+  // close existed while one had in fact been retrieved but was not a valid basis.
+  it('repeats the retrieval layer note instead of asserting its own cause', () => {
+    const note = 'No reference quote was retrieved, and an official close cannot stand in for one while the underlying is in its main session.'
+    const result = gate({ reference: { ...liveReference, chosen: null, note }, premiumBps: null, alignmentState: 'unknown' })
+    expect(result.reason).toContain(note)
+    expect(result.reason).not.toMatch(/nor an official daily close was available/i)
   })
 
   it('blocks when the token feed itself is stale', () => {
@@ -254,5 +264,44 @@ describe('gate contract with the analysis pipeline', () => {
     expect(reference.stale).toBe(true)
     expect(result.decision).toBe('WAIT')
     expect(result.code).toBe('STALE_REFERENCE_DRIFT')
+  })
+
+  // The regression this guards: with an official-close basis the premium is the
+  // overnight gap, so a large number is the normal case and must never be read as
+  // a live alignment break.
+  it('reads a closed-market gap against an official close as drift, not a break', () => {
+    const reference = pickReference([], overnight, { dailyCloses: [{ dateKey: '2026-09-18', close: 212.17 }] })
+    const result = evaluateGate({
+      token: { price: 222.5, ageSeconds: 10 },
+      reference,
+      premiumBps: Math.round(((222.5 - 212.17) / 212.17) * 10_000),
+      alignmentState: alignmentStateOf(Math.round(((222.5 - 212.17) / 212.17) * 10_000)),
+      move: detectMove(Array.from({ length: 40 }, (_, i) => ({ timestamp: overnight - (40 - i) * 5 * 60_000, close: 222.5, turnover: 1_000_000 }))),
+      drift: { currentBps: 487, priorBps: 400, deltaBps: 87, trend: 'widening' },
+      spread: spreadOf({ bid1Price: '222.49', ask1Price: '222.51' }),
+      turnover: turnoverAcceleration(Array.from({ length: 40 }, (_, i) => ({ timestamp: overnight - (40 - i) * 5 * 60_000, close: 222.5, turnover: 1_000_000 }))),
+    })
+    expect(reference.kind).toBe('official-close')
+    expect(result.code).not.toBe('ALIGNMENT_BREAK')
+    expect(result.decision).toBe('WAIT')
+    expect(result.code).toBe('CLOSED_MARKET_DRIFT')
+    expect(result.referenceKind).toBe('official-close')
+    expect(result.nextStep).toMatch(/stress test/i)
+  })
+
+  it('clears a token that sits at the last official close', () => {
+    const reference = pickReference([], overnight, { dailyCloses: [{ dateKey: '2026-09-18', close: 212.17 }] })
+    const result = evaluateGate({
+      token: { price: 212.2, ageSeconds: 10 },
+      reference,
+      premiumBps: 1,
+      alignmentState: alignmentStateOf(1),
+      move: { detected: false, reason: 'no move' },
+      drift: { currentBps: 1, priorBps: 0, deltaBps: 1, trend: 'stable' },
+      spread: spreadOf({ bid1Price: '212.19', ask1Price: '212.21' }),
+      turnover: turnoverAcceleration([]),
+    })
+    expect(result.decision).toBe('CLEAR')
+    expect(result.code).toBe('CLOSED_MARKET_ALIGNED')
   })
 })

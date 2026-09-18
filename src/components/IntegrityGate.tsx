@@ -37,7 +37,7 @@ function EntryCard({ entry, onInspect }: { entry: SweepEntry; onInspect: (symbol
       <p className="gate-reason">{gate.reason}</p>
       <dl className="gate-metrics">
         <div><dt>Premium</dt><dd>{bpsText(entry.premiumBps)} <small>({entry.alignmentState})</small></dd></div>
-        <div><dt>Reference</dt><dd>{entry.referencePrice ?? 'unavailable'}{entry.referenceStale ? ' · cannot confirm' : ' · live'}</dd></div>
+        <div><dt>Reference</dt><dd>{entry.referencePrice ?? 'unavailable'}<small>{gate.referenceKind === 'official-close' ? 'last official close' : gate.referenceKind === 'live-quote' ? 'live authenticated quote' : entry.referenceStale ? 'cannot confirm' : 'unclassified'}</small></dd></div>
         <div><dt>Drift</dt><dd>{metrics ? `${bpsText(metrics.drift.currentBps)} ${metrics.drift.trend}` : 'not computed'}</dd></div>
         <div><dt>Turnover</dt><dd>{metrics?.turnover.ratio == null ? 'not computed' : `${metrics.turnover.ratio}× baseline`}</dd></div>
         <div><dt>Top-of-book</dt><dd>{metrics?.spread.spreadBps == null ? 'not published' : `${metrics.spread.spreadBps} bps`}</dd></div>

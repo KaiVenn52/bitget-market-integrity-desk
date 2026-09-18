@@ -76,6 +76,69 @@ describe('reference selection', () => {
     expect(result.note).toMatch(/current/i)
   })
 
+  // While the underlying cannot trade, the price it last traded at is the correct
+  // basis, and it must be usable without an authenticated live quote.
+  it('falls back to the last official close while the market is closed', () => {
+    const result = pickReference([], WEEKEND, {
+      dailyCloses: [{ dateKey: '2026-09-04', close: 366.0 }, { dateKey: '2026-09-08', close: 373.5 }],
+    })
+    expect(result.kind).toBe('official-close')
+    expect(result.chosen.price).toBe(373.5)
+    expect(result.closeDateKey).toBe('2026-09-08')
+    expect(result.stale).toBe(false)
+    expect(result.staleReason).toBeNull()
+    expect(result.underlyingTradable).toBe(false)
+    expect(result.note).toMatch(/last official close of 373.5 is the correct basis/i)
+  })
+
+  it('prefers a live same-session quote over the official close', () => {
+    const result = pickReference([
+      { id: 'afterhours', price: 366.4, timestampMs: AFTERHOURS - 60_000, session: 'afterhours' },
+    ], AFTERHOURS, { dailyCloses: [{ dateKey: '2026-09-04', close: 366.0 }] })
+    expect(result.kind).toBe('live-quote')
+    expect(result.chosen.id).toBe('afterhours')
+  })
+
+  // Inside the main session the underlying trades continuously, so an old close is
+  // not a basis: a live quote is required and its absence must stay visible.
+  it('does not use an official close as a basis inside the main session', () => {
+    const result = pickReference([
+      { id: 'regular', price: 366.0, timestampMs: REGULAR - 400 * 60_000, session: 'regular' },
+    ], REGULAR, { dailyCloses: [{ dateKey: '2026-09-03', close: 360.0 }] })
+    expect(result.kind).toBeNull()
+    expect(result.stale).toBe(true)
+    expect(result.staleReason).toBe('quote-age')
+  })
+
+  it('reports a missing reference when neither a quote nor a close exists', () => {
+    const result = pickReference([], WEEKEND, { dailyCloses: [] })
+    expect(result.chosen).toBeNull()
+    expect(result.stale).toBe(true)
+    expect(result.staleReason).toBe('missing')
+    expect(result.kind).toBeNull()
+  })
+
+  it('ignores unusable close rows rather than using a zero price', () => {
+    const result = pickReference([], WEEKEND, { dailyCloses: [{ dateKey: '2026-09-08', close: 0 }, { dateKey: '2026-09-09', close: Number.NaN }] })
+    expect(result.kind).toBeNull()
+    expect(result.stale).toBe(true)
+    expect(result.staleReason).toBe('missing')
+  })
+
+  // The failure this guards: no authenticated quote exists and the market is open,
+  // so the previous close is not a basis. That must return a missing reference, not
+  // throw — an exception here blocked the whole sweep and was reported as a ticker
+  // outage instead.
+  it('returns a missing reference, without throwing, when only a close exists during the main session', () => {
+    const result = pickReference([], REGULAR, { dailyCloses: [{ dateKey: '2026-09-17', close: 360.0 }] })
+    expect(result.chosen).toBeNull()
+    expect(result.kind).toBeNull()
+    expect(result.stale).toBe(true)
+    expect(result.staleReason).toBe('missing')
+    expect(result.underlyingTradable).toBe(true)
+    expect(result.note).toMatch(/main session/i)
+  })
+
   // A session label is not freshness. A stalled feed keeps reporting the current
   // session for hours, and treating that as a live basis would price-verify a
   // token against a quote that stopped updating.

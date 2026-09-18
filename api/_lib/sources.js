@@ -7,6 +7,7 @@
 // for the analysis endpoint and the integrity sweep alike.
 
 import { createHmac } from 'node:crypto'
+import { etDateKey } from './analysis.js'
 
 export const BITGET_BASE = 'https://api.bitget.com'
 export const MAX_HEADLINES = 10
@@ -96,6 +97,43 @@ export async function fetchReferenceQuotes(meta, signal) {
 }
 
 const escapeRe = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+export const DAILY_CLOSE_TIMEOUT_MS = 8000
+
+/**
+ * Official daily closes for the underlying, keyed by exchange calendar date.
+ *
+ * This is a keyless source, which matters: while the underlying market is closed,
+ * the last official close is the correct reference, so the desk must be able to
+ * establish a basis even when no authenticated quote is available. A failure
+ * returns an empty set and a note rather than a substitute.
+ */
+export async function fetchDailyCloses(ticker, options = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DAILY_CLOSE_TIMEOUT_MS)
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=1mo&interval=1d`
+    const response = await fetch(url, { signal: controller.signal, headers: { 'user-agent': 'Mozilla/5.0 (compatible; MarketIntegrityDesk/0.2)', accept: 'application/json' } })
+    if (!response.ok) return { closes: [], note: `Official ${ticker} daily closes unavailable (HTTP ${response.status}).` }
+    const json = await response.json()
+    const result = json?.chart?.result?.[0]
+    const timestamps = result?.timestamp ?? []
+    const values = result?.indicators?.quote?.[0]?.close ?? []
+    const closes = timestamps
+      .map((seconds, index) => ({ dateKey: etDateKey(seconds * 1000), ts: seconds * 1000, close: Number(values[index]), source: 'Yahoo Finance chart API' }))
+      .filter((row) => Number.isFinite(row.close) && row.close > 0)
+    return {
+      closes,
+      note: closes.length
+        ? `${closes.length} official ${ticker} daily closes retrieved, ${closes[0].dateKey} to ${closes[closes.length - 1].dateKey}.`
+        : `The daily-close source returned no usable rows for ${ticker}.`,
+    }
+  } catch (error) {
+    return { closes: [], note: `Official ${ticker} daily closes could not be retrieved (${sanitize(error)}).` }
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 /** A headline only counts when it names the instrument in its own text. */
 export function isRelevant(title, meta) {

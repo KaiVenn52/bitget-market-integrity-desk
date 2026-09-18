@@ -30,7 +30,7 @@ const absBps = (value) => (typeof value === 'number' ? Math.abs(value) : null)
 // A gate verdict is a claim about evidence, so it must name the evidence it
 // rests on. These IDs match the sweep's evidence set and the analysis endpoint's
 // vocabulary, so one evidence model serves the whole desk.
-function verdict({ decision, code, headline, reason, evidenceIds, conditions, nextStep }) {
+function verdict({ decision, code, headline, reason, evidenceIds, conditions, nextStep, referenceKind = null }) {
   return {
     decision,
     code,
@@ -40,6 +40,7 @@ function verdict({ decision, code, headline, reason, evidenceIds, conditions, ne
     evidenceIds,
     conditions,
     nextStep,
+    referenceKind,
   }
 }
 
@@ -74,19 +75,24 @@ export function evaluateGate(input) {
     })
   }
 
-  // 1. No authenticated underlying reference at all: nothing can be compared.
+  // 1. No usable reference: nothing can be compared. The reason quotes the retrieval
+  // layer's own note rather than asserting a cause, because "no source responded" and
+  // "a source responded but cannot serve as a basis" are different failures, and a
+  // verdict that blurs them is not honest about what it actually checked.
   if (!reference || reference.chosen?.price == null) {
+    const cause = reference?.note ? ` ${reference.note}` : ''
     return verdict({
       decision: 'BLOCKED',
       code: 'UNVERIFIABLE_REFERENCE',
-      headline: 'No underlying reference',
-      reason: 'The live rToken ticker was retrieved, but no authenticated Stock+ quote was available, so no premium exists to check. This is a missing source, not a finding about the token.',
+      headline: 'No usable underlying reference',
+      reason: `The live rToken ticker was retrieved, but no reference price could be established, so there is no premium to check.${cause} This is a missing or unusable source, not a finding about the token.`,
       evidenceIds: ['token', 'reference'],
       conditions: [
         'An authenticated Stock+ quote for the underlying becomes available',
+        'The underlying market enters a window where the last official close is the correct basis',
         'The rToken ticker itself stops updating, which would change this to a feed-staleness block',
       ],
-      nextStep: 'Treat the price as unverified. Inspect the token quote and re-run once the reference source responds.',
+      nextStep: 'Treat the price as unverified. Inspect the token quote and re-run once a reference source responds.',
     })
   }
 
@@ -103,7 +109,43 @@ export function evaluateGate(input) {
     })
   }
 
-  // 3. A live underlying disagrees beyond the fail threshold: a state contradiction.
+  // 3. The reference is the last official close. While the underlying cannot
+  // trade, that close *is* the correct basis, so a gap against it is the token
+  // pricing something the underlying has not confirmed yet. That is the desk's
+  // central case, and calling it an alignment break would be wrong: there is no
+  // live underlying price for the token to disagree with.
+  if (reference.kind === 'official-close') {
+    const gapBps = absBps(premiumBps)
+    const material = gapBps != null && gapBps >= MOVE_THRESHOLD_BPS
+    if (material) {
+      return verdict({
+        decision: 'WAIT',
+        code: 'CLOSED_MARKET_DRIFT',
+        headline: `${bpsLabel(premiumBps)} from the last official close`,
+        reason: `${reference.note} The gap is ${gapBps} bps, beyond the ${MOVE_THRESHOLD_BPS} bps alignment threshold, so the token is pricing information the underlying market has not traded on yet.`,
+        evidenceIds: ['token', 'reference', 'drift', 'turnover', 'session'],
+        conditions: [
+          'The underlying opens and trades to within 20 bps of the token price',
+          'The gap reverts toward the official close before the market opens',
+          'A timing-consistent catalyst is found that explains the repricing',
+        ],
+        nextStep: 'Run the historical stress test for a drift of this size to see how often comparable gaps resolved the same way, then run catalyst attribution on this instrument.',
+        referenceKind: 'official-close',
+      })
+    }
+    return verdict({
+      decision: 'CLEAR',
+      code: 'CLOSED_MARKET_ALIGNED',
+      headline: `Sitting at the last official close (${bpsLabel(premiumBps ?? 0)})`,
+      reason: `${reference.note} The gap is ${gapBps ?? 0} bps, inside the ${MOVE_THRESHOLD_BPS} bps alignment threshold, so the token is not pricing unconfirmed information.`,
+      evidenceIds: ['token', 'reference', 'drift', 'session'],
+      conditions: ['A gap beyond the alignment threshold opens while the underlying is still not in its main session'],
+      nextStep: 'No integrity obstacle. Standard research applies.',
+      referenceKind: 'official-close',
+    })
+  }
+
+  // 4. A live underlying disagrees beyond the fail threshold: a state contradiction.
   if (alignmentState === 'fail' && !reference.stale) {
     return verdict({
       decision: 'BLOCKED',
@@ -113,13 +155,14 @@ export function evaluateGate(input) {
       evidenceIds: ['token', 'reference', 'drift', 'session'],
       conditions: [
         'The gap narrows inside the 20 bps pass threshold',
-        'The reference quote goes stale, which would move this to the closed-reference path',
+        'The reference quote goes stale, which would move this to the stale-reference path',
       ],
       nextStep: 'Do not act on either price. Re-check both sources before forming a view.',
+      referenceKind: 'live-quote',
     })
   }
 
-  // 4/5. The reference cannot price-verify the token: the market is closed, the
+  // 5. No reference can price-verify the token: the market is closed, the
   // quote comes from an earlier session, or the feed has stalled. This is the
   // desk's signature case — the token keeps trading while nothing can confirm it,
   // so the question is whether the drift is material, not whether it is "wrong".
@@ -165,6 +208,7 @@ export function evaluateGate(input) {
         'The premium widens past 100 bps, which would block the state outright',
       ],
       nextStep: 'Check whether the gap is widening or converging before relying on this price.',
+      referenceKind: 'live-quote',
     })
   }
 
@@ -214,6 +258,7 @@ export function evaluateGate(input) {
       'The quoted spread widens beyond the pass threshold',
     ],
     nextStep: 'No integrity obstacle. Standard research applies.',
+    referenceKind: 'live-quote',
   })
 }
 

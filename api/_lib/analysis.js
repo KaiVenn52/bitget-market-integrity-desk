@@ -75,48 +75,85 @@ export const isReferenceLive = (session) => session === 'regular'
 // still reports "Intraday" hours later.
 export const REFERENCE_STALE_SECONDS = 300
 
+/** ET calendar date of an instant, used to line a token up with official daily closes. */
+export function etDateKey(ms) {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(ms))
+  const get = (type) => parts.find((part) => part.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')}`
+}
+
 /**
  * Choose the reference price a trader should actually compare against.
- * Preference order: a quote from the session we are in, then the freshest quote
- * available. The returned `stale` flag drives the drift-versus-basis wording, and
- * `staleReason` says *why* it is not live so the UI cannot call a stalled feed a
- * closed market.
+ *
+ * Preference order: a quote from the session we are in, then — while the main
+ * session is not running — the last official close, then the freshest quote
+ * available. The last official close is not a consolation prize: while the
+ * underlying cannot trade, the price it last traded at *is* the correct basis, and
+ * it is retrievable without an authenticated feed. A quote is only a basis while
+ * its own session is running.
+ *
+ * `stale` means no reference could be established at all, and `staleReason` says
+ * why, so the UI can never call a stalled feed a closed market. `kind` records what
+ * the chosen reference actually is, and every verdict that rests on it repeats it.
  */
-export function pickReference(candidates, nowMs) {
+export function pickReference(candidates, nowMs, options = {}) {
   const usable = (candidates ?? [])
     .filter((item) => item && Number.isFinite(item.price) && Number.isFinite(item.timestampMs))
     .map((item) => ({ ...item, ageSeconds: Math.max(0, Math.round((nowMs - item.timestampMs) / 1000)), session: item.session ?? sessionOf(item.timestampMs) }))
-  if (!usable.length) return { chosen: null, candidates: [], stale: true, staleReason: 'missing', note: 'No reference quote was retrieved; alignment is not calculated.' }
   const current = sessionOf(nowMs)
   const sameSession = usable.filter((item) => item.session === current).sort((a, b) => a.ageSeconds - b.ageSeconds)
   const chosen = sameSession[0] ?? [...usable].sort((a, b) => a.ageSeconds - b.ageSeconds)[0]
-  // The underlying can only reprice while an equity session is open. Outside one,
-  // a gap is token-side drift; inside one, a gap from an earlier session or from a
-  // stalled feed is an outdated reference. All three must be labelled, and none
-  // may be called a tradable basis.
-  const underlyingTradable = current !== 'overnight'
-  const staleReason = !underlyingTradable
-    ? 'market-closed'
-    : chosen.session !== current
-      ? 'session-mismatch'
-      : chosen.ageSeconds > REFERENCE_STALE_SECONDS
-        ? 'quote-age'
-        : null
-  const note = staleReason === 'market-closed'
-    ? `The underlying market is closed (${sessionLabel(current)}), so any gap is token-side drift rather than a tradable basis.`
-    : staleReason === 'session-mismatch'
-      ? `The freshest reference comes from the ${sessionLabel(chosen.session)} window, not the current ${sessionLabel(current)} window.`
+  const closes = (options.dailyCloses ?? []).filter((row) => row && Number.isFinite(row.close) && row.close > 0)
+  const latestClose = closes.length ? closes[closes.length - 1] : null
+
+  // The main session is the only window where the underlying trades continuously,
+  // so inside it a live quote is the only valid basis.
+  const liveQuote = chosen && chosen.session === current && chosen.ageSeconds <= REFERENCE_STALE_SECONDS ? chosen : null
+  const useOfficialClose = !liveQuote && current !== 'regular' && latestClose
+
+  if (!liveQuote && !useOfficialClose) {
+    // No quote can serve as a basis. Either nothing was retrieved at all, or the
+    // main session is running — where the previous close is not a basis because the
+    // underlying is trading at a different price right now.
+    if (!chosen) {
+      const note = latestClose
+        ? 'No reference quote was retrieved, and an official close cannot stand in for one while the underlying is in its main session, so there is no basis to compare against.'
+        : 'No reference quote and no official close were retrieved; alignment is not calculated.'
+      return { chosen: null, candidates: [], stale: true, staleReason: 'missing', kind: null, underlyingTradable: current !== 'overnight', currentSession: current, note }
+    }
+    const underlyingTradable = current !== 'overnight'
+    const staleReason = underlyingTradable ? (chosen.session !== current ? 'session-mismatch' : 'quote-age') : 'market-closed'
+    const note = staleReason === 'session-mismatch'
+      ? `The freshest reference comes from the ${sessionLabel(chosen.session)} window, not the current ${sessionLabel(current)} window, and no official close was retrieved to stand in for it.`
       : staleReason === 'quote-age'
         ? `The freshest reference quote is ${chosen.ageSeconds}s old, beyond the ${REFERENCE_STALE_SECONDS}s ceiling for a live basis, so the reference cannot price-verify this token right now.`
-        : `Reference belongs to the current ${sessionLabel(current)} window.`
+        : 'The underlying market is closed and no official close was retrieved, so there is no reference to compare against.'
+    return { chosen, candidates: usable.sort((a, b) => a.ageSeconds - b.ageSeconds), stale: true, staleReason, kind: null, underlyingTradable, currentSession: current, note }
+  }
+
+  if (useOfficialClose) {
+    return {
+      chosen: { price: latestClose.close, timestampMs: latestClose.ts ?? nowMs, session: 'closed', ageSeconds: null, source: latestClose.source ?? 'official daily close' },
+      candidates: usable.sort((a, b) => a.ageSeconds - b.ageSeconds),
+      stale: false,
+      staleReason: null,
+      kind: 'official-close',
+      closeDateKey: latestClose.dateKey ?? null,
+      underlyingTradable: false,
+      currentSession: current,
+      note: `The underlying is not in its main session (${sessionLabel(current)}), so the last official close of ${latestClose.close} is the correct basis. Any gap against it is token-side movement the underlying has not confirmed.`,
+    }
+  }
+
   return {
-    chosen,
+    chosen: liveQuote,
     candidates: usable.sort((a, b) => a.ageSeconds - b.ageSeconds),
-    stale: staleReason !== null,
-    staleReason,
-    underlyingTradable,
+    stale: false,
+    staleReason: null,
+    kind: 'live-quote',
+    underlyingTradable: true,
     currentSession: current,
-    note,
+    note: `Reference belongs to the current ${sessionLabel(current)} window and is ${liveQuote.ageSeconds}s old.`,
   }
 }
 

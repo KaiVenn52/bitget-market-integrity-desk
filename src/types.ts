@@ -148,6 +148,8 @@ export interface GateVerdict {
   evidenceIds: string[]
   conditions: string[]
   nextStep: string
+  /** What the basis was: an authenticated live quote, or the last official close. */
+  referenceKind: 'live-quote' | 'official-close' | null
 }
 
 export interface SweepEntry {
@@ -198,4 +200,93 @@ export interface DeskLogEntry {
   headline: string
   detail: string
   verdicts: { symbol: string; decision: GateDecision; code: string; headline: string }[]
+}
+
+// --- Historical stress test ---------------------------------------------------
+
+export interface StudyEpisode {
+  anchorMs: number
+  anchorPrice: number
+  windowHours: number
+  peakDriftBps: number
+  resolutionBps: number | null
+  directionMatch: boolean | null
+  underlyingResolutionBps: number | null
+  underlyingDirectionMatch: boolean | null
+}
+
+/** What the following session did, relative to the drift being tested. */
+export type StudyOutcome = 'confirmed' | 'contradicted' | 'flat' | 'unknown'
+
+export interface StudyMatched {
+  anchorMs: number
+  windowHours: number
+  peakDriftBps: number
+  sessionCloseMs: number
+  resolutionBps: number
+  directionMatch: boolean
+  errorBps: number
+  maxFavourableBps: number | null
+  maxAdverseBps: number | null
+  underlyingResolutionBps: number | null
+  underlyingDirectionMatch: boolean | null
+  underlyingErrorBps: number | null
+  /** Whether the session that followed materially moved the way the drift implied. */
+  outcome: StudyOutcome
+  usedResolutionBps: number
+  usedSource: 'underlying' | 'token'
+}
+
+export interface StudyResult {
+  symbol: string
+  company?: string
+  generatedAt: string
+  available: boolean
+  reason?: string
+  mode: DataMode
+  reasoningMode: ReasoningMode
+  lookback: { candles: number; from: string; to: string }
+  target: { driftBps: number | null; bandBps: number; minWindowHours: number; source: string; material: boolean; context: string }
+  current: {
+    lastCandleMs: number
+    lastClose: number
+    session: string
+    sessionLabel: string
+    underlyingTradable: boolean
+    anchorMs: number | null
+    anchorPrice: number | null
+    driftBps: number | null
+  } | null
+  distribution: {
+    observations: number
+    medianAbsBps: number | null
+    p75AbsBps: number | null
+    p90AbsBps: number | null
+    p95AbsBps: number | null
+    maxAbsBps: number | null
+    aboveThresholdPct: number | null
+    above100Pct: number | null
+    above200Pct: number | null
+  }
+  stats: {
+    episodes: number
+    confirmed: number
+    contradicted: number
+    /** Sessions that closed inside the alignment threshold: neither support nor refutation. */
+    flat: number
+    materialEpisodes: number
+    confirmationRate: number | null
+    flatRate: number | null
+    medianErrorBps: number | null
+    medianResolutionBps: number | null
+    worstErrorBps: number | null
+    direction: 'up' | 'down' | null
+    source: 'underlying' | 'token' | 'mixed' | null
+  }
+  verdict: { headline: string; detail: string; tone?: string }
+  matched: StudyMatched[]
+  episodes: StudyEpisode[]
+  coverage: { episodes: number; resolved: number; withUnderlying: number }
+  evidence: EvidenceItem[]
+  sourceErrors: string[]
 }

@@ -14,6 +14,7 @@ import {
   attempt,
   fetchCandles,
   fetchHeadlines,
+  fetchDailyCloses,
   fetchReferenceQuotes,
   fetchTicker,
   INSTRUMENTS,
@@ -67,10 +68,11 @@ export default async function handler(req, res) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), SOURCE_TIMEOUT_MS + 4000)
   try {
-    const [tickerResult, candleResult, referenceQuotes, news] = await Promise.all([
+    const [tickerResult, candleResult, referenceQuotes, dailyCloses, news] = await Promise.all([
       attempt(() => fetchTicker(symbol, controller.signal), { data: null }),
       attempt(() => fetchCandles(symbol, '5m', 200, controller.signal), { data: [] }),
       fetchReferenceQuotes(meta, controller.signal),
+      fetchDailyCloses(meta.ticker).then((result) => result.closes).catch(() => []),
       fetchHeadlines(meta, { timeoutMs: NEWS_TIMEOUT_MS }),
     ])
 
@@ -79,7 +81,7 @@ export default async function handler(req, res) {
     const candles = (candleResult.data ?? []).map(toCandle).filter((row) => Number.isFinite(row.timestamp) && Number.isFinite(row.close)).sort((a, b) => a.timestamp - b.timestamp)
 
     const session = sessionOf(now)
-    const reference = pickReference(referenceQuotes, now)
+    const reference = pickReference(referenceQuotes, now, { dailyCloses })
     const referencePrice = reference.chosen?.price ?? null
     const spread = spreadOf(token)
     const move = detectMove(candles)

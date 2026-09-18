@@ -23,7 +23,7 @@ import {
   turnoverAcceleration,
 } from './_lib/analysis.js'
 import { evaluateGate, summarizeSweep } from './_lib/gate.js'
-import { attempt, fetchCandles, fetchReferenceQuotes, fetchTicker, INSTRUMENTS, SYMBOLS, toCandle } from './_lib/sources.js'
+import { attempt, fetchCandles, fetchDailyCloses, fetchReferenceQuotes, fetchTicker, INSTRUMENTS, SYMBOLS, toCandle } from './_lib/sources.js'
 
 export const config = { maxDuration: 30 }
 
@@ -129,10 +129,11 @@ function buildEvidence({ symbol, now, token, tokenAge, candles, reference, drift
 
 async function sweepOne(symbol, meta, signal) {
   const now = Date.now()
-  const [tickerResult, candleResult, referenceQuotes] = await Promise.all([
+  const [tickerResult, candleResult, referenceQuotes, dailyCloses] = await Promise.all([
     attempt(() => fetchTicker(symbol, signal), { data: null }),
     attempt(() => fetchCandles(symbol, '5m', CANDLE_LIMIT, signal), { data: [] }),
     fetchReferenceQuotes(meta, signal),
+    fetchDailyCloses(meta.ticker).then((result) => result.closes).catch(() => []),
   ])
 
   const token = (tickerResult.data ?? []).find?.((item) => String(item.symbol).toLowerCase() === symbol.toLowerCase()) ?? tickerResult.data?.[0] ?? null
@@ -146,7 +147,9 @@ async function sweepOne(symbol, meta, signal) {
     ? Math.max(0, Math.round((now - Number(token.ts || now)) / 1000))
     : null
 
-  const reference = pickReference(referenceQuotes, now)
+  // The official close is passed in so the gate has a basis while the underlying
+  // cannot trade, without needing an authenticated quote to exist.
+  const reference = pickReference(referenceQuotes, now, { dailyCloses })
   const referencePrice = reference.chosen?.price ?? null
   const premiumBps = Number.isFinite(tokenPrice) && referencePrice != null ? bpsBetween(tokenPrice, referencePrice) : null
   const alignmentState = alignmentStateOf(premiumBps)
