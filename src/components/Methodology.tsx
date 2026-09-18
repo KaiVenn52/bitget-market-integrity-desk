@@ -46,6 +46,7 @@ export function Methodology() {
         <li>Where official underlying closes were not retrieved, the historical study falls back to the rToken's own session close and labels that fallback as a proxy.</li>
         <li>Excursion figures in the stress test come from hourly highs and lows, so intra-hour extremes are not captured.</li>
         <li>A gate verdict describes whether the state can be verified. It is not advice, and a clear verdict is not a recommendation to trade.</li>
+        <li>The official Skill layer was probed with the argument shapes it publishes, and withheld. Its transport answers in under a second, but no tool returned a usable observation about a gated instrument or its underlying, and the one tool that carries data ignores the exchange parameter — it reports a Binance error for a Bitget symbol — so it cannot see Bitget at all. The probe is committed and reproducible; the finding is a missing source, not a market fact.</li>
         <li>This tool does not predict returns or recommend trades.</li>
       </ul>
     </section>

@@ -1,36 +1,382 @@
 {
-  "probedAt": "2026-09-12T09:46:12.476Z",
+  "probedAt": "2026-09-18T19:00:05.555Z",
   "server": "https://datahub.noxiaohao.com/mcp",
   "package": "@bitget-ai/bitget-signal",
+  "serverInfo": {
+    "name": "market-data-mcp",
+    "version": "1.26.0"
+  },
+  "transport": {
+    "reachable": true,
+    "initializeMs": 284,
+    "toolsListMs": 162
+  },
+  "advertisedToolCount": 19,
+  "advertisedTools": [
+    "crypto_market",
+    "defi_analytics",
+    "dex_market",
+    "sentiment_index",
+    "tradfi_news",
+    "crypto_price",
+    "social_trending",
+    "network_status",
+    "derivatives_sentiment",
+    "global_data",
+    "news_feed",
+    "cn_market",
+    "global_assets",
+    "crypto_derivatives",
+    "technical_analysis",
+    "backtest",
+    "macro_indicators",
+    "rates_yields",
+    "cross_asset"
+  ],
+  "callTimeoutMs": 20000,
   "probes": [
     {
       "tool": "global_assets",
-      "latencyMs": 15155,
-      "result": {
-        "content": [
-          {
-            "type": "text",
-            "text": "Error executing tool global_assets: "
-          }
-        ],
-        "isError": true
-      }
+      "arguments": {
+        "action": "price",
+        "symbol": "TSLA"
+      },
+      "target": "underlying",
+      "wouldAnswer": "the underlying official price, as a second path to the reference tier",
+      "outcome": "error",
+      "latencyMs": 15137,
+      "payloadBytes": 36,
+      "sample": "Error executing tool global_assets: "
+    },
+    {
+      "tool": "global_assets",
+      "arguments": {
+        "action": "ohlcv",
+        "symbol": "TSLA",
+        "period": "1mo",
+        "interval": "1d"
+      },
+      "target": "underlying",
+      "wouldAnswer": "official daily closes, to cross-check the retrieved reference",
+      "outcome": "timeout",
+      "latencyMs": 20011,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "cross_asset",
+      "arguments": {
+        "action": "correlation",
+        "base": "TSLA",
+        "targets": "spx,ndx,vix",
+        "period": "90d"
+      },
+      "target": "underlying",
+      "wouldAnswer": "whether a move is idiosyncratic or market-wide",
+      "outcome": "timeout",
+      "latencyMs": 20011,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "macro_indicators",
+      "arguments": {
+        "action": "multi_indicator",
+        "indicators": "cpi,nonfarm_payrolls"
+      },
+      "target": "market-context",
+      "wouldAnswer": "scheduled macro releases that reprice the whole market",
+      "outcome": "timeout",
+      "latencyMs": 20011,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "rates_yields",
+      "arguments": {
+        "action": "yield_curve"
+      },
+      "target": "market-context",
+      "wouldAnswer": "the rate regime a move is happening inside",
+      "outcome": "timeout",
+      "latencyMs": 20016,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "tradfi_news",
+      "arguments": {
+        "action": "earnings",
+        "symbol": "TSLA"
+      },
+      "target": "underlying",
+      "wouldAnswer": "a scheduled earnings date: a known, dated catalyst",
+      "outcome": "empty",
+      "latencyMs": 15290,
+      "payloadBytes": 13,
+      "sample": "{\"error\": \"\"}"
+    },
+    {
+      "tool": "tradfi_news",
+      "arguments": {
+        "action": "company",
+        "symbol": "TSLA"
+      },
+      "target": "underlying",
+      "wouldAnswer": "the instrument profile",
+      "outcome": "empty",
+      "latencyMs": 15241,
+      "payloadBytes": 13,
+      "sample": "{\"error\": \"\"}"
     },
     {
       "tool": "news_feed",
-      "latencyMs": 20186,
-      "result": {
-        "content": [
-          {
-            "type": "text",
-            "text": "[{\"feed\": \"cnbc\", \"error\": \"\", \"items\": []}, {\"feed\": \"techcrunch\", \"error\": \"\", \"items\": []}]"
-          }
-        ],
-        "isError": false
-      }
+      "arguments": {
+        "action": "latest",
+        "feeds": "all",
+        "keyword": "Tesla",
+        "limit": 3
+      },
+      "target": "underlying",
+      "wouldAnswer": "an independent headline source",
+      "outcome": "timeout",
+      "latencyMs": 20005,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "news_feed",
+      "arguments": {
+        "action": "sources"
+      },
+      "target": "unrelated",
+      "wouldAnswer": "which feeds exist (an inventory, not an observation)",
+      "outcome": "usable",
+      "latencyMs": 270,
+      "payloadBytes": 589,
+      "sample": "{\"feeds\": [\"cointelegraph\", \"decrypt\", \"bitcoinist\", \"blockworks\", \"the_defiant\", \"watcherguru\", \"coindesk\", \"cryptonews_com\", \"u_today\", \"cryptobriefing\", \"cryptonews\", \"bitcoin_com\", \"newsbtc\", \"amb"
+    },
+    {
+      "tool": "crypto_derivatives",
+      "arguments": {
+        "action": "price",
+        "symbol": "rTSLA/USDT",
+        "exchange": "bitget"
+      },
+      "target": "gated-instrument",
+      "wouldAnswer": "the gated instrument itself, through Bitget",
+      "outcome": "error",
+      "latencyMs": 275,
+      "payloadBytes": 59,
+      "sample": "{\"error\": \"binance does not have market symbol rTSLA/USDT\"}"
+    },
+    {
+      "tool": "crypto_derivatives",
+      "arguments": {
+        "action": "klines",
+        "symbol": "rTSLA/USDT",
+        "exchange": "bitget",
+        "timeframe": "1h",
+        "limit": 6
+      },
+      "target": "gated-instrument",
+      "wouldAnswer": "hourly candles for the gated instrument",
+      "outcome": "error",
+      "latencyMs": 144,
+      "payloadBytes": 59,
+      "sample": "{\"error\": \"binance does not have market symbol rTSLA/USDT\"}"
+    },
+    {
+      "tool": "crypto_derivatives",
+      "arguments": {
+        "action": "price",
+        "symbol": "BTC/USDT",
+        "exchange": "bitget"
+      },
+      "target": "unrelated",
+      "wouldAnswer": "a control: a pair Binance lists, requested from Bitget",
+      "outcome": "usable",
+      "latencyMs": 202,
+      "payloadBytes": 103,
+      "sample": "{\"symbol\": \"BTC/USDT\", \"price\": 80917.76, \"bid\": 80917.75, \"ask\": 80917.76, \"timestamp\": 1789757820012}"
+    },
+    {
+      "tool": "crypto_derivatives",
+      "arguments": {
+        "action": "price",
+        "symbol": "BTC/USDT",
+        "exchange": "okx"
+      },
+      "target": "unrelated",
+      "wouldAnswer": "a control: the same pair requested from OKX",
+      "outcome": "usable",
+      "latencyMs": 158,
+      "payloadBytes": 103,
+      "sample": "{\"symbol\": \"BTC/USDT\", \"price\": 80917.76, \"bid\": 80917.75, \"ask\": 80917.76, \"timestamp\": 1789757820012}"
+    },
+    {
+      "tool": "crypto_market",
+      "arguments": {
+        "action": "global"
+      },
+      "target": "market-context",
+      "wouldAnswer": "crypto market-wide risk context",
+      "outcome": "timeout",
+      "latencyMs": 20008,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "sentiment_index",
+      "arguments": {
+        "action": "current"
+      },
+      "target": "market-context",
+      "wouldAnswer": "crypto risk appetite",
+      "outcome": "timeout",
+      "latencyMs": 20010,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "derivatives_sentiment",
+      "arguments": {
+        "action": "long_short",
+        "symbol": "BTCUSDT"
+      },
+      "target": "market-context",
+      "wouldAnswer": "positioning on the venue the rTokens trade in",
+      "outcome": "empty",
+      "latencyMs": 15261,
+      "payloadBytes": 13,
+      "sample": "{\"error\": \"\"}"
+    },
+    {
+      "tool": "global_data",
+      "arguments": {
+        "action": "forex",
+        "base": "USD",
+        "symbols": "EUR,JPY"
+      },
+      "target": "market-context",
+      "wouldAnswer": "dollar context for a dollar-denominated equity",
+      "outcome": "timeout",
+      "latencyMs": 20010,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "cn_market",
+      "arguments": {
+        "action": "price",
+        "symbol": "00700",
+        "market": "hk"
+      },
+      "target": "market-context",
+      "wouldAnswer": "a different equity market, for comparison",
+      "outcome": "timeout",
+      "latencyMs": 20008,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "technical_analysis",
+      "arguments": {
+        "action": "rsi",
+        "symbol": "BTC/USDT",
+        "timeframe": "4h"
+      },
+      "target": "unrelated",
+      "wouldAnswer": "momentum, but only on a pair Binance lists",
+      "outcome": "usable",
+      "latencyMs": 334,
+      "payloadBytes": 93,
+      "sample": "{\"symbol\": \"BTC/USDT\", \"timeframe\": \"4h\", \"rsi\": 78.24, \"period\": 14, \"signal\": \"overbought\"}"
+    },
+    {
+      "tool": "defi_analytics",
+      "arguments": {
+        "action": "tvl_rank",
+        "limit": 3
+      },
+      "target": "unrelated",
+      "wouldAnswer": "nothing this desk needs; probed for completeness",
+      "outcome": "timeout",
+      "latencyMs": 20016,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "dex_market",
+      "arguments": {
+        "action": "trending"
+      },
+      "target": "unrelated",
+      "wouldAnswer": "nothing this desk needs; probed for completeness",
+      "outcome": "empty",
+      "latencyMs": 15240,
+      "payloadBytes": 71,
+      "sample": "{\"error\": \"\", \"url\": \"https://api.dexscreener.com/token-boosts/top/v1\"}"
+    },
+    {
+      "tool": "social_trending",
+      "arguments": {
+        "action": "trending",
+        "platform": "xueqiu",
+        "limit": 3
+      },
+      "target": "unrelated",
+      "wouldAnswer": "retail attention, if it were reachable",
+      "outcome": "timeout",
+      "latencyMs": 20010,
+      "payloadBytes": 0,
+      "sample": ""
+    },
+    {
+      "tool": "network_status",
+      "arguments": {
+        "action": "eth_gas"
+      },
+      "target": "unrelated",
+      "wouldAnswer": "nothing this desk needs; probed for completeness",
+      "outcome": "empty",
+      "latencyMs": 15290,
+      "payloadBytes": 55,
+      "sample": "{\"error\": \"\", \"url\": \"https://ethgasprice.org/api/gas\"}"
+    },
+    {
+      "tool": "crypto_price",
+      "arguments": {
+        "action": "price",
+        "symbol": "BTC,ETH"
+      },
+      "target": "unrelated",
+      "wouldAnswer": "a second crypto price source",
+      "outcome": "timeout",
+      "latencyMs": 20014,
+      "payloadBytes": 0,
+      "sample": ""
     }
   ],
-  "usableProbeCount": 0,
+  "summary": {
+    "probed": 24,
+    "usable": 4,
+    "empty": 5,
+    "error": 3,
+    "timeout": 12,
+    "usableTools": [
+      "news_feed[unrelated]",
+      "crypto_derivatives[unrelated]",
+      "crypto_derivatives[unrelated]",
+      "technical_analysis[unrelated]"
+    ],
+    "actionableProbes": 0,
+    "actionableTools": [],
+    "slowestMs": 20016,
+    "requestedExchange": "bitget",
+    "exchangeParameterHonoured": false,
+    "exchangeParameterEvidence": "A call requesting exchange=bitget answered: {\"error\": \"binance does not have market symbol rTSLA/USDT\"}"
+  },
   "productionIntegrationDecision": "withheld",
-  "decisionReason": "At least one required tool timed out, errored, or returned no usable source data. The live desk remains unchanged to protect latency and evidence quality."
+  "decisionReason": "The transport answers in under a second and advertises its tools, but no tool returned a usable observation about a gated instrument or its underlying. Every equity, macro and news upstream timed out, errored, or returned a payload with no observation in it; the only tools that carry data are crypto ones that speak about pairs Binance lists, and the exchange parameter is ignored, so they cannot see Bitget or any tokenized equity. A source that returns nothing is a missing source, not a finding, so the Skill layer is withheld from verdicts rather than rendered as an empty panel."
 }

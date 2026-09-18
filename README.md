@@ -60,6 +60,21 @@ The gate can say "the reference cannot confirm this, and the token has moved 478
 - **It refuses to answer when there is nothing to test.** A drift inside the 20 bps alignment threshold is not an event, so the desk declines to compare it to history rather than dressing up a meaningless match.
 - **It is a base rate, not a forecast.** The sample is weeks of hourly candles, no significance is claimed, and the declared limits are printed on the page.
 
+## The official Skill layer: probed, and withheld
+
+The hackathon's `@bitget-ai/bitget-signal` layer advertises 19 tools, several of which would genuinely improve this desk — an official price for the underlying, a cross-asset correlation that separates an idiosyncratic move from a market-wide one, a scheduled earnings date, macro release dates. So it was probed properly rather than assumed either way.
+
+`scripts/probe-bitget-signal.mjs` calls every tool with the argument shape published by `tools/list` — not a guessed one, because a probe that calls a tool wrongly measures the probe, not the source — and classifies each answer as `usable`, `empty`, `error` or `timeout`. The saved result is `benchmark/bitget-signal-probe.json`.
+
+**Result: the transport is healthy and the data is not.** `initialize` answers in ~0.4s and `tools/list` in ~0.2s, but of 24 probes only 4 returned any data at all — and **none of those 4 was about a gated instrument or its underlying**. 5 answered with a shell containing no observation, 3 errored, 12 timed out at the 20-second ceiling:
+
+- Every equity, macro and news upstream timed out, errored, or answered with an empty shell: `global_assets` and `cross_asset` (Yahoo), `macro_indicators` and `rates_yields` (FRED), `tradfi_news` (Finnhub), `news_feed` (44 RSS feeds, every one empty), `cn_market` (AKShare), `crypto_market` (CoinGecko), `sentiment_index`.
+- The 4 that carry data are crypto ones speaking about pairs Binance lists — a BTC/USDT price, BTC/USDT RSI, and a feed inventory. That is a neighbour, not an integration: it cannot change a single verdict about a tokenized equity.
+- **The `exchange` parameter is ignored**: a call requesting `exchange: bitget` for `rTSLA/USDT` answers *"binance does not have market symbol rTSLA/USDT"* — the error names the exchange it actually used, and it is not the one requested. Two control calls confirm the tool itself works, so the failure belongs to the exchange, not the tool. It therefore cannot see Bitget, let alone a tokenized equity.
+- `rates_yields` answers `spread_10y2y: 0.0` and `inverted: false` while every yield behind that spread is an empty error shell, and two other tools answer with nothing but the request URL read back to the caller. A zero next to an empty shell is a default and an echoed endpoint is not a fact; the probe's classifier says so rather than counting them as data.
+
+**Decision: withheld.** A working tool that only speaks about BTC is a neighbour, not an integration — it cannot change a single verdict about a tokenized equity — and shipping a 15–30 second call that renders an empty panel would be exactly the dishonesty this desk exists to prevent. The probe is committed so the finding is reproducible and can be re-run: if the upstreams recover, the same script reports `eligible_for_bounded_adapter` and the layer can be integrated against a measured baseline rather than a guess.
+
 ## What is real today
 
 - Deterministic premium and freshness checks with published thresholds.
