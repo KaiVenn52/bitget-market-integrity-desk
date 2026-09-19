@@ -4,6 +4,7 @@ import {
   driftSeries,
   pickReference,
   rankHeadlines,
+  referenceEvidence,
   sessionLabel,
   sessionOf,
   spreadOf,
@@ -28,7 +29,17 @@ import {
 
 const QWEN_URL = 'https://hackathon.bitgetops.com/v1/responses'
 const SOURCE_TIMEOUT_MS = 9000
-const QWEN_TIMEOUT_MS = 25_000
+// Measured in production. Retrieval from a Vercel region costs roughly 1-2s, so the
+// model has almost the whole function budget. Two runs answered in 20-22s end to end
+// (model ~13-15s); every run after that hit a 25s deadline, so the ceiling was the
+// binding constraint rather than the endpoint, which is healthy — an invalid token is
+// refused in 3s.
+//
+// 40s is the largest deadline that still leaves room to answer: 2s of retrieval plus
+// 40s of generation lands inside the 45s budget, so a slow model degrades to the
+// labelled deterministic fallback instead of the platform killing the request. A 504
+// would tell the trader nothing, which is worse than an honest RULES answer.
+const QWEN_TIMEOUT_MS = 40_000
 const NEWS_TIMEOUT_MS = 8000
 
 export const config = { maxDuration: 45 }
@@ -117,11 +128,9 @@ export default async function handler(req, res) {
         : move.reason,
       source: 'Deterministic calculation', endpoint: 'api/_lib/analysis.js#detectMove', retrievedAt: new Date(now).toISOString(),
     })
-    evidence.push({
-      id: 'reference', title: 'Reference price selection', state: reference.stale ? 'caution' : 'pass',
-      summary: reference.chosen ? `${reference.chosen.label ?? reference.chosen.session} reference ${reference.chosen.price} USD, age ${reference.chosen.ageSeconds}s. ${reference.note}` : reference.note,
-      source: 'Bitget Stock+', endpoint: reference.chosen?.endpoint ?? '/api/v3/stockplus/market/quote', retrievedAt: new Date(now).toISOString(),
-    })
+    // Same rule as the sweep: name the source that actually answered, from one
+    // shared builder, so the two endpoints cannot drift apart on provenance.
+    evidence.push(referenceEvidence(reference, now))
     evidence.push({
       id: 'drift', title: reference.stale ? 'Token drift versus closed reference' : 'Basis versus live reference', state: drift.currentBps === null ? 'unknown' : Math.abs(drift.currentBps) <= 20 ? 'pass' : Math.abs(drift.currentBps) <= 100 ? 'caution' : 'fail',
       summary: drift.currentBps === null ? drift.note : `${drift.currentBps} bps now against ${drift.priorBps} bps ${drift.lookbackMinutes} minutes ago. ${drift.note}`,
@@ -166,6 +175,9 @@ export default async function handler(req, res) {
       const allowedIds = evidence.map((item) => item.id)
       const qwenController = new AbortController()
       const qwenTimer = setTimeout(() => qwenController.abort(), QWEN_TIMEOUT_MS)
+      // Reported on every run so the model's real latency is visible in production
+      // rather than inferred from a timeout that fires at the ceiling.
+      const qwenStartedMs = Date.now()
       try {
         const response = await fetch(QWEN_URL, {
           method: 'POST',
@@ -186,7 +198,7 @@ export default async function handler(req, res) {
             brief = parsed.brief
             briefEvidenceIds = check.accepted
             reasoningMode = 'qwen'
-            reasoningNote = `qwen3.8-max · ${check.accepted.length} citations verified against server evidence`
+            reasoningNote = `qwen3.8-max · ${check.accepted.length} citations verified against server evidence · answered in ${((Date.now() - qwenStartedMs) / 1000).toFixed(1)}s`
           } else {
             reasoningNote = check.rejected.length
               ? `Qwen cited ${check.rejected.length} unknown evidence ID(s) · deterministic fallback retained`
@@ -196,7 +208,13 @@ export default async function handler(req, res) {
           reasoningNote = `Qwen returned HTTP ${response.status} · deterministic fallback retained`
         }
       } catch (error) {
-        reasoningNote = `${sanitize(error instanceof Error ? error.message : error)} · deterministic fallback retained`
+        // Distinguish our own deadline from a transport failure. "This operation was
+        // aborted" is what Node says, and it tells a reader nothing about whether the
+        // model was slow or the endpoint was down.
+        const aborted = error instanceof Error && (error.name === 'AbortError' || /abort/i.test(error.message))
+        reasoningNote = aborted
+          ? `Qwen did not answer within ${Math.round(QWEN_TIMEOUT_MS / 1000)}s (waited ${((Date.now() - qwenStartedMs) / 1000).toFixed(1)}s) · deterministic fallback retained`
+          : `${sanitize(error instanceof Error ? error.message : error)} · deterministic fallback retained`
       } finally {
         clearTimeout(qwenTimer)
       }

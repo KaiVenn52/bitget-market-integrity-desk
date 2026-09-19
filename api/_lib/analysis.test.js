@@ -7,6 +7,7 @@ import {
   pickReference,
   priceLabel,
   rankHeadlines,
+  referenceEvidence,
   sessionOf,
   spreadOf,
   turnoverAcceleration,
@@ -201,6 +202,54 @@ describe('price formatting', () => {
     expect(result.kind).toBe('official-close')
     expect(result.note).toContain('222.27')
     expect(result.note).not.toContain('222.27000427246094')
+  })
+})
+
+describe('reference evidence provenance', () => {
+  const officialClose = {
+    chosen: { price: 336.1300048828125, timestampMs: AFTERHOURS - 86_400_000, session: 'closed', ageSeconds: null, source: 'Yahoo Finance chart API' },
+    candidates: [],
+    stale: false,
+    staleReason: null,
+    kind: 'official-close',
+    closeDateKey: '2026-09-18',
+    underlyingTradable: false,
+    currentSession: 'overnight',
+    note: 'The underlying is not in its main session (Overnight / closed), so the last official close of 336.13 is the correct basis.',
+  }
+
+  // The desk exists to catch misattributed evidence, so its own evidence panel must
+  // not attribute a keyless daily close to the authenticated Stock+ feed.
+  it('credits the source that actually answered, not Stock+', () => {
+    const record = referenceEvidence(officialClose, AFTERHOURS)
+    expect(record.source).toBe('Yahoo Finance chart API')
+    expect(record.source).not.toMatch(/Stock\+/)
+    expect(record.endpoint).toBe('/v8/finance/chart?interval=1d')
+  })
+
+  it('describes an official close by its session date, never a null age', () => {
+    const record = referenceEvidence(officialClose, AFTERHOURS)
+    expect(record.summary).toContain('2026-09-18')
+    expect(record.summary).toContain('336.13')
+    expect(record.summary).not.toMatch(/null/)
+    expect(record.summary).not.toContain('336.1300048828125')
+  })
+
+  it('still credits Stock+ for a live quote, where that is the truth', () => {
+    const record = referenceEvidence({
+      chosen: { price: 222.27, timestampMs: AFTERHOURS, session: 'regular', ageSeconds: 42, source: 'Bitget Stock+' },
+      candidates: [], stale: false, staleReason: null, kind: 'live-quote', underlyingTradable: true, currentSession: 'regular',
+      note: 'Reference belongs to the current Regular session window and is 42s old.',
+    }, AFTERHOURS)
+    expect(record.source).toBe('Bitget Stock+ quote')
+    expect(record.summary).toContain('age 42s')
+    expect(record.summary).not.toMatch(/null/)
+  })
+
+  it('marks a missing reference unknown and carries the reason through', () => {
+    const record = referenceEvidence({ chosen: null, candidates: [], stale: true, staleReason: 'missing', kind: null, underlyingTradable: false, currentSession: 'regular', note: 'No reference price was retrievable.' }, AFTERHOURS)
+    expect(record.state).toBe('unknown')
+    expect(record.summary).toContain('No reference price was retrievable')
   })
 })
 

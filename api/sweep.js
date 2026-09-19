@@ -17,6 +17,7 @@ import {
   detectMove,
   driftSeries,
   pickReference,
+  referenceEvidence,
   sessionLabel,
   sessionOf,
   spreadOf,
@@ -77,17 +78,9 @@ function buildEvidence({ symbol, now, token, tokenAge, candles, reference, drift
       retrievedAt: new Date(now).toISOString(),
     })
   }
-  evidence.push({
-    id: 'reference',
-    title: 'Session-aware underlying reference',
-    summary: reference.chosen
-      ? `Reference price ${reference.chosen.price} from the ${reference.chosen.label ?? reference.chosen.session} window, age ${reference.chosen.ageSeconds}s. ${reference.note}`
-      : reference.note,
-    state: reference.chosen ? (reference.stale ? 'caution' : 'pass') : 'unknown',
-    source: 'Bitget Stock+ quote',
-    endpoint: reference.chosen?.endpoint ?? '/api/v3/stockplus/market/quote',
-    retrievedAt: new Date(now).toISOString(),
-  })
+  // Provenance has to name the source that actually answered, so the reference
+  // record is built in one place and shared with the analysis endpoint.
+  evidence.push(referenceEvidence(reference, now))
   evidence.push({
     id: 'drift',
     title: 'Drift versus reference',

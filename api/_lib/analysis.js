@@ -172,6 +172,37 @@ export function pickReference(candidates, nowMs, options = {}) {
   }
 }
 
+/**
+ * The evidence record for the reference price.
+ *
+ * Provenance has to name the source that actually answered. An official close is
+ * retrieved from the keyless daily-close feed, not from Stock+, and it has a session
+ * date rather than a quote age — so labelling it "Bitget Stock+ quote" with
+ * "age nulls" would be both a misattribution and unreadable. That is the exact class
+ * of error this desk exists to catch, so it must not make it itself.
+ *
+ * @param reference - the value returned by `pickReference`.
+ * @param nowMs - the instant the evidence was retrieved.
+ */
+export function referenceEvidence(reference, nowMs) {
+  const officialClose = reference?.kind === 'official-close'
+  const chosen = reference?.chosen
+  const summary = !chosen
+    ? reference?.note ?? 'No reference price was retrievable.'
+    : officialClose
+      ? `Reference is the last official close of ${priceLabel(chosen.price)} from ${reference.closeDateKey ?? 'the prior session'}, retrieved from ${chosen.source}. ${reference.note}`
+      : `Reference price ${priceLabel(chosen.price)} from the ${chosen.label ?? sessionLabel(chosen.session)} window, age ${chosen.ageSeconds}s. ${reference.note}`
+  return {
+    id: 'reference',
+    title: 'Session-aware underlying reference',
+    summary,
+    state: chosen ? (reference.stale ? 'caution' : 'pass') : 'unknown',
+    source: officialClose ? (chosen?.source ?? 'Official daily close') : 'Bitget Stock+ quote',
+    endpoint: officialClose ? '/v8/finance/chart?interval=1d' : (chosen?.endpoint ?? '/api/v3/stockplus/market/quote'),
+    retrievedAt: new Date(nowMs).toISOString(),
+  }
+}
+
 export function spreadOf(ticker) {
   const bid = Number(ticker?.bid1Price)
   const ask = Number(ticker?.ask1Price)
