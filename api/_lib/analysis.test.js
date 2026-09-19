@@ -4,6 +4,7 @@ import {
   classifyHeadline,
   detectMove,
   driftSeries,
+  modelDeadlineMs,
   pickReference,
   priceLabel,
   rankHeadlines,
@@ -250,6 +251,39 @@ describe('reference evidence provenance', () => {
     const record = referenceEvidence({ chosen: null, candidates: [], stale: true, staleReason: 'missing', kind: null, underlyingTradable: false, currentSession: 'regular', note: 'No reference price was retrievable.' }, AFTERHOURS)
     expect(record.state).toBe('unknown')
     expect(record.summary).toContain('No reference price was retrievable')
+  })
+})
+
+describe('model deadline derived from the function budget', () => {
+  const base = { budgetMs: 45_000, reserveMs: 3_000, ceilingMs: 40_000 }
+
+  it('gives a fresh handler the full ceiling', () => {
+    expect(modelDeadlineMs({ ...base, elapsedMs: 0 })).toBe(40_000)
+    expect(modelDeadlineMs({ ...base, elapsedMs: 2_000 })).toBe(40_000)
+  })
+
+  // The regression this guards: a fixed 40s deadline with 2s of retrieval measured
+  // 42.3s end to end against a 45s ceiling, so a slower retrieval would have had the
+  // platform kill the request and return nothing instead of the labelled fallback.
+  it('shrinks when retrieval ran long, so the handler can still answer', () => {
+    const deadline = modelDeadlineMs({ ...base, elapsedMs: 8_000 })
+    expect(deadline).toBe(34_000)
+    expect(deadline + 8_000 + base.reserveMs).toBeLessThanOrEqual(base.budgetMs)
+  })
+
+  // While the remaining budget still exceeds the floor, the deadline must fit inside
+  // it — the floor binds only once retrieval has consumed all but 5s, past which no
+  // deadline can satisfy this and starting the call anyway costs nothing.
+  it('never exceeds the budget while the remaining budget exceeds the floor', () => {
+    for (const elapsedMs of [0, 2_000, 8_000, 20_000, 30_000, 37_000]) {
+      const deadline = modelDeadlineMs({ ...base, elapsedMs })
+      expect(deadline + elapsedMs + base.reserveMs).toBeLessThanOrEqual(base.budgetMs)
+    }
+  })
+
+  it('floors rather than starting a call with no time left', () => {
+    expect(modelDeadlineMs({ ...base, elapsedMs: 42_000 })).toBe(5_000)
+    expect(modelDeadlineMs({ ...base, elapsedMs: 60_000 })).toBe(5_000)
   })
 })
 

@@ -203,6 +203,24 @@ export function referenceEvidence(reference, nowMs) {
   }
 }
 
+/**
+ * How long a model call may be given, derived from what is left of the function budget.
+ *
+ * A fixed deadline cannot be safe here. The platform kills the function at its own
+ * limit, so a fixed deadline that ignores how long retrieval already took will either
+ * waste budget or — worse — run past the limit, at which point the platform returns
+ * nothing at all. An honest labelled fallback is strictly more useful than a 504.
+ *
+ * @param budgetMs - the platform's budget for the whole handler.
+ * @param elapsedMs - time already spent before the model call.
+ * @param reserveMs - what the handler needs to serialize its response afterwards.
+ * @param ceilingMs - the most the model may ever be given.
+ * @param floorMs - below this a call is not worth starting.
+ */
+export function modelDeadlineMs({ budgetMs, elapsedMs, reserveMs, ceilingMs, floorMs = 5_000 }) {
+  return Math.max(floorMs, Math.min(ceilingMs, budgetMs - elapsedMs - reserveMs))
+}
+
 export function spreadOf(ticker) {
   const bid = Number(ticker?.bid1Price)
   const ask = Number(ticker?.ask1Price)

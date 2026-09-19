@@ -2,6 +2,7 @@ import {
   buildVerdicts,
   detectMove,
   driftSeries,
+  modelDeadlineMs,
   pickReference,
   rankHeadlines,
   referenceEvidence,
@@ -29,16 +30,20 @@ import {
 
 const QWEN_URL = 'https://hackathon.bitgetops.com/v1/responses'
 const SOURCE_TIMEOUT_MS = 9000
-// Measured in production. Retrieval from a Vercel region costs roughly 1-2s, so the
-// model has almost the whole function budget. Two runs answered in 20-22s end to end
-// (model ~13-15s); every run after that hit a 25s deadline, so the ceiling was the
-// binding constraint rather than the endpoint, which is healthy — an invalid token is
-// refused in 3s.
+// The platform kills the function at `maxDuration`; this is the budget the handler
+// plans against, and the model deadline is derived from what is left of it.
+const FUNCTION_BUDGET_MS = 45_000
+// What the handler needs to serialize its response after the model returns. Without
+// it the model could finish at the last millisecond and the answer would never be sent.
+const RESPONSE_RESERVE_MS = 3_000
+// The most the model may ever be given. Measured in production: retrieval from a
+// Vercel region costs 1-2s, two runs answered in 20-22s end to end, and every run
+// after that hit a 25s deadline — so the deadline was the binding constraint rather
+// than the endpoint, which is healthy (an invalid token is refused in 3s).
 //
-// 40s is the largest deadline that still leaves room to answer: 2s of retrieval plus
-// 40s of generation lands inside the 45s budget, so a slow model degrades to the
-// labelled deterministic fallback instead of the platform killing the request. A 504
-// would tell the trader nothing, which is worse than an honest RULES answer.
+// This is a ceiling, not a guarantee: the effective deadline is whatever remains of
+// FUNCTION_BUDGET_MS. Raising it past the remaining budget would not buy the model
+// more time, it would only remove the chance to answer at all.
 const QWEN_TIMEOUT_MS = 40_000
 const NEWS_TIMEOUT_MS = 8000
 
@@ -78,6 +83,7 @@ export default async function handler(req, res) {
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), SOURCE_TIMEOUT_MS + 4000)
+  const handlerStartedMs = Date.now()
   try {
     const [tickerResult, candleResult, referenceQuotes, dailyCloses, news] = await Promise.all([
       attempt(() => fetchTicker(symbol, controller.signal), { data: null }),
@@ -173,8 +179,19 @@ export default async function handler(req, res) {
     const apiKey = process.env.BITGET_QWEN_API_KEY
     if (apiKey) {
       const allowedIds = evidence.map((item) => item.id)
+      // The model gets whatever is left of the function budget, not a fixed constant.
+      // A fixed 40s deadline plus retrieval measured at 42.3s end to end against a 45s
+      // ceiling means a slower retrieval would have the platform kill the request and
+      // return nothing, which is strictly worse than the labelled fallback: a 504 tells
+      // the trader nothing at all. The reserve is what the response needs to serialize.
+      const qwenDeadlineMs = modelDeadlineMs({
+        budgetMs: FUNCTION_BUDGET_MS,
+        elapsedMs: Date.now() - handlerStartedMs,
+        reserveMs: RESPONSE_RESERVE_MS,
+        ceilingMs: QWEN_TIMEOUT_MS,
+      })
       const qwenController = new AbortController()
-      const qwenTimer = setTimeout(() => qwenController.abort(), QWEN_TIMEOUT_MS)
+      const qwenTimer = setTimeout(() => qwenController.abort(), qwenDeadlineMs)
       // Reported on every run so the model's real latency is visible in production
       // rather than inferred from a timeout that fires at the ceiling.
       const qwenStartedMs = Date.now()
@@ -213,7 +230,7 @@ export default async function handler(req, res) {
         // model was slow or the endpoint was down.
         const aborted = error instanceof Error && (error.name === 'AbortError' || /abort/i.test(error.message))
         reasoningNote = aborted
-          ? `Qwen did not answer within ${Math.round(QWEN_TIMEOUT_MS / 1000)}s (waited ${((Date.now() - qwenStartedMs) / 1000).toFixed(1)}s) · deterministic fallback retained`
+          ? `Qwen did not answer within ${Math.round(qwenDeadlineMs / 1000)}s (waited ${((Date.now() - qwenStartedMs) / 1000).toFixed(1)}s) · deterministic fallback retained`
           : `${sanitize(error instanceof Error ? error.message : error)} · deterministic fallback retained`
       } finally {
         clearTimeout(qwenTimer)
