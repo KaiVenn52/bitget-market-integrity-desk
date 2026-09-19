@@ -15,6 +15,14 @@ const decisionLabel: Record<GateDecision, string> = {
 
 const clock = (iso: string) => `${iso.slice(11, 16)} UTC`
 const bpsText = (value: number | null | undefined) => (value === null || value === undefined ? 'n/a' : `${value > 0 ? '+' : ''}${value} bps`)
+// Prices arrive as full floats. Rendering one raw reads like a variable dump rather
+// than a market fact, so precision scales with magnitude and trailing zeros go.
+const priceText = (value: number | null | undefined) => {
+  if (value === null || value === undefined || !Number.isFinite(value)) return 'unavailable'
+  const magnitude = Math.abs(value)
+  const decimals = magnitude >= 100 ? 2 : magnitude >= 1 ? 3 : 6
+  return Number(value.toFixed(decimals)).toString()
+}
 
 function DecisionIcon({ decision }: { decision: GateDecision }) {
   if (decision === 'BLOCKED') return <AlertOctagon size={16} aria-hidden />
@@ -37,7 +45,7 @@ function EntryCard({ entry, onInspect }: { entry: SweepEntry; onInspect: (symbol
       <p className="gate-reason">{gate.reason}</p>
       <dl className="gate-metrics">
         <div><dt>Premium</dt><dd>{bpsText(entry.premiumBps)} <small>({entry.alignmentState})</small></dd></div>
-        <div><dt>Reference</dt><dd>{entry.referencePrice ?? 'unavailable'}<small>{gate.referenceKind === 'official-close' ? 'last official close' : gate.referenceKind === 'live-quote' ? 'live authenticated quote' : entry.referenceStale ? 'cannot confirm' : 'unclassified'}</small></dd></div>
+        <div><dt>Reference</dt><dd>{priceText(entry.referencePrice)}<small>{gate.referenceKind === 'official-close' ? 'last official close' : gate.referenceKind === 'live-quote' ? 'live authenticated quote' : entry.referenceStale ? 'cannot confirm' : 'unclassified'}</small></dd></div>
         <div><dt>Drift</dt><dd>{metrics ? `${bpsText(metrics.drift.currentBps)} ${metrics.drift.trend}` : 'not computed'}</dd></div>
         <div><dt>Turnover</dt><dd>{metrics?.turnover.ratio == null ? 'not computed' : `${metrics.turnover.ratio}× baseline`}</dd></div>
         <div><dt>Top-of-book</dt><dd>{metrics?.spread.spreadBps == null ? 'not published' : `${metrics.spread.spreadBps} bps`}</dd></div>

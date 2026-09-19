@@ -5,6 +5,7 @@ import {
   detectMove,
   driftSeries,
   pickReference,
+  priceLabel,
   rankHeadlines,
   sessionOf,
   spreadOf,
@@ -171,6 +172,35 @@ describe('reference selection', () => {
     expect(result.chosen).toBeNull()
     expect(result.stale).toBe(true)
     expect(result.staleReason).toBe('missing')
+  })
+})
+
+describe('price formatting', () => {
+  // Prices arrive as full floats, and interpolating one straight into a verdict
+  // produced "the last official close of 222.27000427246094" on screen.
+  it('does not put a raw float in a sentence a human reads', () => {
+    expect(priceLabel(222.27000427246094)).toBe('222.27')
+    expect(priceLabel(178.9499969482422)).toBe('178.95')
+  })
+
+  it('keeps meaning for a sub-dollar token and drops trailing zeros', () => {
+    expect(priceLabel(1.5)).toBe('1.5')
+    expect(priceLabel(0.500123456)).toBe('0.500123')
+    expect(priceLabel(1000)).toBe('1000')
+  })
+
+  it('says unavailable rather than NaN when there is no price', () => {
+    expect(priceLabel(null)).toBe('unavailable')
+    expect(priceLabel(Number.NaN)).toBe('unavailable')
+  })
+
+  it('uses the formatted price in the official-close note', () => {
+    const result = pickReference([], AFTERHOURS, {
+      dailyCloses: [{ dateKey: '2026-09-18', ts: AFTERHOURS - 86_400_000, close: 222.27000427246094, source: 'official daily close' }],
+    })
+    expect(result.kind).toBe('official-close')
+    expect(result.note).toContain('222.27')
+    expect(result.note).not.toContain('222.27000427246094')
   })
 })
 

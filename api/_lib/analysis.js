@@ -83,6 +83,21 @@ export function etDateKey(ms) {
 }
 
 /**
+ * Format a price for a sentence a human reads.
+ *
+ * Prices arrive as full floats, so interpolating one directly produces a verdict
+ * that reads "the last official close of 222.27000427246094", which looks like a
+ * dump of a variable rather than a market fact. Precision scales with magnitude so
+ * a sub-dollar token keeps its meaning, and trailing zeros are dropped.
+ */
+export function priceLabel(value) {
+  if (!Number.isFinite(value)) return 'unavailable'
+  const magnitude = Math.abs(value)
+  const decimals = magnitude >= 100 ? 2 : magnitude >= 1 ? 3 : 6
+  return Number(value.toFixed(decimals)).toString()
+}
+
+/**
  * Choose the reference price a trader should actually compare against.
  *
  * Preference order: a quote from the session we are in, then — while the main
@@ -141,7 +156,7 @@ export function pickReference(candidates, nowMs, options = {}) {
       closeDateKey: latestClose.dateKey ?? null,
       underlyingTradable: false,
       currentSession: current,
-      note: `The underlying is not in its main session (${sessionLabel(current)}), so the last official close of ${latestClose.close} is the correct basis. Any gap against it is token-side movement the underlying has not confirmed.`,
+      note: `The underlying is not in its main session (${sessionLabel(current)}), so the last official close of ${priceLabel(latestClose.close)} is the correct basis. Any gap against it is token-side movement the underlying has not confirmed.`,
     }
   }
 
