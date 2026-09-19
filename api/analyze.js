@@ -202,6 +202,15 @@ export default async function handler(req, res) {
           signal: qwenController.signal,
           body: JSON.stringify({
             model: 'qwen3.8-max',
+            // Bounded reasoning, measured rather than assumed. This is a reasoning model:
+            // every response carries a "reasoning" block, and on an identical payload the
+            // thinking was 13-44s, which is what pushed runs past the deadline and made
+            // the desk fall back to RULES. With reasoning bounded the same payload
+            // answered in 13-22s across eight runs, and the answer kept all seven
+            // citations, the closed-market semantics, and the explicit statement that no
+            // timing-consistent catalyst was found. Bounding the thinking buys latency
+            // without costing the quality the desk is judged on.
+            reasoning: { effort: 'low' },
             input: [
               { role: 'system', content: [{ type: 'input_text', text: systemPrompt }] },
               { role: 'user', content: [{ type: 'input_text', text: JSON.stringify({ researchQuestion: question, instrument: symbol, metrics: { move, drift, spread, turnover, session, referenceStale: reference.stale }, verdicts, evidence: evidence.map(({ id, title, summary, source, retrievedAt }) => ({ id, title, summary, source, retrievedAt })) }) }] },
