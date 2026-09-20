@@ -100,7 +100,7 @@ export function StressTest({ symbol, onSymbol }: { symbol: string; onSymbol: (ne
           <div><dt>Drift tested</dt><dd>{bps(result.target.driftBps)}<small>{result.target.source}</small></dd></div>
           <div><dt>Band</dt><dd>±{result.target.bandBps} bps<small>minimum {result.target.minWindowHours}h window</small></dd></div>
           <div><dt>Episodes built</dt><dd>{result.coverage.episodes}<small>{result.coverage.resolved} with a following session</small></dd></div>
-          <div><dt>Official closes</dt><dd>{result.coverage.withUnderlying}<small>{result.coverage.withUnderlying ? 'underlying outcomes measured' : 'rToken resolution used'}</small></dd></div>
+          <div><dt>Yahoo closes</dt><dd>{result.coverage.withUnderlying}<small>{result.coverage.withUnderlying ? 'underlying outcomes measured' : 'rToken resolution used'}</small></dd></div>
         </dl>
 
         <p className="study-context">{result.target.context}</p>
@@ -120,7 +120,7 @@ export function StressTest({ symbol, onSymbol }: { symbol: string; onSymbol: (ne
 
       <section className="panel study-matched" aria-label="Matched episodes">
         <h2><History size={15} aria-hidden /> Comparable closed-market episodes and what followed</h2>
-        <p className="study-sub">Windows that were within ±{result.target.bandBps} bps of the {bps(result.target.driftBps)} being tested <b>at a moment that was observable while the market was shut</b> — matched on the drift actually on screen at the time, never on the window's peak, which only hindsight reveals. The underlying column is used for the statistics whenever official closes were retrieved. This describes what already happened rather than testing the desk forward, and it makes no prediction from a sample this small.</p>
+        <p className="study-sub">Same-direction windows that were within ±{result.target.bandBps} bps of the {bps(result.target.driftBps)} being tested <b>at a moment that was observable while the market was shut</b> — matched on the drift actually on screen at the time, never on the window's peak, which only hindsight reveals. The underlying column is used for the statistics whenever Yahoo-reported closes were retrieved. This describes what already happened rather than testing the desk forward, and it makes no prediction from a sample this small.</p>
         {result.matched.length ? <div className="table-scroll"><table className="study-table">
           <thead><tr><th>Episode</th><th>Observed drift</th><th>rToken next close</th><th>Underlying next close</th><th>Direction</th><th>Error</th></tr></thead>
           <tbody>{result.matched.map((item) => <EpisodeRow key={item.anchorMs} item={item} />)}</tbody>
@@ -156,7 +156,7 @@ export function StressTest({ symbol, onSymbol }: { symbol: string; onSymbol: (ne
         <ul>
           <li>It reports what happened in this sample, not a probability of profit. Nothing here is a forecast or a recommendation.</li>
           <li>The window is {result.lookback.candles} closed hourly candles ({result.coverage.episodes} episodes), which is weeks, not years. No statistical significance is claimed.</li>
-          <li>{result.coverage.withUnderlying} of {result.coverage.resolved} resolved episodes had official underlying closes. Where they were missing, the rToken's own session close was used and labelled as such — a proxy, not the underlying itself.</li>
+          <li>{result.coverage.withUnderlying} of {result.coverage.resolved} resolved episodes had Yahoo-reported underlying closes, a secondary feed not independently checked against the exchange. Where they were missing, the rToken's own session close was used and labelled as such — a proxy, not the underlying itself.</li>
           <li>Excursion figures come from hourly highs and lows, so intra-hour extremes are not captured.</li>
           <li>A drift that resolved the same way before is not evidence that it will again. The gate treats a material drift as unverifiable either way.</li>
         </ul>

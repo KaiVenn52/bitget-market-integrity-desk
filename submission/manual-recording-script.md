@@ -16,7 +16,7 @@ Use this as the primary judge-facing walkthrough. Record the real production sit
 
 Record while the **U.S. market is closed** — for a UTC+8 audience that is roughly **09:00–20:00 local time**, i.e. overnight and pre-market in New York.
 
-This is not a convenience, it is the demo. While the underlying cannot trade, the desk's second reference tier applies: the last official close is the correct basis, and it is retrievable without an exchange credential. That is the desk's flagship case — the overnight drift nothing can confirm — and it is the only window where the Gate produces a *varied* set of verdicts on screen.
+This is not a convenience, it is the demo. While the underlying cannot trade, the desk's second reference tier applies: a Yahoo-reported prior close is an available comparison baseline, not an exchange-certified quote, and it is retrievable without an exchange credential. That is the desk's flagship case — the overnight drift nothing can confirm — and it is the only window where the Gate produces a *varied* set of verdicts on screen.
 
 Two failure modes to avoid:
 
@@ -90,7 +90,7 @@ Before recording, open `#gate` and run one sweep. If every instrument reads `UNV
 
 **Say:**
 
-> Each verdict names the evidence it cites, the conditions that would change it, and the next thing to check. And it names its own basis: while the underlying can trade, only a fresh authenticated quote counts; while it cannot, the last official close is the correct basis. A gap against a closed market is drift, not a broken alignment, because there is no live price for the token to disagree with. The gate never says buy or sell.
+> Each verdict names the evidence it cites, the conditions that would change it, and the next thing to check. And it names its own basis: while the underlying can trade, only a fresh authenticated quote counts; while it cannot, a Yahoo-reported prior close is a comparison baseline, not an exchange-certified quote. A gap against a closed market is drift, not a broken alignment, because there is no live price for the token to disagree with. The gate never says buy or sell.
 
 ### 1:44–1:56 — The desk log
 
@@ -106,7 +106,7 @@ Before recording, open `#gate` and run one sweep. If every instrument reads `UNV
 
 **Say:**
 
-> The gate can tell you the reference cannot confirm a drift. That is useless on its own, so the desk answers the follow-up: when this token drifted like this before, what did the following session actually do? It builds closed-market episodes from hourly candles, measures the drift distribution, and matches comparable episodes — using the official underlying closes where it retrieved them.
+> The gate can tell you the reference cannot confirm a drift. That is useless on its own, so the desk answers the follow-up: when this token drifted like this before, what did the following session actually do? It builds closed-market episodes from hourly candles, measures the drift distribution, and matches comparable episodes — using the Yahoo-reported underlying closes where it retrieved them.
 
 **Action:** Scroll to the matched-episode table. Point at a row whose outcome reads `closed flat`, then at a row that moved the same way.
 

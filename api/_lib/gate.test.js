@@ -266,7 +266,7 @@ describe('gate contract with the analysis pipeline', () => {
     expect(result.code).toBe('STALE_REFERENCE_DRIFT')
   })
 
-  // The regression this guards: with an official-close basis the premium is the
+  // The regression this guards: with an reported-close basis the premium is the
   // overnight gap, so a large number is the normal case and must never be read as
   // a live alignment break.
   it('reads a closed-market gap against an official close as drift, not a break', () => {
@@ -281,11 +281,11 @@ describe('gate contract with the analysis pipeline', () => {
       spread: spreadOf({ bid1Price: '222.49', ask1Price: '222.51' }),
       turnover: turnoverAcceleration(Array.from({ length: 40 }, (_, i) => ({ timestamp: overnight - (40 - i) * 5 * 60_000, close: 222.5, turnover: 1_000_000 }))),
     })
-    expect(reference.kind).toBe('official-close')
+    expect(reference.kind).toBe('reported-close')
     expect(result.code).not.toBe('ALIGNMENT_BREAK')
     expect(result.decision).toBe('WAIT')
     expect(result.code).toBe('CLOSED_MARKET_DRIFT')
-    expect(result.referenceKind).toBe('official-close')
+    expect(result.referenceKind).toBe('reported-close')
     expect(result.nextStep).toMatch(/stress test/i)
   })
 

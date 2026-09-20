@@ -140,7 +140,7 @@ async function sweepOne(symbol, meta, signal) {
     ? Math.max(0, Math.round((now - Number(token.ts || now)) / 1000))
     : null
 
-  // The official close is passed in so the gate has a basis while the underlying
+  // The reported prior close is passed in so the gate has a basis while the underlying
   // cannot trade, without needing an authenticated quote to exist.
   const reference = pickReference(referenceQuotes, now, { dailyCloses })
   const referencePrice = reference.chosen?.price ?? null

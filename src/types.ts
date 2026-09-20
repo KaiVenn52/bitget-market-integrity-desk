@@ -148,8 +148,8 @@ export interface GateVerdict {
   evidenceIds: string[]
   conditions: string[]
   nextStep: string
-  /** What the basis was: an authenticated live quote, or the last official close. */
-  referenceKind: 'live-quote' | 'official-close' | null
+  /** What the basis was: an authenticated live quote, or a secondary-feed prior close. */
+  referenceKind: 'live-quote' | 'reported-close' | null
 }
 
 export interface SweepEntry {

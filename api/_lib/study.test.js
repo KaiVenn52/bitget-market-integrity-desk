@@ -176,10 +176,18 @@ describe('scenario matching', () => {
     expect(excluded.map((item) => item.matchedDriftBps)).toEqual([150])
   })
 
-  it('falls back to the whole pool when nothing shares the direction', () => {
+  it('does not call an opposite-direction window a comparable episode', () => {
     const onlyDown = [episode(-400, -450), episode(-380, -300)]
-    const matched = matchEpisodes(onlyDown, 400, { bandBps: 50 })
-    expect(matched).toHaveLength(2)
+    expect(matchEpisodes(onlyDown, 400, { bandBps: 50 })).toEqual([])
+    expect(matchEpisodes([...onlyDown, episode(410, 420)], 400, { bandBps: 50 })
+      .map((item) => item.matchedDriftBps)).toEqual([410])
+  })
+
+  it('does not let a negative-only episode slip into a positive matched sample', () => {
+    const opposite = { ...episode(-40, -50), anchorMs: at(14, 19) }
+    const same = { ...episode(45, 50), anchorMs: at(15, 19) }
+    const matched = matchEpisodes([opposite, same], 40, { bandBps: 10 })
+    expect(matched.map((item) => item.anchorMs)).toEqual([same.anchorMs])
   })
 
   it('returns nothing rather than a nearest-neighbour guess outside the band', () => {

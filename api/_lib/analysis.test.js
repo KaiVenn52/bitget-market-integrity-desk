@@ -142,13 +142,13 @@ describe('reference selection', () => {
     const result = pickReference([], WEEKEND, {
       dailyCloses: [{ dateKey: '2026-09-04', close: 366.0 }, { dateKey: '2026-09-08', close: 373.5 }],
     })
-    expect(result.kind).toBe('official-close')
+    expect(result.kind).toBe('reported-close')
     expect(result.chosen.price).toBe(373.5)
     expect(result.closeDateKey).toBe('2026-09-08')
     expect(result.stale).toBe(false)
     expect(result.staleReason).toBeNull()
     expect(result.underlyingTradable).toBe(false)
-    expect(result.note).toMatch(/last official close of 373.5 is the correct basis/i)
+    expect(result.note).toMatch(/prior-session close of 373.5 reported by an unspecified source is the available comparison baseline/i)
   })
 
   it('prefers a live same-session quote over the official close', () => {
@@ -253,40 +253,42 @@ describe('price formatting', () => {
     expect(priceLabel(Number.NaN)).toBe('unavailable')
   })
 
-  it('uses the formatted price in the official-close note', () => {
+  it('uses the formatted price in the reported-close note', () => {
     const result = pickReference([], AFTERHOURS, {
       dailyCloses: [{ dateKey: '2026-09-18', ts: AFTERHOURS - 86_400_000, close: 222.27000427246094, source: 'official daily close' }],
     })
-    expect(result.kind).toBe('official-close')
+    expect(result.kind).toBe('reported-close')
     expect(result.note).toContain('222.27')
     expect(result.note).not.toContain('222.27000427246094')
   })
 })
 
 describe('reference evidence provenance', () => {
-  const officialClose = {
+  const reportedClose = {
     chosen: { price: 336.1300048828125, timestampMs: AFTERHOURS - 86_400_000, session: 'closed', ageSeconds: null, source: 'Yahoo Finance chart API' },
     candidates: [],
     stale: false,
     staleReason: null,
-    kind: 'official-close',
+    kind: 'reported-close',
     closeDateKey: '2026-09-18',
     underlyingTradable: false,
     currentSession: 'overnight',
-    note: 'The underlying is not in its main session (Overnight / closed), so the last official close of 336.13 is the correct basis.',
+    note: 'The underlying is not in its main session (Overnight / closed), so the prior-session close of 336.13 reported by Yahoo Finance chart API is the available comparison baseline, not a live or exchange-certified price.',
   }
 
   // The desk exists to catch misattributed evidence, so its own evidence panel must
   // not attribute a keyless daily close to the authenticated Stock+ feed.
   it('credits the source that actually answered, not Stock+', () => {
-    const record = referenceEvidence(officialClose, AFTERHOURS)
+    const record = referenceEvidence(reportedClose, AFTERHOURS)
     expect(record.source).toBe('Yahoo Finance chart API')
     expect(record.source).not.toMatch(/Stock\+/)
     expect(record.endpoint).toBe('/v8/finance/chart?interval=1d')
+    expect(record.summary).toMatch(/reported daily close/i)
+    expect(record.summary).not.toMatch(/official close/i)
   })
 
   it('describes an official close by its session date, never a null age', () => {
-    const record = referenceEvidence(officialClose, AFTERHOURS)
+    const record = referenceEvidence(reportedClose, AFTERHOURS)
     expect(record.summary).toContain('2026-09-18')
     expect(record.summary).toContain('336.13')
     expect(record.summary).not.toMatch(/null/)

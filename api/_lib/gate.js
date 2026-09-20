@@ -89,7 +89,7 @@ export function evaluateGate(input) {
       evidenceIds: ['token', 'reference'],
       conditions: [
         'An authenticated Stock+ quote for the underlying becomes available',
-        'The underlying market enters a window where the last official close is the correct basis',
+        'The underlying market enters a closed window where a reported prior-session close can be used as a comparison baseline',
         'The rToken ticker itself stops updating, which would change this to a feed-staleness block',
       ],
       nextStep: 'Treat the price as unverified. Inspect the token quote and re-run once a reference source responds.',
@@ -109,39 +109,39 @@ export function evaluateGate(input) {
     })
   }
 
-  // 3. The reference is the last official close. While the underlying cannot
-  // trade, that close *is* the correct basis, so a gap against it is the token
+  // 3. The reference is a reported prior-session close. While the underlying cannot
+  // trade, that close is a comparison baseline, so a gap against it is the token
   // pricing something the underlying has not confirmed yet. That is the desk's
   // central case, and calling it an alignment break would be wrong: there is no
   // live underlying price for the token to disagree with.
-  if (reference.kind === 'official-close') {
+  if (reference.kind === 'reported-close') {
     const gapBps = absBps(premiumBps)
     const material = gapBps != null && gapBps >= MOVE_THRESHOLD_BPS
     if (material) {
       return verdict({
         decision: 'WAIT',
         code: 'CLOSED_MARKET_DRIFT',
-        headline: `${bpsLabel(premiumBps)} from the last official close`,
+        headline: `${bpsLabel(premiumBps)} from the reported prior close`,
         reason: `${reference.note} The gap is ${gapBps} bps, beyond the ${MOVE_THRESHOLD_BPS} bps alignment threshold, so the token is pricing information the underlying market has not traded on yet.`,
         evidenceIds: ['token', 'reference', 'drift', 'turnover', 'session'],
         conditions: [
           'The underlying opens and trades to within 20 bps of the token price',
-          'The gap reverts toward the official close before the market opens',
+          'The gap reverts toward the reported prior close before the market opens',
           'A timing-consistent catalyst is found that explains the repricing',
         ],
         nextStep: 'Run the historical stress test for a drift of this size to see how often comparable gaps resolved the same way, then run catalyst attribution on this instrument.',
-        referenceKind: 'official-close',
+        referenceKind: 'reported-close',
       })
     }
     return verdict({
       decision: 'CLEAR',
       code: 'CLOSED_MARKET_ALIGNED',
-      headline: `Sitting at the last official close (${bpsLabel(premiumBps ?? 0)})`,
+      headline: `Near the reported prior close (${bpsLabel(premiumBps ?? 0)})`,
       reason: `${reference.note} The gap is ${gapBps ?? 0} bps, inside the ${MOVE_THRESHOLD_BPS} bps alignment threshold, so the token is not pricing unconfirmed information.`,
       evidenceIds: ['token', 'reference', 'drift', 'session'],
       conditions: ['A gap beyond the alignment threshold opens while the underlying is still not in its main session'],
       nextStep: 'No integrity obstacle. Standard research applies.',
-      referenceKind: 'official-close',
+      referenceKind: 'reported-close',
     })
   }
 

@@ -50,7 +50,7 @@ export function etParts(ms) {
 //
 // Time-of-day alone is not a session. Christmas morning is a weekday at 10:00 ET, and
 // the desk used to call it a regular session: it would then demand a live quote from a
-// market that was shut and treat the correct official close as a stale reference. The
+// market that was shut and treat a reported prior close as a stale reference. The
 // calendar is computed from the published NYSE rules rather than stored as a table, so
 // it cannot silently expire.
 
@@ -189,7 +189,7 @@ export const isReferenceLive = (session) => session === 'regular'
 // still reports "Intraday" hours later.
 export const REFERENCE_STALE_SECONDS = 300
 
-/** ET calendar date of an instant, used to line a token up with official daily closes. */
+/** ET calendar date of an instant, used to line a token up with reported daily closes. */
 export function etDateKey(ms) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(ms))
   const get = (type) => parts.find((part) => part.type === type)?.value ?? ''
@@ -200,7 +200,7 @@ export function etDateKey(ms) {
  * Format a price for a sentence a human reads.
  *
  * Prices arrive as full floats, so interpolating one directly produces a verdict
- * that reads "the last official close of 222.27000427246094", which looks like a
+ * that reads "the reported close of 222.27000427246094", which looks like a
  * dump of a variable rather than a market fact. Precision scales with magnitude so
  * a sub-dollar token keeps its meaning, and trailing zeros are dropped.
  */
@@ -215,11 +215,10 @@ export function priceLabel(value) {
  * Choose the reference price a trader should actually compare against.
  *
  * Preference order: a quote from the session we are in, then — while the main
- * session is not running — the last official close, then the freshest quote
- * available. The last official close is not a consolation prize: while the
- * underlying cannot trade, the price it last traded at *is* the correct basis, and
- * it is retrievable without an authenticated feed. A quote is only a basis while
- * its own session is running.
+ * session is not running — the latest Yahoo-reported daily close. The latter
+ * is a secondary-source comparison baseline, not a live price or an
+ * exchange-certified close. A quote is only a live basis while its own session
+ * is running.
  *
  * `stale` means no reference could be established at all, and `staleReason` says
  * why, so the UI can never call a stalled feed a closed market. `kind` records what
@@ -238,39 +237,39 @@ export function pickReference(candidates, nowMs, options = {}) {
   // The main session is the only window where the underlying trades continuously,
   // so inside it a live quote is the only valid basis.
   const liveQuote = chosen && chosen.session === current && chosen.ageSeconds <= REFERENCE_STALE_SECONDS ? chosen : null
-  const useOfficialClose = !liveQuote && current !== 'regular' && latestClose
+  const useReportedClose = !liveQuote && current !== 'regular' && latestClose
 
-  if (!liveQuote && !useOfficialClose) {
+  if (!liveQuote && !useReportedClose) {
     // No quote can serve as a basis. Either nothing was retrieved at all, or the
     // main session is running — where the previous close is not a basis because the
     // underlying is trading at a different price right now.
     if (!chosen) {
       const note = latestClose
-        ? 'No reference quote was retrieved, and an official close cannot stand in for one while the underlying is in its main session, so there is no basis to compare against.'
-        : 'No reference quote and no official close were retrieved; alignment is not calculated.'
+        ? 'No reference quote was retrieved, and a prior-session close cannot stand in for one while the underlying is in its main session, so there is no basis to compare against.'
+        : 'No reference quote or reported daily close was retrieved; alignment is not calculated.'
       return { chosen: null, candidates: [], stale: true, staleReason: 'missing', kind: null, underlyingTradable: current !== 'overnight', currentSession: current, note }
     }
     const underlyingTradable = current !== 'overnight'
     const staleReason = underlyingTradable ? (chosen.session !== current ? 'session-mismatch' : 'quote-age') : 'market-closed'
     const note = staleReason === 'session-mismatch'
-      ? `The freshest reference comes from the ${sessionLabel(chosen.session)} window, not the current ${sessionLabel(current)} window, and no official close was retrieved to stand in for it.`
+      ? `The freshest reference comes from the ${sessionLabel(chosen.session)} window, not the current ${sessionLabel(current)} window, and no reported daily close was retrieved to stand in for it.`
       : staleReason === 'quote-age'
         ? `The freshest reference quote is ${chosen.ageSeconds}s old, beyond the ${REFERENCE_STALE_SECONDS}s ceiling for a live basis, so the reference cannot price-verify this token right now.`
-        : 'The underlying market is closed and no official close was retrieved, so there is no reference to compare against.'
+        : 'The underlying market is closed and no reported daily close was retrieved, so there is no reference to compare against.'
     return { chosen, candidates: usable.sort((a, b) => a.ageSeconds - b.ageSeconds), stale: true, staleReason, kind: null, underlyingTradable, currentSession: current, note }
   }
 
-  if (useOfficialClose) {
+  if (useReportedClose) {
     return {
-      chosen: { price: latestClose.close, timestampMs: latestClose.ts ?? nowMs, session: 'closed', ageSeconds: null, source: latestClose.source ?? 'official daily close' },
+      chosen: { price: latestClose.close, timestampMs: latestClose.ts ?? nowMs, session: 'closed', ageSeconds: null, source: latestClose.source ?? 'Daily-close source unspecified' },
       candidates: usable.sort((a, b) => a.ageSeconds - b.ageSeconds),
       stale: false,
       staleReason: null,
-      kind: 'official-close',
+      kind: 'reported-close',
       closeDateKey: latestClose.dateKey ?? null,
       underlyingTradable: false,
       currentSession: current,
-      note: `The underlying is not in its main session (${sessionLabel(current)}), so the last official close of ${priceLabel(latestClose.close)} is the correct basis. Any gap against it is token-side movement the underlying has not confirmed.`,
+      note: `The underlying is not in its main session (${sessionLabel(current)}), so the prior-session close of ${priceLabel(latestClose.close)} reported by ${latestClose.source ?? 'an unspecified source'} is the available comparison baseline, not a live or exchange-certified price. Any gap against it is token-side movement the underlying has not confirmed.`,
     }
   }
 
@@ -289,7 +288,7 @@ export function pickReference(candidates, nowMs, options = {}) {
 /**
  * The evidence record for the reference price.
  *
- * Provenance has to name the source that actually answered. An official close is
+ * Provenance has to name the source that actually answered. A reported close is
  * retrieved from the keyless daily-close feed, not from Stock+, and it has a session
  * date rather than a quote age — so labelling it "Bitget Stock+ quote" with
  * "age nulls" would be both a misattribution and unreadable. That is the exact class
@@ -299,20 +298,20 @@ export function pickReference(candidates, nowMs, options = {}) {
  * @param nowMs - the instant the evidence was retrieved.
  */
 export function referenceEvidence(reference, nowMs) {
-  const officialClose = reference?.kind === 'official-close'
+  const reportedClose = reference?.kind === 'reported-close'
   const chosen = reference?.chosen
   const summary = !chosen
     ? reference?.note ?? 'No reference price was retrievable.'
-    : officialClose
-      ? `Reference is the last official close of ${priceLabel(chosen.price)} from ${reference.closeDateKey ?? 'the prior session'}, retrieved from ${chosen.source}. ${reference.note}`
+    : reportedClose
+      ? `Reference is the reported daily close of ${priceLabel(chosen.price)} from ${reference.closeDateKey ?? 'the prior session'}, retrieved from ${chosen.source}. ${reference.note}`
       : `Reference price ${priceLabel(chosen.price)} from the ${chosen.label ?? sessionLabel(chosen.session)} window, age ${chosen.ageSeconds}s. ${reference.note}`
   return {
     id: 'reference',
     title: 'Session-aware underlying reference',
     summary,
     state: chosen ? (reference.stale ? 'caution' : 'pass') : 'unknown',
-    source: officialClose ? (chosen?.source ?? 'Official daily close') : 'Bitget Stock+ quote',
-    endpoint: officialClose ? '/v8/finance/chart?interval=1d' : (chosen?.endpoint ?? '/api/v3/stockplus/market/quote'),
+    source: reportedClose ? (chosen?.source ?? 'Daily-close source unspecified') : 'Bitget Stock+ quote',
+    endpoint: reportedClose ? '/v8/finance/chart?interval=1d' : (chosen?.endpoint ?? '/api/v3/stockplus/market/quote'),
     retrievedAt: new Date(nowMs).toISOString(),
   }
 }

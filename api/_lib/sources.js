@@ -101,11 +101,12 @@ const escapeRe = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 export const DAILY_CLOSE_TIMEOUT_MS = 8000
 
 /**
- * Official daily closes for the underlying, keyed by exchange calendar date.
+ * Yahoo-reported daily closes for the underlying, keyed by exchange calendar date.
  *
  * This is a keyless source, which matters: while the underlying market is closed,
- * the last official close is the correct reference, so the desk must be able to
- * establish a basis even when no authenticated quote is available. A failure
+ * a reported prior-session close is a comparison basis, so the desk can
+ * establish one even when no authenticated quote is available. This is a
+ * secondary feed, not an exchange-certified primary source. A failure
  * returns an empty set and a note rather than a substitute.
  */
 export async function fetchDailyCloses(ticker, options = {}) {
@@ -114,7 +115,7 @@ export async function fetchDailyCloses(ticker, options = {}) {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=1mo&interval=1d`
     const response = await fetch(url, { signal: controller.signal, headers: { 'user-agent': 'Mozilla/5.0 (compatible; MarketIntegrityDesk/0.2)', accept: 'application/json' } })
-    if (!response.ok) return { closes: [], note: `Official ${ticker} daily closes unavailable (HTTP ${response.status}).` }
+    if (!response.ok) return { closes: [], note: `Yahoo-reported ${ticker} daily closes unavailable (HTTP ${response.status}).` }
     const json = await response.json()
     const result = json?.chart?.result?.[0]
     const timestamps = result?.timestamp ?? []
@@ -125,11 +126,11 @@ export async function fetchDailyCloses(ticker, options = {}) {
     return {
       closes,
       note: closes.length
-        ? `${closes.length} official ${ticker} daily closes retrieved, ${closes[0].dateKey} to ${closes[closes.length - 1].dateKey}.`
+        ? `${closes.length} Yahoo-reported ${ticker} daily closes retrieved, ${closes[0].dateKey} to ${closes[closes.length - 1].dateKey}; not independently verified against an exchange feed.`
         : `The daily-close source returned no usable rows for ${ticker}.`,
     }
   } catch (error) {
-    return { closes: [], note: `Official ${ticker} daily closes could not be retrieved (${sanitize(error)}).` }
+    return { closes: [], note: `Yahoo-reported ${ticker} daily closes could not be retrieved (${sanitize(error)}).` }
   } finally {
     clearTimeout(timer)
   }

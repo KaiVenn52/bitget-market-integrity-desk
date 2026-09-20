@@ -32,7 +32,7 @@ const catalystNote = (analysis: MoveAnalysis) => analysis.verdicts.likelyCatalys
     : 'no material repricing'
 
 const completionNote = (result: Passport, analysis: MoveAnalysis | null) => analysis
-  ? `${result.mode === 'live' ? 'Live' : 'Snapshot'} passport · ${catalystNote(analysis)} · ${analysis.reasoningMode === 'qwen' ? 'Qwen narrative verified.' : 'deterministic narrative retained.'}`
+  ? `${result.mode === 'live' ? 'Live' : 'Snapshot'} passport · ${catalystNote(analysis)} · ${analysis.reasoningMode === 'qwen' ? 'Qwen citation IDs resolved.' : 'deterministic narrative retained.'}`
   : `${result.mode === 'live' ? 'Live' : 'Snapshot'} passport ready · move analysis unavailable.`
 
 export default function App() {
@@ -111,7 +111,7 @@ export default function App() {
     <header className="topbar"><button className="brand" onClick={() => go('live')} aria-label="Open Live Desk"><span className="brand-mark"><ShieldCheck size={18} /></span><span className="brand-copy"><strong>Market Integrity</strong><small>Evidence desk</small></span></button><nav aria-label="Primary navigation"><button className={view === 'live' ? 'active' : ''} onClick={() => go('live')}>Desk</button><button className={view === 'gate' ? 'active' : ''} onClick={() => go('gate')}>Gate</button><button className={view === 'stress' ? 'active' : ''} onClick={() => go('stress')}>Stress</button><button className={view === 'replay' ? 'active' : ''} onClick={() => go('replay')}>Replay</button><button className={view === 'methodology' ? 'active' : ''} onClick={() => go('methodology')}>Method</button></nav><div className="system-status"><span className="pulse" />Read-only</div></header>
     {view === 'live' ? <main className={`live-view ${scanning ? 'is-scanning' : ''}`}>
       <section className="research-hero">
-        <div className="hero-heading"><span className="eyebrow"><ScanLine size={14} /> Live market research</span><h1>AI explains the move.<br /><em>The desk proves what supports it.</em></h1><p>Rank the catalysts behind a tokenized U.S. equity repricing by publication time, market response, and rejected explanations.</p></div>
+        <div className="hero-heading"><span className="eyebrow"><ScanLine size={14} /> Live market research</span><h1>AI explains the move.<br /><em>The desk shows the evidence.</em></h1><p>Rank the catalysts behind a tokenized U.S. equity repricing by publication time, market response, and rejected explanations.</p></div>
         <form className="research-bar" onSubmit={submitResearchQuestion}><label htmlFor="research-question">Research question</label><div className="question-control"><input id="research-question" value={researchQuestion} onChange={(event) => setResearchQuestion(event.target.value)} autoComplete="off" /><button type="submit" disabled={scanning}>{scanning ? <RefreshCw className="spin" size={18} /> : <ArrowRight size={18} />}<span>{scanning ? 'Checking' : 'Investigate'}</span></button></div><small aria-live="polite">{queryNote}</small></form>
       </section>
       <JudgeProof />

@@ -47,7 +47,7 @@ The desk gates its own watchlist in one sweep and writes down what it refused.
 Every premium and drift claim is a comparison against a reference price. Which price counts depends on whether the underlying can trade:
 
 - **Live quote** — while the underlying's main session runs, only a fresh authenticated quote from that same session is a basis. A quote from an earlier session, or one past the freshness ceiling, is not a basis, and the desk reports which of those it was rather than calling a stalled feed a closed market.
-- **Last official close** — while the main session is not running, the price the underlying last traded at *is* the correct basis, and it is retrievable keylessly. This is why the desk's central case, an overnight drift nothing can confirm, does not depend on a credential. A gap against this tier is **drift, not an alignment break**: there is no live underlying price for the token to disagree with.
+- **Yahoo-reported prior close** — while the main session is not running, this keyless secondary-feed value is a comparison baseline, not a live quote or an exchange-certified close. It lets the desk measure overnight drift without a Stock+ credential. A gap against it is **drift, not a verified alignment break**: there is no live underlying price for the token to disagree with.
 
 Both tiers are labelled in the interface and repeated in every verdict that rests on them.
 
@@ -55,7 +55,8 @@ Both tiers are labelled in the interface and repeated in every verdict that rest
 
 The gate can say "the reference cannot confirm this, and the token has moved 478 bps". That is useless unless a human can ask the obvious follow-up. The stress test builds closed-market episodes from hourly rToken candles, anchors each to the last session close, measures what the following session actually did, and reports the base rate with its sample size attached.
 
-- **Measured on the underlying, not only the token.** Official daily closes are retrieved when available and used for the statistics; where they are missing the rToken's own session close is used and labelled a proxy.
+- **Measured on the underlying when available, not only the token.** Yahoo-reported daily closes are used for the statistics where retrieved, but they are secondary-feed observations not independently verified against an exchange record. Where they are missing, the rToken's own session close is used and labelled a proxy.
+- **Comparable means same-direction.** A historical window that only moved up is not used as a match for a current down drift (or vice versa), even when the absolute magnitudes are identical.
 - **A flat close is not a confirmation.** A +108 bps drift that resolves to +5 bps is reported as `closed flat`, excluded from the rate and shown separately, so the headline number cannot be inflated by immaterial closes.
 - **It refuses to answer when there is nothing to test.** A drift inside the 20 bps alignment threshold is not an event, so the desk declines to compare it to history rather than dressing up a meaningless match.
 - **It is a base rate, not a forecast.** The sample is weeks of hourly candles, no significance is claimed, and the declared limits are printed on the page.
@@ -87,7 +88,7 @@ The hackathon's `@bitget-ai/bitget-signal` layer advertises 19 tools, several of
 - **A move-explanation endpoint** that measures the repricing, locates where it began, retrieves headlines, and ranks them by publication time into `POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT` and `DISTANT` buckets with an explicit confidence rule and a "what would change this conclusion" list.
 - A bounded Qwen investigator that narrates only supplied evidence IDs.
 - **A pre-trade integrity gate** with ordered deterministic rules, four decisions, evidence citations, change conditions and a next step for every verdict, plus a self-check that a verdict never cites evidence the sweep did not retrieve.
-- **A historical stress test** that builds closed-market episodes, measures the drift distribution, and matches comparable episodes to what the following session actually did — using official underlying closes where available and labelling the proxy where not.
+- **A historical stress test** that builds closed-market episodes, measures the drift distribution, and matches same-direction comparable episodes to what the following session actually did — using Yahoo-reported underlying closes where available and labelling the proxy where not.
 - **A browser-local desk log** that records every sweep including refusals, and reports the refusal rate.
 - **A two-tier reference** so the desk's central case works without an authenticated feed.
 - A clearly labeled snapshot fallback when live sources cannot be reached.
@@ -109,12 +110,12 @@ The hackathon's `@bitget-ai/bitget-signal` layer advertises 19 tools, several of
 ```text
 Bitget rToken ticker ─┬─> deterministic checks ─> Market State Passport
 Bitget Stock+ quote ──┤            │
-official daily closes ┘            ├─> move start + drift + turnover + spread ─┐
+Yahoo-reported daily closes ┘            ├─> move start + drift + turnover + spread ─┐
                                    │                                           ├─> verdict buckets ─> Qwen narrative
 keyless headline feeds ────────────┴─> publication-time classification ────────┘   (cited IDs only, server-side key)
 
 rToken hourly candles ─┬─> session-boundary episodes ─> drift distribution ─┐
-official daily closes ─┘                                                    ├─> /api/study
+Yahoo-reported daily closes ─┘                                                    ├─> /api/study
                                                                             └─> matched episodes ─> base rate (no model)
 
 ticker + candles + reference ─> measured state ─> ordered gate rules ─> /api/sweep
@@ -149,7 +150,7 @@ The public rToken ticker can run without exchange credentials. The Stock+ underl
 
 ## Validation
 
-The 42-second submission film is available as an [MP4](submission/market-integrity-desk-demo.mp4), with a separate [caption file](submission/market-integrity-desk-demo.srt) and [thumbnail](submission/demo-thumbnail.png). It was rendered from the reproducible Remotion source in `video/`.
+An older 42-second [prototype film](submission/market-integrity-desk-demo.mp4) remains in the repository for provenance; it predates the current Gate and Stress workflows and is **not** the final submission video. The current product should be recorded manually in the live UI.
 
 ```powershell
 npm.cmd test
@@ -159,14 +160,14 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 153/153 tests pass across six suites: query and instrument resolution (5), published deterministic integrity rules mirrored in the browser (22), the server analysis engine — session labelling, the U.S. market holiday calendar and half days, session-aware two-tier reference selection, move detection and start location, the 20 bps event boundary, headline timing verdicts (`POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT`, `DISTANT`, `TIME_UNKNOWN`), drift, turnover acceleration, top-of-book spread, verdict assembly, confidence rules, reference provenance, the model deadline, and the citation gate including inline-prose extraction (58), the ordered gate rules with pipeline contract tests that feed real `pickReference` output into `evaluateGate` (34), episode construction, drift distribution, point-in-time scenario matching, example-episode exclusion, underlying-close attachment, outcome classification and the stress-test verdict (28), and the public-endpoint budget (6).
+- 154/154 tests pass across six suites: query and instrument resolution (5), published deterministic integrity rules mirrored in the browser (22), the server analysis engine — session labelling, the U.S. market holiday calendar and half days, session-aware two-tier reference selection, move detection and start location, the 20 bps event boundary, headline timing verdicts (`POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT`, `DISTANT`, `TIME_UNKNOWN`), drift, turnover acceleration, top-of-book spread, verdict assembly, confidence rules, reference provenance, the model deadline, and the citation gate including inline-prose extraction (58), the ordered gate rules with pipeline contract tests that feed real `pickReference` output into `evaluateGate` (34), episode construction, drift distribution, point-in-time scenario matching, example-episode exclusion, underlying-close attachment, outcome classification and the stress-test verdict and same-direction matching (29), and the public-endpoint budget (6).
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.
 - The move-explanation endpoint was exercised end to end against live Bitget candles and live headline feeds: a quiet tape produced `NO_MATERIAL_MOVE` with no catalyst named, and a +180 bps repricing with six retrieved headlines all published 57–270 minutes earlier produced `NO_STRONG_CATALYST` with `MEDIUM` confidence rather than a fabricated cause.
 - A 2026-09-11 production matrix verified `LIVE · QWEN` for all four supported instruments; all four returned citation sets that exactly matched the evidence IDs present in their briefs, with investigator latency from 7.42 to 12.85 seconds.
 - A second frozen benchmark captured 16 instrument-time cases across four closed five-minute cutoffs. Deterministic state accuracy, Qwen availability, citation validity, and bounded-abstention rate were 100%; directional-claim rate was 0%; median Qwen latency was 8.581 seconds.
-- The submission film was verified as 1920 × 1080, 30 fps, H.264/AAC, 42.048 seconds.
+- The older prototype film was verified as 1920 × 1080, 30 fps, H.264/AAC, 42.048 seconds; it does not show the current full workflow.
 
 These are product QA observations, not user-adoption or trading-performance claims. The first benchmark slice contains 16 instrument-time cases but only four unique clock cutoffs, and every case tests the missing-Stock+ path. It proves abstention discipline, not balanced classification or trading accuracy.
 
@@ -177,7 +178,7 @@ The application never turns an unavailable endpoint into a negative fact. In par
 ## Current limitations
 
 - The public rToken path and authenticated Stock+ quote path are verified in production. A 2026-09-14 AAPL run returned both prices and a deterministic +14 bps comparison.
-- **While the underlying's main session is running, the gate needs the authenticated Stock+ quote.** If that credential is absent or the endpoint fails, every instrument is blocked as `UNVERIFIABLE_REFERENCE` — correctly, because a live basis cannot be established without it — and the desk reports the retrieval layer's own account of why rather than a market finding. Outside the main session the official-close tier keeps the desk fully functional without credentials.
+- **While the underlying's main session is running, the gate needs the authenticated Stock+ quote.** If that credential is absent or the endpoint fails, every instrument is blocked as `UNVERIFIABLE_REFERENCE` — correctly, because a live basis cannot be established without it — and the desk reports the retrieval layer's own account of why rather than a market finding. Outside the main session the Yahoo-reported prior-close tier keeps the desk functional without credentials; it is not an exchange-certified feed.
 - The stress test covers the retrieved window only: 500 hourly candles, roughly three weeks and a dozen or so closed-market episodes. It claims no statistical significance, and its excursion figures come from hourly highs and lows.
 - The desk log is stored in the browser, so it is per-device and does not survive clearing site data. It is an audit trail, not a server-side record, and it holds no positions because the desk places no orders.
 - The frozen benchmark is published, but matched Stock+ candle cases remain absent. On 2026-09-15, both official current and historical Stock+ candle endpoints authenticated but returned empty lists across all four supported symbols during a U.S. intraday probe, so the original missing-reference slice has not been overwritten or replaced with synthetic history.
@@ -193,7 +194,7 @@ The application never turns an unavailable endpoint into a negative fact. In par
 - `api/analyze.js` — the Desk: retrieval plus move explanation and the Qwen investigator.
 - `api/sweep.js` — the Gate: one pass over the watchlist, gated verdicts, and a self-check that every verdict cites evidence the sweep holds.
 - `api/study.js` — the Stress test: closed-market episodes, the drift distribution and matched historical outcomes.
-- `api/_lib/sources.js` — the only file that talks to an external source: Bitget endpoints, HMAC signing, headline feeds, official daily closes.
+- `api/_lib/sources.js` — the only file that talks to an external source: Bitget endpoints, HMAC signing, headline feeds, Yahoo-reported daily closes.
 - `api/_lib/analysis.js` — pure measurement: sessions, the two-tier reference, move detection, drift, turnover, spread.
 - `api/_lib/gate.js` — pure, ordered gate rules and the sweep summary.
 - `api/_lib/study.js` — pure episode construction, outcome classification and scenario matching.

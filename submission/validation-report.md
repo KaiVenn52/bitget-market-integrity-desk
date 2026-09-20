@@ -1,7 +1,7 @@
 # Validation Record
 
-Date: 2026-09-20
-Scope: local engine, public production workflow, and one adversarial review round
+Updated: 2026-09-21
+Scope: local engine, public production workflow, and two adversarial review rounds
 Operator: project developer
 
 This record is linked directly from the deployed desk. Every row below was observed on
@@ -11,7 +11,7 @@ the date shown, and rows that describe an earlier state say so.
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic, gate, study, routing and rate-limit unit tests | 153/153 passed, six suites | 5 query and instrument resolution; 22 published deterministic integrity rules; 58 analysis-engine; 34 gate; 28 study; 6 public-endpoint budget. `npm.cmd test` |
+| Deterministic, gate, study, routing and rate-limit unit tests | 154/154 passed, six suites | 5 query and instrument resolution; 22 published deterministic integrity rules; 58 analysis-engine; 34 gate; 29 study; 6 public-endpoint budget. `npm.cmd test` |
 | Production build | Passed | `npm.cmd run build` — Vite 8, 278 kB JS / 40 kB CSS |
 | Static lint | Passed | `npm.cmd run lint` |
 | API syntax checks | 5/5 passed | `node --check` on `api/analyze.js`, `api/scan.js`, `api/sweep.js`, `api/study.js`, `api/benchmark-source.js` |
@@ -21,6 +21,8 @@ the date shown, and rows that describe an earlier state say so.
 | Weekend holiday observation | Passed | Independence Day 2026 falls on a Saturday, so the market is shut on Friday 2026-07-03; in 2027 it falls on a Sunday, so the market is shut on Monday 2027-07-05 |
 | Stress-test matching has no look-ahead | Passed | Matched rows key on the drift observed at a stage of the window, never the window's peak. Live: `matchedDriftBps: -30, matchedStageHours: 16, peakDriftBps: 52` |
 | The example episode is excluded from its own sample | Passed | When the market is open the most recent closed episode supplies the target and is removed from the pool it is compared against, so it cannot match itself at zero distance |
+| Opposite-direction episodes are not called comparable | Passed locally | A +40 bps target does not match a -40 bps-only episode, even at equal absolute magnitude; same-direction matches remain eligible |
+| Daily-close provenance | Passed locally | The API and interface identify Yahoo Finance as a secondary daily-close feed, not an exchange-certified primary source; the JSON reference kind is `reported-close` |
 | Initial scan concurrency | Passed | Token ticker and Stock+ quote are requested together; production `/api/scan` returns a real premium in ~2 s |
 | Public endpoint budget | Passed | `/api/analyze` returns `x-ratelimit-limit: 12`, `x-ratelimit-remaining`, and `retry-after` on refusal. Per warm instance, not a global quota — stated as such rather than implied otherwise. |
 | Core browser tasks | Passed | Natural-language query, question-aware Qwen answer, instrument switch, live/fallback scan, row expansion, evidence selection, provenance reveal, Gate, Stress, Replay and Method navigation |
@@ -41,10 +43,10 @@ the date shown, and rows that describe an earlier state say so.
 
 - The deterministic calculations and state thresholds behave as tested, including the
   exchange calendar that decides whether a market is open at all.
-- The citation claim the interface makes is the citation claim it checks: the narrative
-  prose is verified, not just the model's own index of it.
+- The citation claim the interface makes is the citation claim it checks: inline IDs in
+  the narrative resolve to server evidence, not just IDs in the model's own index.
 - The historical comparison contains only scenarios that were recognisable while they
-  were happening, and never counts an episode as its own precedent.
+  were happening and moved in the same direction, and never counts an episode as its own precedent.
 - The production client compiles and the current code passes static checks.
 - The primary research workflow is operable in a real browser, and a stale narrative
   cannot be shown against a different instrument.
@@ -59,6 +61,10 @@ the date shown, and rows that describe an earlier state say so.
 - That the stress test predicts anything. It describes what already happened across a
   small sample of one instrument's recent history. It is a historical base rate, not a
   forward test, and the page says so.
+- That resolving a citation ID proves the cited record semantically supports every
+  sentence around it. The trader still needs to inspect the record and the claim.
+- That Yahoo Finance daily closes have been independently verified against exchange
+  records. They are a secondary-feed comparison baseline; missing rows remain missing.
 - That the rate limit is a global quota. It is per warm instance; a durable limit would
   need shared storage this desk does not have.
 - Balanced state-classification accuracy: all 16 frozen benchmark cases share the
@@ -85,7 +91,7 @@ before being fixed, and each carries a regression test.
 5. **The public analysis endpoint had no budget** despite spending a paid model call per
    request.
 6. **A static "Stock+ VERIFIED" badge** advertised a credentialed path even when the
-   answer rested on the keyless official-close tier.
+   answer rested on the keyless Yahoo-reported prior-close tier.
 7. **A stale narrative could outlive an instrument switch**, sitting beside the new
    instrument's passport for 15–20 seconds.
 8. **The submission documents were stale**, quoting earlier test counts, a deleted

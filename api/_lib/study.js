@@ -115,7 +115,7 @@ export function buildEpisodes(candles, options = {}) {
  * Attach what the *underlying* did, when daily closes for it are available.
  *
  * The token's own session close is a proxy for the underlying, and a proxy is
- * weaker evidence than the thing itself. When official closes are retrieved the
+ * weaker evidence than the thing itself. When reported underlying closes are retrieved the
  * desk reports both and says which one a conclusion rests on; when they are not,
  * the episode keeps a null underlying outcome rather than substituting the proxy
  * silently.
@@ -180,9 +180,11 @@ export function matchedPointOf(episode, targetDriftBps) {
   if (!points.length) return null
   const targetSign = Math.sign(targetDriftBps)
   const sameDirection = points.filter((point) => Math.sign(point.driftBps) === targetSign)
-  const pool = sameDirection.length ? sameDirection : points
+  // A +40 bps window is not a precedent for a -40 bps drift, even if their
+  // absolute magnitudes coincide. An empty same-direction pool is no match.
+  if (!sameDirection.length) return null
   const distanceFrom = (point) => Math.abs(Math.abs(point.driftBps) - Math.abs(targetDriftBps))
-  return pool.reduce((best, point) => (distanceFrom(point) < distanceFrom(best) ? point : best), pool[0])
+  return sameDirection.reduce((best, point) => (distanceFrom(point) < distanceFrom(best) ? point : best), sameDirection[0])
 }
 
 /**
@@ -301,7 +303,7 @@ export function stressTestVerdict(targetDriftBps, stats, band) {
   if (!stats.episodes) {
     return {
       headline: 'No comparable episode in the retrieved window',
-      detail: `No closed-market episode in the last ${band} bps band of ${targetDriftBps} bps had a measurable following session. The desk does not extrapolate from an empty sample.`,
+      detail: `No same-direction closed-market episode within ${band} bps of ${targetDriftBps} bps had a measurable following session. Opposite-direction windows are not substitutes; the desk does not extrapolate from an empty sample.`,
     }
   }
   const flatNote = stats.flat
@@ -310,7 +312,7 @@ export function stressTestVerdict(targetDriftBps, stats, band) {
   if (!stats.materialEpisodes) {
     return {
       headline: `All ${stats.episodes} comparable episodes closed essentially flat`,
-      detail: `Across ${stats.episodes} earlier closed-market windows within ${band} bps of the current ${targetDriftBps} bps, every following session closed inside the ${MOVE_THRESHOLD_BPS} bps threshold. The drift did not carry into the session in this sample, and there is no material outcome to quote a rate from.`,
+      detail: `Across ${stats.episodes} earlier same-direction closed-market windows within ${band} bps of the current ${targetDriftBps} bps, every following session closed inside the ${MOVE_THRESHOLD_BPS} bps threshold. The drift did not carry into the session in this sample, and there is no material outcome to quote a rate from.`,
       tone: 'unreliable',
     }
   }
@@ -320,10 +322,10 @@ export function stressTestVerdict(targetDriftBps, stats, band) {
     ? 'the underlying closed in the same direction'
     : stats.source === 'mixed'
       ? 'the following session closed in the same direction (mixed sources: underlying closes where retrieved, the rToken itself otherwise)'
-      : 'the rToken itself closed in the same direction (official underlying closes were not retrieved)'
+      : 'the rToken itself closed in the same direction (Yahoo-reported underlying closes were not retrieved)'
   return {
     headline: `${stats.confirmed} of ${stats.materialEpisodes} materially resolved episodes moved the same way as the drift`,
-    detail: `Across ${stats.episodes} earlier closed-market windows that were within ${band} bps of the current ${targetDriftBps} bps at some point while the market was shut, ${measured} ${stats.confirmed} times out of the ${stats.materialEpisodes} that resolved materially (${rate}%), and moved against it ${stats.contradicted} times.${flatNote} Median error between the observed drift and the eventual close is ${stats.medianErrorBps} bps. This is a historical base rate, not a forecast: the sample is small and the desk states the outcome rather than a probability of profit.`,
+    detail: `Across ${stats.episodes} earlier same-direction closed-market windows that were within ${band} bps of the current ${targetDriftBps} bps at some point while the market was shut, ${measured} ${stats.confirmed} times out of the ${stats.materialEpisodes} that resolved materially (${rate}%), and moved against it ${stats.contradicted} times.${flatNote} Median error between the observed drift and the eventual close is ${stats.medianErrorBps} bps. This is a historical base rate, not a forecast: the sample is small and the desk states the outcome rather than a probability of profit.`,
     tone,
   }
 }

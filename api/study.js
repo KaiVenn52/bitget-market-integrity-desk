@@ -2,7 +2,7 @@
 //
 // Answers the question the gate raises but cannot answer: when the token drifted
 // like this before, what happened next? It retrieves closed hourly rToken candles
-// and, when reachable, the underlying's official daily closes, then hands both to
+// and, when reachable, the underlying's Yahoo-reported daily closes, then hands both to
 // the deterministic study module.
 //
 // The response is a historical base rate with its sample size attached. It is not
@@ -130,8 +130,8 @@ export default async function handler(req, res) {
       { id: 'candles', title: 'Closed hourly rToken candles', summary: `${candles.length} hourly candles from ${new Date(candles[0].timestamp).toISOString()} to ${new Date(candles[candles.length - 1].timestamp).toISOString()}.`, state: 'pass', source: 'Bitget UTA public market data', endpoint: `/api/v3/market/candles?interval=1H&limit=${CANDLE_LIMIT}`, retrievedAt: new Date().toISOString() },
       { id: 'episodes', title: 'Closed-market episodes', summary: `${episodes.length} closed-market windows were built, ${episodes.filter((episode) => episode.resolution).length} of them with a measurable following session.`, state: 'pass', source: 'Derived from session boundaries (America/New_York)', endpoint: 'Derived', retrievedAt: new Date().toISOString() },
       { id: 'distribution', title: 'Drift distribution', summary: `${distribution.observations} closed-market observations; median ${distribution.medianAbsBps} bps, 90th percentile ${distribution.p90AbsBps} bps, maximum ${distribution.maxAbsBps} bps; ${distribution.aboveThresholdPct}% beyond the 20 bps alignment threshold.`, state: 'pass', source: 'Deterministic computation over candles', endpoint: 'Derived', retrievedAt: new Date().toISOString() },
-      { id: 'matched', title: 'Matched historical episodes', summary: `${matched.length} earlier episodes were within ${bandBps} bps of the ${targetDriftBps} bps being tested at a point that was observable while the market was shut${excludeAnchorMs ? '; the example episode is excluded from this sample' : ''}.`, state: matched.length ? 'pass' : 'unknown', source: 'Deterministic point-in-time episode matching', endpoint: 'Derived', retrievedAt: new Date().toISOString() },
-      { id: 'underlying-closes', title: 'Official underlying daily closes', summary: daily.note, state: daily.closes.length ? 'pass' : 'unknown', source: 'Yahoo Finance chart API', endpoint: '/v8/finance/chart?interval=1d', retrievedAt: new Date().toISOString() },
+      { id: 'matched', title: 'Matched historical episodes', summary: `${matched.length} earlier same-direction episodes were within ${bandBps} bps of the ${targetDriftBps} bps being tested at a point that was observable while the market was shut${excludeAnchorMs ? '; the example episode is excluded from this sample' : ''}.`, state: matched.length ? 'pass' : 'unknown', source: 'Deterministic point-in-time episode matching', endpoint: 'Derived', retrievedAt: new Date().toISOString() },
+      { id: 'underlying-closes', title: 'Yahoo-reported underlying daily closes', summary: daily.note, state: daily.closes.length ? 'pass' : 'unknown', source: 'Yahoo Finance chart API', endpoint: '/v8/finance/chart?interval=1d', retrievedAt: new Date().toISOString() },
       { id: 'session', title: 'Session context', summary: current ? `The latest candle belongs to the ${current.sessionLabel}; the underlying ${current.underlyingTradable ? 'can' : 'cannot'} currently reprice.` : 'Session context unavailable.', state: 'pass', source: 'US equity session calendar (America/New_York)', endpoint: 'Derived', retrievedAt: new Date().toISOString() },
     ]
 

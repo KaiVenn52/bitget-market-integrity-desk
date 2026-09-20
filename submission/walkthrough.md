@@ -33,14 +33,14 @@ Two questions, in the order a trader actually asks them:
 13. Open **Gate** and run the integrity sweep. It applies ordered deterministic rules to the whole watchlist in one pass.
 14. Confirm the headline is the **worst** verdict across the watchlist, not an average. A desk is only as clear as its least verifiable instrument.
 15. Expand an instrument. Each verdict must name its code, its reason, what it means, the evidence ids it cites, the conditions that would change it, and a next research step. The gate never says buy or sell.
-16. Check the reference line. The desk reports which basis the verdict rests on: a fresh authenticated same-session quote, or the last official close while the underlying cannot trade. A closed-market gap must be reported as drift, never as an alignment break — there is no live underlying price for the token to disagree with.
+16. Check the reference line. The desk reports which basis the verdict rests on: a fresh authenticated same-session quote, or the Yahoo-reported prior close while the underlying cannot trade. A closed-market gap must be reported as drift, never as an alignment break — there is no live underlying price for the token to disagree with.
 17. Choose **Open in the Desk** and confirm the instrument carries into the analysis workspace.
 18. Read the **desk log**. Every sweep is recorded, including refusals, with the refusal rate. A refusal is a recorded outcome, not a failure. Reload the page and confirm the log persists.
 
 ### C · The Stress test: answer the follow-up
 
 19. Open **Stress**. The desk builds closed-market episodes from hourly rToken candles, measures the distribution of drift, and reports what the following session actually did across comparable episodes.
-20. Read the four facts: the drift being tested, the matching band, the number of episodes built, and how many official underlying closes were retrieved.
+20. Read the four facts: the drift being tested, the matching band, the number of episodes built, and how many Yahoo-reported underlying closes were retrieved.
 21. Read the distribution: median, 90th percentile and maximum absolute drift, and the share of observations beyond the 20 bps threshold.
 22. Read the matched-episode table. Each row shows the peak drift, what the rToken closed at, what the **underlying** closed at, the classified outcome, and the error. Confirm the outcome is one of `same way`, `against it`, or `closed flat` — a drift that resolved to a flat close is **not** counted as a confirmation, and the flat rows are excluded from the headline rate and reported separately.
 23. Confirm the desk refuses to answer when there is nothing to test. A drift inside the 20 bps threshold is not an event, so the desk declines to compare it to history rather than dressing up a meaningless match.

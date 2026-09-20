@@ -369,3 +369,10 @@
 @media (max-width: 1050px) {
   .tier-grid { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 600px) {
+  .method-rail { grid-template-columns: 1fr; }
+  .method-rail > div,
+  .method-rail > div:nth-child(2) { border-right: 0; border-bottom: 1px solid var(--line); }
+  .method-rail > div:last-child { border-bottom: 0; }
+}
