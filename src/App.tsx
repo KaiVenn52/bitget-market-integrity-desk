@@ -39,7 +39,11 @@ export default function App() {
   const [view, setView] = useState<View>(viewFromHash)
   const [symbol, setSymbol] = useState('rNVDAUSDT')
   const [passport, setPassport] = useState<Passport>(() => snapshotFor(symbol))
-  const [analysis, setAnalysis] = useState<MoveAnalysis | null>(null)
+  // The analysis carries the instrument it belongs to. The passport is replaced as soon
+  // as retrieval finishes, but the narrative takes another 15-20s behind it, and without
+  // this the previous instrument's explanation sat next to the new instrument's passport
+  // for the whole of that window.
+  const [analysis, setAnalysis] = useState<{ symbol: string; data: MoveAnalysis } | null>(null)
   const [liveQuotes, setLiveQuotes] = useState<Record<string, Passport['instrument']>>({})
   const [scanning, setScanning] = useState(false)
   const [researchQuestion, setResearchQuestion] = useState('Can I trust rNVDAUSDT right now?')
@@ -59,7 +63,7 @@ export default function App() {
     const next = await runAnalysis(nextSymbol, question, setQueryNote)
     if (requestId !== scanRequest.current) return
     startTransition(() => {
-      setAnalysis(next)
+      setAnalysis(next ? { symbol: nextSymbol, data: next } : null)
       setQueryNote(completionNote(result, next))
       setScanning(false)
     })
@@ -115,7 +119,7 @@ export default function App() {
       <section className="workbench">
         <div className="instrument-bar"><div><span>Current passport</span><h2>{passport.instrument.symbol}</h2><p>{passport.instrument.company} · tokenized U.S. equity</p></div><button className="scan-button" aria-label={scanning ? 'Scanning evidence' : 'Refresh evidence'} disabled={scanning} onClick={() => void scan(symbol, passport.researchQuestion ?? researchQuestion)}>{scanning ? <RefreshCw className="spin" size={16} /> : <ScanLine size={16} />}<span>{scanning ? 'Scanning evidence' : 'Refresh evidence'}</span></button></div>
         <PassportPanel passport={passport} />
-        {analysis ? <CatalystPanel analysis={analysis} /> : null}
+        {analysis && analysis.symbol === passport.instrument.symbol ? <CatalystPanel analysis={analysis.data} /> : null}
         <EvidenceInspector key={`${passport.instrument.symbol}-${passport.scannedAt}`} passport={passport} />
       </section>
     </main> : view === 'gate' ? <IntegrityGate onInspect={inspectFromGate} /> : view === 'stress' ? <StressTest symbol={symbol} onSymbol={selectSymbol} /> : view === 'replay' ? <ReplayLab /> : <Methodology />}

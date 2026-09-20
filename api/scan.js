@@ -38,11 +38,15 @@ export default async function handler(req, res) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 5500)
   try {
-    const tokenResult = await getJson(`/api/v3/market/tickers?category=SPOT&symbol=${symbol}`, controller.signal)
     const stockPath = '/api/v3/stockplus/market/quote'
     const stockQuery = `symbol=${encodeURIComponent(meta.underlyingSymbol)}`
-    let stockResult = null
-    try { stockResult = await getJson(`${stockPath}?${stockQuery}`, controller.signal, stockAuthHeaders(stockPath, stockQuery)) } catch { stockResult = null }
+    // The token ticker and the Stock+ quote are independent, so they are requested
+    // together. Run in sequence they each spent the whole 5.5s budget, so a slow
+    // Stock+ response could time out a scan whose public data had already arrived.
+    const [tokenResult, stockResult] = await Promise.all([
+      getJson(`/api/v3/market/tickers?category=SPOT&symbol=${symbol}`, controller.signal),
+      getJson(`${stockPath}?${stockQuery}`, controller.signal, stockAuthHeaders(stockPath, stockQuery)).catch(() => null),
+    ])
     const token = tokenResult.data?.find?.((item) => item.symbol?.toLowerCase() === symbol.toLowerCase()) || tokenResult.data?.[0]
     const stock = stockResult?.data?.list?.[0]
     if (!token) throw new Error('Required rToken ticker fields unavailable')

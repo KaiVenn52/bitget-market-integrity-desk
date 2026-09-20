@@ -165,44 +165,78 @@ export function driftDistribution(episodes, options = {}) {
 }
 
 /**
- * Find the closed-market episodes whose peak drift is most similar to the drift
- * being asked about. This is the "historically similar scenarios" step: the
- * caller supplies today's drift, the desk supplies what followed the last times
- * it looked like this.
+ * The observed point in a closed window that looks most like the drift being asked
+ * about.
+ *
+ * Matching on the window's peak would use information that did not exist at the time:
+ * nobody watching an overnight window knows it will peak at 44 bps until it already
+ * has. Every point here was observable in real time, and the outcome is identical for
+ * all of them — the following session's close measured against the same anchor — so
+ * choosing the closest point selects *when* the window looked like today without
+ * biasing what followed it.
+ */
+export function matchedPointOf(episode, targetDriftBps) {
+  const points = (episode?.points ?? []).filter((point) => Number.isFinite(point?.driftBps))
+  if (!points.length) return null
+  const targetSign = Math.sign(targetDriftBps)
+  const sameDirection = points.filter((point) => Math.sign(point.driftBps) === targetSign)
+  const pool = sameDirection.length ? sameDirection : points
+  const distanceFrom = (point) => Math.abs(Math.abs(point.driftBps) - Math.abs(targetDriftBps))
+  return pool.reduce((best, point) => (distanceFrom(point) < distanceFrom(best) ? point : best), pool[0])
+}
+
+/**
+ * Find the closed-market windows that looked like the drift being asked about. This is
+ * the "historically similar scenarios" step: the caller supplies today's drift, the
+ * desk supplies what followed the last times it looked like this.
+ *
+ * Two corrections make the comparison honest. The example episode is excluded from its
+ * own pool, because an episode that matches itself at zero distance inflates every
+ * count it appears in. And the matching key is the drift observed inside the window,
+ * not the window's peak, so the sample contains only scenarios a trader could have
+ * recognised while they were happening.
  */
 export function matchEpisodes(episodes, targetDriftBps, options = {}) {
   const band = options.bandBps ?? 100
   const limit = options.limit ?? 6
-  const usable = episodes.filter((episode) => episode.resolution && episode.windowHours >= (options.minWindowHours ?? 2))
+  const minWindowHours = options.minWindowHours ?? 2
+  const excludeAnchorMs = options.excludeAnchorMs ?? null
   if (!Number.isFinite(targetDriftBps)) return []
-  const sameDirection = usable.filter((episode) => Math.sign(episode.peakDriftBps) === Math.sign(targetDriftBps))
-  const pool = sameDirection.length ? sameDirection : usable
-  return pool
-    .map((episode) => ({ episode, distance: Math.abs(Math.abs(episode.peakDriftBps) - Math.abs(targetDriftBps)) }))
+  return (episodes ?? [])
+    .filter((episode) => episode.resolution && episode.windowHours >= minWindowHours)
+    .filter((episode) => excludeAnchorMs === null || episode.anchorMs !== excludeAnchorMs)
+    .map((episode) => ({ episode, point: matchedPointOf(episode, targetDriftBps) }))
+    .filter((candidate) => candidate.point)
+    .map((candidate) => ({ ...candidate, distance: Math.abs(Math.abs(candidate.point.driftBps) - Math.abs(targetDriftBps)) }))
     .filter((candidate) => candidate.distance <= band)
     .sort((a, b) => a.distance - b.distance)
     .slice(0, limit)
-    .map((candidate) => {
-      const { episode } = candidate
+    .map(({ episode, point }) => {
       // The underlying close is the better measure whenever it was retrieved, and the
       // outcome is classified here so the table and the statistics can never disagree
       // about what a given episode did.
       const useUnderlying = Number.isFinite(episode.underlying?.resolutionBps)
       const usedResolutionBps = useUnderlying ? episode.underlying.resolutionBps : episode.resolution.resolutionBps
+      const matchedDriftBps = point.driftBps
+      const direction = Math.sign(matchedDriftBps)
       return {
         anchorMs: episode.anchorMs,
         windowHours: episode.windowHours,
+        // The point-in-time basis: the drift actually observed at this stage of the
+        // window, which is what a trader would have been reacting to.
+        matchedDriftBps,
+        matchedStageHours: Math.round(((point.timestamp - episode.anchorMs) / 3_600_000) * 10) / 10,
         peakDriftBps: episode.peakDriftBps,
         sessionCloseMs: episode.resolution.sessionCloseMs,
         resolutionBps: episode.resolution.resolutionBps,
-        directionMatch: episode.resolution.directionMatch,
-        errorBps: episode.resolution.errorBps,
+        directionMatch: direction !== 0 && Math.sign(episode.resolution.resolutionBps) === direction,
+        errorBps: Math.abs(matchedDriftBps - episode.resolution.resolutionBps),
         maxFavourableBps: episode.resolution.maxFavourableBps,
         maxAdverseBps: episode.resolution.maxAdverseBps,
         underlyingResolutionBps: episode.underlying?.resolutionBps ?? null,
-        underlyingDirectionMatch: episode.underlying?.directionMatch ?? null,
-        underlyingErrorBps: episode.underlying?.errorBps ?? null,
-        outcome: outcomeOf(usedResolutionBps, episode.peakDriftBps),
+        underlyingDirectionMatch: Number.isFinite(episode.underlying?.resolutionBps) && direction !== 0 && Math.sign(episode.underlying.resolutionBps) === direction,
+        underlyingErrorBps: Number.isFinite(episode.underlying?.resolutionBps) ? Math.abs(matchedDriftBps - episode.underlying.resolutionBps) : null,
+        outcome: outcomeOf(usedResolutionBps, matchedDriftBps),
         usedResolutionBps,
         usedSource: useUnderlying ? 'underlying' : 'token',
       }
@@ -228,7 +262,7 @@ export function outcomeStats(matched, options = {}) {
         usedResolutionBps,
         usedDirectionMatch: useUnderlying ? item.underlyingDirectionMatch : item.directionMatch,
         usedErrorBps: useUnderlying ? item.underlyingErrorBps : item.errorBps,
-        outcome: outcomeOf(usedResolutionBps, item.peakDriftBps),
+        outcome: outcomeOf(usedResolutionBps, item.matchedDriftBps),
       }
     })
     .filter((item) => Number.isFinite(item.usedResolutionBps))
@@ -256,7 +290,7 @@ export function outcomeStats(matched, options = {}) {
     medianErrorBps: percentile(errors, 0.5),
     medianResolutionBps: percentile(resolutions, 0.5),
     worstErrorBps: errors[errors.length - 1],
-    direction: rows[0].peakDriftBps >= 0 ? 'up' : 'down',
+    direction: rows[0].matchedDriftBps >= 0 ? 'up' : 'down',
     source,
     rows,
   }
@@ -289,7 +323,7 @@ export function stressTestVerdict(targetDriftBps, stats, band) {
       : 'the rToken itself closed in the same direction (official underlying closes were not retrieved)'
   return {
     headline: `${stats.confirmed} of ${stats.materialEpisodes} materially resolved episodes moved the same way as the drift`,
-    detail: `Across ${stats.episodes} earlier closed-market windows whose peak drift was within ${band} bps of the current ${targetDriftBps} bps, ${measured} ${stats.confirmed} times out of the ${stats.materialEpisodes} that resolved materially (${rate}%), and moved against it ${stats.contradicted} times.${flatNote} Median error between the drift and the eventual close is ${stats.medianErrorBps} bps. This is a historical base rate, not a forecast: the sample is small and the desk states the outcome rather than a probability of profit.`,
+    detail: `Across ${stats.episodes} earlier closed-market windows that were within ${band} bps of the current ${targetDriftBps} bps at some point while the market was shut, ${measured} ${stats.confirmed} times out of the ${stats.materialEpisodes} that resolved materially (${rate}%), and moved against it ${stats.contradicted} times.${flatNote} Median error between the observed drift and the eventual close is ${stats.medianErrorBps} bps. This is a historical base rate, not a forecast: the sample is small and the desk states the outcome rather than a probability of profit.`,
     tone,
   }
 }

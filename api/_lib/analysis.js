@@ -46,6 +46,117 @@ export function etParts(ms) {
   return { weekday, hour, minute, minutes: hour * 60 + minute, weekend: WEEKEND.has(weekday) }
 }
 
+// --- U.S. equity market calendar ---------------------------------------------
+//
+// Time-of-day alone is not a session. Christmas morning is a weekday at 10:00 ET, and
+// the desk used to call it a regular session: it would then demand a live quote from a
+// market that was shut and treat the correct official close as a stale reference. The
+// calendar is computed from the published NYSE rules rather than stored as a table, so
+// it cannot silently expire.
+
+const DAY_MS = 86_400_000
+
+/** Meeus/Jones/Butcher Gregorian Easter Sunday, which Good Friday hangs off. */
+function easterSunday(year) {
+  const a = year % 19
+  const b = Math.floor(year / 100)
+  const c = year % 100
+  const d = Math.floor(b / 4)
+  const e = b % 4
+  const f = Math.floor((b + 8) / 25)
+  const g = Math.floor((b - f + 1) / 3)
+  const h = (19 * a + b - d - g + 15) % 30
+  const i = Math.floor(c / 4)
+  const k = c % 4
+  const l = (32 + 2 * e + 2 * i - h - k) % 7
+  const m = Math.floor((a + 11 * h + 22 * l) / 451)
+  const month = Math.floor((h + l - 7 * m + 114) / 31)
+  const day = ((h + l - 7 * m + 114) % 31) + 1
+  return Date.UTC(year, month - 1, day)
+}
+
+const keyOfUtc = (ms) => new Date(ms).toISOString().slice(0, 10)
+const weekdayOfKey = (key) => new Date(`${key}T12:00:00Z`).getUTCDay()
+const shiftKey = (key, days) => keyOfUtc(Date.parse(`${key}T12:00:00Z`) + days * DAY_MS)
+
+/** The nth given weekday of a month, as a date key. `weekday` is 0=Sun. */
+function nthWeekday(year, month, weekday, n) {
+  const first = new Date(Date.UTC(year, month - 1, 1))
+  const offset = (weekday - first.getUTCDay() + 7) % 7
+  return keyOfUtc(Date.UTC(year, month - 1, 1 + offset + (n - 1) * 7))
+}
+
+/** The last given weekday of a month, as a date key. */
+function lastWeekday(year, month, weekday) {
+  const last = new Date(Date.UTC(year, month, 0))
+  const offset = (last.getUTCDay() - weekday + 7) % 7
+  return keyOfUtc(Date.UTC(year, month, 0 - offset))
+}
+
+/**
+ * When a fixed-date holiday is actually observed: a Saturday holiday closes the market
+ * the Friday before it, a Sunday holiday the Monday after.
+ */
+function observedFixed(year, month, day) {
+  const key = keyOfUtc(Date.UTC(year, month - 1, day))
+  const weekday = weekdayOfKey(key)
+  if (weekday === 6) return shiftKey(key, -1)
+  if (weekday === 0) return shiftKey(key, 1)
+  return key
+}
+
+const isWeekdayKey = (key) => {
+  const weekday = weekdayOfKey(key)
+  return weekday !== 0 && weekday !== 6
+}
+
+const calendarCache = new Map()
+
+function calendarFor(year) {
+  const cached = calendarCache.get(year)
+  if (cached) return cached
+  const closed = new Map()
+  // A holiday observed on Dec 31 belongs to the previous year's calendar.
+  const add = (key, name) => { if (key.slice(0, 4) === String(year)) closed.set(key, name) }
+  add(observedFixed(year, 1, 1), "New Year's Day")
+  add(nthWeekday(year, 1, 1, 3), 'Martin Luther King Jr. Day')
+  add(nthWeekday(year, 2, 1, 3), "Washington's Birthday")
+  add(keyOfUtc(easterSunday(year) - 2 * DAY_MS), 'Good Friday')
+  add(lastWeekday(year, 5, 1), 'Memorial Day')
+  add(observedFixed(year, 6, 19), 'Juneteenth National Independence Day')
+  add(observedFixed(year, 7, 4), 'Independence Day')
+  add(nthWeekday(year, 9, 1, 1), 'Labor Day')
+  add(nthWeekday(year, 11, 4, 4), 'Thanksgiving Day')
+  add(observedFixed(year, 12, 25), 'Christmas Day')
+  // Half days: the regular session ends at 13:00 ET instead of 16:00 ET.
+  const early = new Set([shiftKey(nthWeekday(year, 11, 4, 4), 1)])
+  for (const key of [keyOfUtc(Date.UTC(year, 11, 24)), keyOfUtc(Date.UTC(year, 6, 3))]) {
+    if (!closed.has(key) && isWeekdayKey(key)) early.add(key)
+  }
+  const entry = { closed, early }
+  calendarCache.set(year, entry)
+  return entry
+}
+
+/**
+ * The state of the U.S. equity market on a New York calendar date.
+ *
+ * `closed` means shut for the whole day, which is the same trading state as an
+ * overnight window and is deliberately given the same session label. `earlyClose` means
+ * a half day, which moves the end of the regular session to 13:00 ET.
+ */
+export function usMarketCalendar(dateKey) {
+  const year = Number(String(dateKey).slice(0, 4))
+  if (!Number.isFinite(year) || year < 1970 || year > 2200) return { closed: false, earlyClose: false, name: null }
+  const { closed, early } = calendarFor(year)
+  const name = closed.get(dateKey) ?? null
+  return { closed: Boolean(name), earlyClose: !name && early.has(dateKey), name }
+}
+
+const REGULAR_OPEN_MINUTES = 570
+const REGULAR_CLOSE_MINUTES = 960
+const EARLY_CLOSE_MINUTES = 780
+
 /**
  * Which U.S. equity session a UTC instant falls into. A closed underlying is not
  * a broken feed, so it gets its own label instead of being treated as stale data.
@@ -53,9 +164,12 @@ export function etParts(ms) {
 export function sessionOf(ms) {
   const { minutes, weekend } = etParts(ms)
   if (weekend) return 'overnight'
-  if (minutes >= 570 && minutes < 960) return 'regular'
-  if (minutes >= 240 && minutes < 570) return 'premarket'
-  if (minutes >= 960 && minutes < 1200) return 'afterhours'
+  const { closed, earlyClose } = usMarketCalendar(etDateKey(ms))
+  if (closed) return 'overnight'
+  const close = earlyClose ? EARLY_CLOSE_MINUTES : REGULAR_CLOSE_MINUTES
+  if (minutes >= REGULAR_OPEN_MINUTES && minutes < close) return 'regular'
+  if (minutes >= 240 && minutes < REGULAR_OPEN_MINUTES) return 'premarket'
+  if (minutes >= close && minutes < 1200) return 'afterhours'
   return 'overnight'
 }
 
@@ -454,11 +568,57 @@ export function buildVerdicts(input) {
   }
 }
 
-/** A citation is only accepted when it resolves to evidence the server supplied. */
-export function validateCitations(evidenceIds, allowedIds) {
+/**
+ * Every bracketed marker a narrative actually used, in the order it used them.
+ *
+ * The model is told to cite inside the prose, so the prose is what has to be checked.
+ * Accepts the shapes a model plausibly emits — `[token]`, `[token, drift]`,
+ * `[token][drift]` — and returns nothing for text with no markers at all, which is
+ * itself a failure the caller has to treat as one.
+ */
+export function extractCitations(text) {
+  if (typeof text !== 'string') return []
+  const found = []
+  for (const match of text.matchAll(/\[([^\]\n]{1,120})\]/g)) {
+    for (const part of match[1].split(/[,;]/)) {
+      const id = part.trim().replace(/^["'`]|["'`]$/g, '').trim()
+      // Prose brackets such as "[sic]" or a bare number are not citation attempts.
+      if (id && /^[A-Za-z][\w:.-]*$/.test(id)) found.push(id)
+    }
+  }
+  return [...new Set(found)]
+}
+
+/**
+ * A citation is only accepted when it resolves to evidence the server supplied.
+ *
+ * This checks both halves of the claim the interface makes. The `evidenceIds` array is
+ * the model's own index of what it used; `brief` is the prose a reader actually reads,
+ * where the same IDs appear inline. Checking only the array would let a narrative cite
+ * nothing, or cite an ID the server never issued, and still be labelled verified — the
+ * exact failure this desk exists to prevent. A narrative that cites nothing fails,
+ * because an uncited claim is indistinguishable from a fabricated one.
+ */
+export function validateCitations(evidenceIds, allowedIds, brief) {
   const allowed = new Set(allowedIds ?? [])
   const requested = Array.isArray(evidenceIds) ? evidenceIds : []
   const accepted = [...new Set(requested.filter((id) => allowed.has(id)))]
   const rejected = [...new Set(requested.filter((id) => !allowed.has(id)))]
-  return { accepted, rejected, valid: accepted.length > 0 && rejected.length === 0 }
+
+  const bodyCitations = extractCitations(brief)
+  const bodyRejected = bodyCitations.filter((id) => !allowed.has(id))
+  const bodyAccepted = bodyCitations.filter((id) => allowed.has(id))
+  // Only meaningful when a body was supplied; the array-only callers predate this.
+  const bodyChecked = typeof brief === 'string'
+  const bodyCited = bodyCitations.length > 0
+
+  return {
+    accepted,
+    rejected,
+    bodyCitations,
+    bodyAccepted,
+    bodyRejected,
+    bodyChecked,
+    valid: accepted.length > 0 && rejected.length === 0 && (!bodyChecked || (bodyCited && bodyRejected.length === 0)),
+  }
 }

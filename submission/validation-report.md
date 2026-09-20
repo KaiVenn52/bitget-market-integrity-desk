@@ -1,68 +1,96 @@
 # Validation Record
 
-Date: 2026-09-15
-Scope: local engine plus public production workflow
+Date: 2026-09-20
+Scope: local engine, public production workflow, and one adversarial review round
 Operator: project developer
+
+This record is linked directly from the deployed desk. Every row below was observed on
+the date shown, and rows that describe an earlier state say so.
 
 ## Observed results
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic and query-routing unit tests | 27/27 passed | Published ±20/±100 bps and 30/120-second boundaries, state degradation, missing checks, and natural-language routing |
-| Production build | Passed | `npm.cmd run build` |
+| Deterministic, gate, study, routing and rate-limit unit tests | 153/153 passed, six suites | 5 query and instrument resolution; 22 published deterministic integrity rules; 58 analysis-engine; 34 gate; 28 study; 6 public-endpoint budget. `npm.cmd test` |
+| Production build | Passed | `npm.cmd run build` — Vite 8, 278 kB JS / 40 kB CSS |
 | Static lint | Passed | `npm.cmd run lint` |
-| API syntax checks | 3/3 passed | `node --check api/scan.js`, `node --check api/evidence.js`, `node --check api/benchmark-source.js` |
-| Core browser tasks | Passed | Natural-language query, question-aware Qwen answer, instrument switch, live/fallback scan, row expansion, evidence selection, provenance reveal, Replay and Method navigation |
-| Judge proof discoverability | Passed | Live Desk names the Bitget rToken, read-only Stock+, and bounded Qwen layers and links directly to validation, benchmark, and source artifacts |
-| Desktop viewport | Passed | `design/implementation-desktop-final.png`, 1440 × 1000 |
-| Mobile viewport | Passed | `design/implementation-mobile-final.png`, 390 × 844; no document-level horizontal overflow |
-| Public deployment | Passed | Stable Vercel URL returned HTTP 200 |
-| Public live rToken scan | Passed | Bitget returned current rToken tickers |
-| Authenticated Stock+ quote | Passed | AAPL returned a real Stock+ reference price; production calculated a deterministic +14 bps comparison and preserved the stale-quote caution |
-| Authenticated Stock+ candles | Partial | Both current and historical official endpoints authenticated but returned empty lists across all four supported symbols, including a U.S. intraday probe; no matched cases were fabricated |
-| Immediate research entry | Passed | Initial automatic Qwen scan removed; the primary action was enabled after DOM load at 1440 × 1000 and 390 × 844 |
-| Public natural-language task | Passed | An Apple question resolved to rAAPLUSDT; the exact question appeared in the result and Qwen answered it directly |
-| Production Qwen matrix | 4/4 passed | NVDA, AAPL, TSLA, and QQQ returned `LIVE · QWEN`; returned evidence IDs exactly matched brief citations |
-| Production Qwen latency | 7.42–12.85 s | One developer-operated run per supported instrument on 2026-09-11 |
+| API syntax checks | 5/5 passed | `node --check` on `api/analyze.js`, `api/scan.js`, `api/sweep.js`, `api/study.js`, `api/benchmark-source.js` |
+| Citation gate closes over the narrative prose | Passed | The gate extracts the inline `[id]` markers from the brief a reader sees and fails a narrative that cites nothing or cites an ID the server never issued. Replayed against three live production answers: all three passed, so the tightening rejects no valid output. |
+| Citation gate closes in production | Passed | `/api/analyze` returned `QWEN` reporting "6 inline citations verified in the narrative against server evidence" in 14.5 s |
+| U.S. market calendar | Passed | Full holidays and half days computed from the published NYSE rules. Christmas, Thanksgiving, New Year's Day, Good Friday, Memorial Day, Juneteenth, Labor Day, MLK Day and Washington's Birthday all classify as closed; the day after Thanksgiving, Christmas Eve and a qualifying July 3 close the regular session at 13:00 ET. |
+| Weekend holiday observation | Passed | Independence Day 2026 falls on a Saturday, so the market is shut on Friday 2026-07-03; in 2027 it falls on a Sunday, so the market is shut on Monday 2027-07-05 |
+| Stress-test matching has no look-ahead | Passed | Matched rows key on the drift observed at a stage of the window, never the window's peak. Live: `matchedDriftBps: -30, matchedStageHours: 16, peakDriftBps: 52` |
+| The example episode is excluded from its own sample | Passed | When the market is open the most recent closed episode supplies the target and is removed from the pool it is compared against, so it cannot match itself at zero distance |
+| Initial scan concurrency | Passed | Token ticker and Stock+ quote are requested together; production `/api/scan` returns a real premium in ~2 s |
+| Public endpoint budget | Passed | `/api/analyze` returns `x-ratelimit-limit: 12`, `x-ratelimit-remaining`, and `retry-after` on refusal. Per warm instance, not a global quota — stated as such rather than implied otherwise. |
+| Core browser tasks | Passed | Natural-language query, question-aware Qwen answer, instrument switch, live/fallback scan, row expansion, evidence selection, provenance reveal, Gate, Stress, Replay and Method navigation |
+| Instrument switch does not show the previous narrative | Passed | The analysis carries its instrument and is withheld while the passport belongs to a different one, closing the 15–20 s window between retrieval finishing and the model answering |
+| Desktop viewport | Passed | 1440 × 1000, no document-level horizontal overflow |
+| Mobile viewport | Passed | 390 × 844, no document-level horizontal overflow |
+| Public deployment | Passed | `https://bitget-market-integrity-desk.vercel.app` returned HTTP 200 |
+| Four-instrument gate sweep | Passed | Four verdicts, each with a code, reason, meaning, cited evidence ids, change conditions and next step |
+| Stress test over retrieved history | Passed | `/api/study` returned 14 closed-market episodes for rAAPLUSDT and rTSLAUSDT over 500 hourly candles |
+| Production Qwen latency | 11.0–21.7 s | Bounded reasoning. Eight runs on the real payload measured 13–22 s bounded against 29–43 s unbounded; the unbounded tail exceeded the deadline and fell back to `RULES`. |
+| Qwen reasoning is bounded, not merely hoped for | Passed | `reasoning: { effort: 'low' }`, measured. The answer kept all seven citations, the closed-market semantics and the explicit statement that no timing-consistent catalyst was found. |
+| Model deadline derived from the function budget | Passed | The deadline is computed from the remaining handler budget rather than fixed, so a slow retrieval cannot cause a bare platform 504 in place of a labelled fallback |
 | Frozen benchmark | 16/16 cases evaluated | Four instruments × four closed five-minute cutoffs; immutable evidence digests and separate labels published in `benchmark/` |
 | Benchmark evidence boundary | Passed | 100% deterministic state accuracy, Qwen availability, citation validity, and bounded abstention; 0% directional claims |
 | Benchmark bundle integrity | Passed | 100% SHA-256 digest validity, five-minute cutoff validity, and OHLC validity; ID coverage matched across cases, labels, and Qwen outputs |
-| Benchmark median Qwen latency | 8.581 s | Saved per-case production timings |
-| Production Replay regression | Passed | 16 rows and protocol disclosure verified at 1440 × 1000 and 390 × 844; no framework overlay, document overflow, or console issues |
-| Portable report packaging | Passed with structural-only browser status | 14 blocks, 5 metrics, 1 chart, and 1 table packaged; local Chromium headless-shell was unavailable to the official verifier |
-| Submission film | Passed | 42.048 s; 1920 × 1080; 30 fps; H.264 video and AAC audio; six representative frames visually inspected |
 
 ## What these results prove
 
-- The deterministic calculations and state thresholds behave as tested.
-- Controlled boundary tests cover both signs of price divergence, exact threshold transitions, source-age degradation, and the minimum observable-check rule. These are rule tests, not historical-market accuracy claims.
+- The deterministic calculations and state thresholds behave as tested, including the
+  exchange calendar that decides whether a market is open at all.
+- The citation claim the interface makes is the citation claim it checks: the narrative
+  prose is verified, not just the model's own index of it.
+- The historical comparison contains only scenarios that were recognisable while they
+  were happening, and never counts an episode as its own precedent.
 - The production client compiles and the current code passes static checks.
-- The primary research workflow is operable in a real browser.
-- The submitted natural-language question reaches the bounded Qwen investigator rather than serving only as a symbol selector.
-- The production sponsor endpoint can return citation-verified briefs for every supported instrument.
-- The frozen missing-reference slice is reproducible and the hybrid workflow abstains consistently when Stock+ evidence is absent.
-- Failure states remain visible and inspectable.
-- The live Stock+ path records corporate-action unavailability as its own source item, so Qwen can cite the missing-evidence boundary instead of relying on an uncited check label.
-- The deployed server can retrieve both the public Bitget rToken ticker and authenticated Stock+ quote, calculate their signed basis-point difference, and preserve independent source ages.
-- A judge can reach the validation record, frozen benchmark, and public source repository from the production interface without relying on the submission description.
-- Watchlist quotes are populated only by current-session live scans; frozen fixtures no longer appear as live watchlist prices.
-- Snapshot evidence retains its frozen source timestamp and is never presented with a synthetic current quote age.
+- The primary research workflow is operable in a real browser, and a stale narrative
+  cannot be shown against a different instrument.
+- The public endpoint that spends money carries a budget, and the endpoint says what
+  kind of budget it is.
 
 ## What these results do not prove
 
 - Live Bitget availability from every deployment region.
-- Historical classification accuracy, user adoption, retention, AUM, volume, fees, or investment performance.
-- Balanced state-classification accuracy: all 16 frozen benchmark cases still share the `UNVERIFIABLE` gold label because Stock+ credentials were absent when that immutable slice was captured.
-- Qwen availability or latency outside the 20 observed production calls (four live workflow checks plus 16 frozen benchmark requests).
+- Historical classification accuracy, user adoption, retention, AUM, volume, fees, or
+  investment performance.
+- That the stress test predicts anything. It describes what already happened across a
+  small sample of one instrument's recent history. It is a historical base rate, not a
+  forward test, and the page says so.
+- That the rate limit is a global quota. It is per warm instance; a durable limit would
+  need shared storage this desk does not have.
+- Balanced state-classification accuracy: all 16 frozen benchmark cases share the
+  `UNVERIFIABLE` gold label because Stock+ credentials were absent when that immutable
+  slice was captured.
+- Qwen availability or latency outside the runs recorded above.
 
-## Benchmark protocol and next slice
+## Defects found by review and fixed
 
-The first slice freezes 16 instrument-time cases with immutable evidence bundles and keeps labels separate. Both official current and historical Stock+ candle routes were retried on 2026-09-15 and returned successful empty lists for all four instruments despite the quote entitlement working. A balanced matched-source slice therefore remains blocked by source availability and is not substituted with synthetic history. If source rows become available, continue evaluating:
+An adversarial review of the deployed product found eight defects. Each was reproduced
+before being fixed, and each carries a regression test.
 
-1. state accuracy;
-2. unsupported-claim rate;
-3. temporal-contradiction catch rate;
-4. abstention precision;
-5. median completion time.
+1. **The citation gate did not cover the prose.** The interface said "citations
+   verified" while only the `evidenceIds` array had been checked, so a narrative citing
+   nothing, or citing an invented ID, still passed. This was the most serious defect
+   because it struck at the product's central claim.
+2. **The stress test had a look-ahead bias.** It matched on the window's peak drift,
+   which is only knowable after the fact, and when the market was open it left the
+   example episode inside its own comparison pool.
+3. **The session classifier had no holiday calendar.** Christmas morning at 10:00 ET was
+   classified as a regular session.
+4. **The initial scan serialised two independent requests**, so a slow Stock+ response
+   could time out a scan whose public data had already arrived.
+5. **The public analysis endpoint had no budget** despite spending a paid model call per
+   request.
+6. **A static "Stock+ VERIFIED" badge** advertised a credentialed path even when the
+   answer rested on the keyless official-close tier.
+7. **A stale narrative could outlive an instrument switch**, sitting beside the new
+   instrument's passport for 15–20 seconds.
+8. **The submission documents were stale**, quoting earlier test counts, a deleted
+   endpoint, and an older product state — including this file, which a judge reaches by
+   clicking "Validation record" on the deployed site.
 
-Every published metric must be labeled observed, estimated, or targeted. Demonstration fixtures must never be described as historical evidence.
+Every published metric must be labeled observed, estimated, or targeted. Demonstration
+fixtures must never be described as historical evidence.

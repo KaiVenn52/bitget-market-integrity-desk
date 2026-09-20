@@ -91,7 +91,7 @@ export function CatalystPanel({ analysis }: { analysis: MoveAnalysis }) {
     </div>
 
     <div className="catalyst-brief">
-      <span className="brief-mode">{analysis.reasoningMode === 'qwen' ? 'Qwen narrative · citations verified' : 'Deterministic narrative · rules only'}</span>
+      <span className="brief-mode">{analysis.reasoningMode === 'qwen' ? 'Qwen narrative · every inline citation resolved to server evidence' : 'Deterministic narrative · rules only'}</span>
       <p>{analysis.brief}</p>
       {analysis.briefEvidenceIds.length ? <div className="citation-row">{analysis.briefEvidenceIds.map((id) => <code key={id}>{id}</code>)}</div> : null}
       <small>{analysis.reasoningNote}</small>

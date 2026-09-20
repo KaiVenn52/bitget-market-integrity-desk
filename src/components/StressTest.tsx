@@ -23,7 +23,7 @@ function EpisodeRow({ item }: { item: StudyResult['matched'][number] }) {
   const usedError = item.usedSource === 'underlying' ? item.underlyingErrorBps : item.errorBps
   return <tr>
     <td>{day(item.anchorMs)}<small>{item.windowHours}h closed</small></td>
-    <td className="num">{bps(item.peakDriftBps)}</td>
+    <td className="num">{bps(item.matchedDriftBps)}<small>at {item.matchedStageHours}h in</small></td>
     <td className="num">{bps(item.resolutionBps)}</td>
     <td className="num">{item.underlyingResolutionBps === null ? '—' : bps(item.underlyingResolutionBps)}</td>
     <td><span className={`timing-badge timing-${OUTCOME_TONE[outcome] ?? 'unknown'}`}>{OUTCOME_LABEL[outcome] ?? outcome}</span><small>measured on {item.usedSource} · {bps(used)}</small></td>
@@ -120,9 +120,9 @@ export function StressTest({ symbol, onSymbol }: { symbol: string; onSymbol: (ne
 
       <section className="panel study-matched" aria-label="Matched episodes">
         <h2><History size={15} aria-hidden /> Comparable closed-market episodes and what followed</h2>
-        <p className="study-sub">Episodes whose peak drift fell within ±{result.target.bandBps} bps of the {bps(result.target.driftBps)} being tested. The underlying column is used for the statistics whenever official closes were retrieved.</p>
+        <p className="study-sub">Windows that were within ±{result.target.bandBps} bps of the {bps(result.target.driftBps)} being tested <b>at a moment that was observable while the market was shut</b> — matched on the drift actually on screen at the time, never on the window's peak, which only hindsight reveals. The underlying column is used for the statistics whenever official closes were retrieved. This describes what already happened rather than testing the desk forward, and it makes no prediction from a sample this small.</p>
         {result.matched.length ? <div className="table-scroll"><table className="study-table">
-          <thead><tr><th>Episode</th><th>Peak drift</th><th>rToken next close</th><th>Underlying next close</th><th>Direction</th><th>Error</th></tr></thead>
+          <thead><tr><th>Episode</th><th>Observed drift</th><th>rToken next close</th><th>Underlying next close</th><th>Direction</th><th>Error</th></tr></thead>
           <tbody>{result.matched.map((item) => <EpisodeRow key={item.anchorMs} item={item} />)}</tbody>
         </table></div> : <p className="gate-empty">No comparable episode inside the band. The desk does not extrapolate from an empty sample.</p>}
 

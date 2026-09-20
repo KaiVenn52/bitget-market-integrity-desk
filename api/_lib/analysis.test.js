@@ -10,9 +10,11 @@ import {
   rankHeadlines,
   referenceEvidence,
   sessionOf,
+  usMarketCalendar,
   spreadOf,
   turnoverAcceleration,
   validateCitations,
+  extractCitations,
 } from './analysis.js'
 
 // All instants below are UTC. U.S. regular session is 13:30–20:00 UTC in EDT.
@@ -39,6 +41,61 @@ describe('session labelling', () => {
     expect(sessionOf(AFTERHOURS)).toBe('afterhours')
     expect(sessionOf(OVERNIGHT)).toBe('overnight')
     expect(sessionOf(WEEKEND)).toBe('overnight')
+  })
+
+  // 10:00 ET on a weekday is a regular session only if the exchange is actually open.
+  // Before this, Christmas morning was labelled regular, so the desk demanded a live
+  // quote from a shut market and treated the correct official close as stale.
+  it('closes the regular session on a full market holiday', () => {
+    const at10et = (iso) => Date.parse(iso)
+    expect(sessionOf(at10et('2026-12-25T15:00:00Z'))).toBe('overnight') // Christmas, a Friday
+    expect(sessionOf(at10et('2026-11-26T15:00:00Z'))).toBe('overnight') // Thanksgiving
+    expect(sessionOf(at10et('2026-01-01T15:00:00Z'))).toBe('overnight') // New Year's Day
+    expect(sessionOf(at10et('2026-04-03T15:00:00Z'))).toBe('overnight') // Good Friday
+    expect(sessionOf(at10et('2026-05-25T15:00:00Z'))).toBe('overnight') // Memorial Day
+    expect(sessionOf(at10et('2026-06-19T15:00:00Z'))).toBe('overnight') // Juneteenth
+    expect(sessionOf(at10et('2026-09-07T15:00:00Z'))).toBe('overnight') // Labor Day
+    expect(sessionOf(at10et('2026-01-19T15:00:00Z'))).toBe('overnight') // MLK Day
+    expect(sessionOf(at10et('2026-02-16T15:00:00Z'))).toBe('overnight') // Washington's Birthday
+    expect(sessionOf(at10et('2026-09-21T14:00:00Z'))).toBe('regular') // an ordinary Monday
+  })
+
+  it('names the holiday it is observing rather than just going quiet', () => {
+    expect(usMarketCalendar('2026-12-25').name).toBe('Christmas Day')
+    expect(usMarketCalendar('2026-12-25').closed).toBe(true)
+    expect(usMarketCalendar('2026-09-21').name).toBeNull()
+    expect(usMarketCalendar('2026-09-21').closed).toBe(false)
+  })
+
+  // A Saturday holiday closes the market the Friday before; a Sunday holiday the
+  // Monday after. Both land on an ordinary-looking weekday.
+  it('observes a weekend holiday on the adjacent weekday', () => {
+    // 2026-07-04 is a Saturday, so the market is shut on Friday 2026-07-03.
+    expect(usMarketCalendar('2026-07-03').name).toBe('Independence Day')
+    expect(sessionOf(Date.parse('2026-07-03T15:00:00Z'))).toBe('overnight')
+    // 2027-07-04 is a Sunday, so the market is shut on Monday 2027-07-05.
+    expect(usMarketCalendar('2027-07-05').name).toBe('Independence Day')
+    expect(sessionOf(Date.parse('2027-07-05T15:00:00Z'))).toBe('overnight')
+  })
+
+  // Half days end the regular session at 13:00 ET, so the afternoon is not regular.
+  it('ends the regular session early on a half day', () => {
+    expect(usMarketCalendar('2026-11-27').earlyClose).toBe(true) // day after Thanksgiving
+    expect(sessionOf(Date.parse('2026-11-27T15:00:00Z'))).toBe('regular') // 10:00 ET
+    expect(sessionOf(Date.parse('2026-11-27T18:00:00Z'))).toBe('afterhours') // 13:00 ET
+    expect(usMarketCalendar('2026-12-24').earlyClose).toBe(true) // Christmas Eve
+    expect(sessionOf(Date.parse('2026-12-24T18:00:00Z'))).toBe('afterhours')
+    // 2028-07-04 is a Tuesday, so 2028-07-03 is a half day rather than a closure.
+    expect(usMarketCalendar('2028-07-03').earlyClose).toBe(true)
+    expect(usMarketCalendar('2028-07-03').closed).toBe(false)
+    // A half day that would fall on a weekend is not a half day at all.
+    expect(usMarketCalendar('2033-07-03').earlyClose).toBe(false)
+  })
+
+  it('computes Easter far enough out to be trusted for Good Friday', () => {
+    expect(usMarketCalendar('2027-03-26').name).toBe('Good Friday')
+    expect(usMarketCalendar('2030-04-19').name).toBe('Good Friday')
+    expect(usMarketCalendar('2026-03-27').closed).toBe(false)
   })
 })
 
@@ -461,5 +518,44 @@ describe('citation gate', () => {
 
   it('rejects an empty citation set', () => {
     expect(validateCitations([], ['a']).valid).toBe(false)
+  })
+
+  it('reads the citations out of the prose a reader actually sees', () => {
+    expect(extractCitations('The token is 334.38 [token], 52 bps below the close [reference].'))
+      .toEqual(['token', 'reference'])
+    expect(extractCitations('[token, drift] both moved')).toEqual(['token', 'drift'])
+    expect(extractCitations('[token][drift]')).toEqual(['token', 'drift'])
+    expect(extractCitations('a repeated [token] mention [token]')).toEqual(['token'])
+    expect(extractCitations('no markers here')).toEqual([])
+    expect(extractCitations(null)).toEqual([])
+  })
+
+  // The interface used to say "citations verified" while only the model's own
+  // evidenceIds array had been checked, so a narrative could cite nothing at all and
+  // still be labelled verified. These are the four ways that could happen.
+  it('fails a narrative that cites nothing, however clean its evidenceIds array', () => {
+    const result = validateCitations(['token', 'drift'], ['token', 'drift'], 'The token moved a lot but nothing here is cited.')
+    expect(result.bodyCitations).toEqual([])
+    expect(result.bodyChecked).toBe(true)
+    expect(result.valid).toBe(false)
+  })
+
+  it('fails a narrative that cites an ID the server never issued', () => {
+    const result = validateCitations(['token'], ['token'], 'The token is 334.38 [token], and the Fed is cutting [news-99].')
+    expect(result.bodyRejected).toEqual(['news-99'])
+    expect(result.bodyAccepted).toEqual(['token'])
+    expect(result.valid).toBe(false)
+  })
+
+  it('passes only when the prose and the array both resolve', () => {
+    const result = validateCitations(['token', 'reference'], ['token', 'reference'], 'Down 52 bps [token] against the last official close [reference].')
+    expect(result.bodyAccepted).toEqual(['token', 'reference'])
+    expect(result.valid).toBe(true)
+  })
+
+  it('still fails when the array is unresolvable even though the prose is clean', () => {
+    const result = validateCitations(['token', 'ghost'], ['token'], 'Down 52 bps [token].')
+    expect(result.bodyRejected).toEqual([])
+    expect(result.valid).toBe(false)
   })
 })

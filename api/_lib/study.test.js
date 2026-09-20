@@ -115,10 +115,15 @@ describe('drift distribution', () => {
 })
 
 describe('scenario matching', () => {
+  // The matching key is a point observed inside the window, not the window's peak, so
+  // every fixture carries the hourly path a real episode would have. A single point
+  // makes the drift constant through the window, which keeps these cases about the
+  // band and the direction rather than about the path shape.
   const episode = (peakDriftBps, resolutionBps, windowHours = 6) => ({
     anchorMs: at(16, 19),
     windowHours,
     peakDriftBps,
+    points: [{ timestamp: at(16, 20), driftBps: peakDriftBps }],
     resolution: { sessionCloseMs: at(17, 19), resolutionBps, directionMatch: Math.sign(peakDriftBps) === Math.sign(resolutionBps), errorBps: Math.abs(peakDriftBps - resolutionBps), maxFavourableBps: resolutionBps + 50, maxAdverseBps: -40 },
   })
   const episodes = [episode(180, 160), episode(478, -478 === 0 ? 0 : 592), episode(-478, -592), episode(20, 5), episode(150, -30)]
@@ -126,12 +131,49 @@ describe('scenario matching', () => {
   it('prefers same-direction episodes inside the band', () => {
     const matched = matchEpisodes(episodes, 170, { bandBps: 60 })
     expect(matched).toHaveLength(2)
-    expect(matched.map((item) => item.peakDriftBps)).toEqual([180, 150])
+    expect(matched.map((item) => item.matchedDriftBps)).toEqual([180, 150])
   })
 
   it('never matches the opposite direction when same-direction history exists', () => {
     const matched = matchEpisodes(episodes, 170, { bandBps: 60 })
-    expect(matched.every((item) => item.peakDriftBps > 0)).toBe(true)
+    expect(matched.every((item) => item.matchedDriftBps > 0)).toBe(true)
+  })
+
+  it('matches the observed path, not the window peak that hindsight reveals', () => {
+    // The window peaks at 480 bps, but only after passing through 60 bps on the way.
+    // A trader watching at 60 bps could have recognised today's 65 bps; nobody could
+    // have recognised the 480 bps peak before it happened, so it must not be the key.
+    const path = {
+      anchorMs: at(16, 19),
+      windowHours: 6,
+      peakDriftBps: 480,
+      points: [{ timestamp: at(16, 20), driftBps: 60 }, { timestamp: at(16, 21), driftBps: 480 }],
+      resolution: { sessionCloseMs: at(17, 19), resolutionBps: 300, directionMatch: true, errorBps: 180, maxFavourableBps: null, maxAdverseBps: null, sessionHours: 6 },
+    }
+    const [row] = matchEpisodes([path], 65, { bandBps: 20 })
+    expect(row.matchedDriftBps).toBe(60)
+    expect(row.matchedStageHours).toBe(1)
+    expect(row.peakDriftBps).toBe(480)
+    // Keyed on the peak it would have been 415 bps away and outside the band entirely.
+    expect(matchEpisodes([path], 65, { bandBps: 20, excludeAnchorMs: null })).toHaveLength(1)
+    expect(matchEpisodes([{ ...path, points: [{ timestamp: at(16, 20), driftBps: 480 }] }], 65, { bandBps: 20 })).toEqual([])
+  })
+
+  it('never counts an episode as its own precedent', () => {
+    // Distinct anchors, because the exclusion is keyed on the anchor and every fixture
+    // above shares one.
+    const target = { ...episode(180, 160), anchorMs: at(16, 19) }
+    const others = [
+      { ...episode(150, -30), anchorMs: at(15, 19) },
+      { ...episode(478, 592), anchorMs: at(14, 19) },
+    ]
+    // Without the exclusion the example matches itself at zero distance and lands first.
+    const selfIncluded = matchEpisodes([target, ...others], 180, { bandBps: 40 })
+    expect(selfIncluded[0].anchorMs).toBe(target.anchorMs)
+    expect(selfIncluded[0].matchedDriftBps).toBe(180)
+    const excluded = matchEpisodes([target, ...others], 180, { bandBps: 40, excludeAnchorMs: target.anchorMs })
+    expect(excluded.map((item) => item.anchorMs)).not.toContain(target.anchorMs)
+    expect(excluded.map((item) => item.matchedDriftBps)).toEqual([150])
   })
 
   it('falls back to the whole pool when nothing shares the direction', () => {
@@ -236,11 +278,11 @@ describe('underlying outcome attachment', () => {
 
 describe('outcome statistics and verdict', () => {
   const matched = [
-    { peakDriftBps: 617, resolutionBps: 542, directionMatch: true, errorBps: 75 },
-    { peakDriftBps: 451, resolutionBps: 398, directionMatch: true, errorBps: 53 },
-    { peakDriftBps: 166, resolutionBps: 52, directionMatch: true, errorBps: 114 },
-    { peakDriftBps: 122, resolutionBps: -180, directionMatch: false, errorBps: 302 },
-    { peakDriftBps: 108, resolutionBps: 5, directionMatch: true, errorBps: 103 },
+    { matchedDriftBps: 617, resolutionBps: 542, directionMatch: true, errorBps: 75 },
+    { matchedDriftBps: 451, resolutionBps: 398, directionMatch: true, errorBps: 53 },
+    { matchedDriftBps: 166, resolutionBps: 52, directionMatch: true, errorBps: 114 },
+    { matchedDriftBps: 122, resolutionBps: -180, directionMatch: false, errorBps: 302 },
+    { matchedDriftBps: 108, resolutionBps: 5, directionMatch: true, errorBps: 103 },
   ]
 
   it('counts confirmations, contradictions and flats without hiding any of them', () => {
@@ -269,8 +311,8 @@ describe('outcome statistics and verdict', () => {
 
   it('does not quote a rate when every episode closed flat', () => {
     const flat = [
-      { peakDriftBps: 300, resolutionBps: 4, directionMatch: true, errorBps: 296 },
-      { peakDriftBps: -300, resolutionBps: -9, directionMatch: true, errorBps: 291 },
+      { matchedDriftBps: 300, resolutionBps: 4, directionMatch: true, errorBps: 296 },
+      { matchedDriftBps: -300, resolutionBps: -9, directionMatch: true, errorBps: 291 },
     ]
     const stats = outcomeStats(flat)
     expect(stats.materialEpisodes).toBe(0)

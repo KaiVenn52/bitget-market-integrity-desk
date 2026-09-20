@@ -23,6 +23,7 @@ import {
   sanitize,
   toCandle,
 } from './_lib/sources.js'
+import { RATE_LIMIT_MAX, clientKey, rateLimit } from './_lib/ratelimit.js'
 
 // The browser sends only a symbol and a question. Every record used to explain a
 // move is retrieved and timestamped here, so a client cannot supply its own
@@ -75,6 +76,19 @@ function safeJson(text) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  // Each answer costs a paid model request, so the endpoint carries a per-client budget.
+  const limit = rateLimit(clientKey(req.headers, req.socket), Date.now())
+  res.setHeader('x-ratelimit-limit', String(RATE_LIMIT_MAX))
+  res.setHeader('x-ratelimit-remaining', String(limit.remaining))
+  if (!limit.allowed) {
+    res.setHeader('retry-after', String(limit.retryAfterSeconds))
+    return res.status(429).json({
+      error: 'Too many research requests',
+      detail: `The desk answers at most ${RATE_LIMIT_MAX} questions per minute per client. Retry in ${limit.retryAfterSeconds}s.`,
+    })
+  }
+
   const body = req.body ?? {}
   const symbol = String(body.symbol || '')
   const question = String(body.question || `Why did ${symbol} move?`).slice(0, 400)
@@ -219,16 +233,23 @@ export default async function handler(req, res) {
         })
         if (response.ok) {
           const parsed = safeJson(outputText(await response.json()))
-          const check = validateCitations(parsed.evidenceIds, allowedIds)
+          // The prose is what a reader sees, so the prose is what gets verified. Checking
+          // only the model's own evidenceIds array would let a narrative cite nothing at
+          // all, or cite an ID the server never issued, and still be labelled verified.
+          const check = validateCitations(parsed.evidenceIds, allowedIds, parsed.brief)
           if (check.valid) {
             brief = parsed.brief
-            briefEvidenceIds = check.accepted
+            briefEvidenceIds = check.bodyAccepted
             reasoningMode = 'qwen'
-            reasoningNote = `qwen3.8-max · ${check.accepted.length} citations verified against server evidence · answered in ${((Date.now() - qwenStartedMs) / 1000).toFixed(1)}s`
+            reasoningNote = `qwen3.8-max · ${check.bodyAccepted.length} inline citations verified in the narrative against server evidence · answered in ${((Date.now() - qwenStartedMs) / 1000).toFixed(1)}s`
+          } else if (check.bodyRejected.length) {
+            reasoningNote = `Qwen cited ${check.bodyRejected.length} evidence ID(s) the server never issued (${check.bodyRejected.slice(0, 3).join(', ')}) · deterministic fallback retained`
+          } else if (check.rejected.length) {
+            reasoningNote = `Qwen cited ${check.rejected.length} unknown evidence ID(s) · deterministic fallback retained`
+          } else if (check.bodyChecked && !check.bodyCitations.length) {
+            reasoningNote = 'Qwen narrative cited no evidence inline, so nothing in it could be checked · deterministic fallback retained'
           } else {
-            reasoningNote = check.rejected.length
-              ? `Qwen cited ${check.rejected.length} unknown evidence ID(s) · deterministic fallback retained`
-              : 'Qwen returned no resolvable citations · deterministic fallback retained'
+            reasoningNote = 'Qwen returned no resolvable citations · deterministic fallback retained'
           }
         } else {
           reasoningNote = `Qwen returned HTTP ${response.status} · deterministic fallback retained`

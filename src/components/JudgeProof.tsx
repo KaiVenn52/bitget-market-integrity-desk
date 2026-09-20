@@ -11,8 +11,8 @@ export function JudgeProof() {
     </div>
     <div className="proof-stack">
       <div><Database size={16} aria-hidden="true" /><span><b>Bitget rToken</b><small>Live UTA market data</small><em>LIVE</em></span></div>
-      <div><FileCheck2 size={16} aria-hidden="true" /><span><b>Stock+ reference</b><small>Read-only underlying quote</small><em>VERIFIED</em></span></div>
-      <div><Bot size={16} aria-hidden="true" /><span><b>Qwen investigator</b><small>Evidence-ID citation gate</small><em>BOUNDED</em></span></div>
+      <div><FileCheck2 size={16} aria-hidden="true" /><span><b>Underlying reference</b><small>Fresh Stock+ quote, or the last official close</small><em>TWO-TIER</em></span></div>
+      <div><Bot size={16} aria-hidden="true" /><span><b>Qwen investigator</b><small>Every inline citation resolved before it is shown</small><em>BOUNDED</em></span></div>
     </div>
     <div className="proof-links">
       <a href={`${repositoryUrl}/blob/main/submission/validation-report.md`} target="_blank" rel="noreferrer">Validation record <ArrowUpRight size={13} /></a>

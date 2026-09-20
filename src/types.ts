@@ -221,6 +221,15 @@ export type StudyOutcome = 'confirmed' | 'contradicted' | 'flat' | 'unknown'
 export interface StudyMatched {
   anchorMs: number
   windowHours: number
+  /**
+   * The point-in-time basis for the match: the drift actually observed at this stage of
+   * the window. This is what the row is selected on, and what the outcome is measured
+   * against, because it is what a trader could have reacted to at the time.
+   */
+  matchedDriftBps: number
+  /** How far into the closed window that observation fell. */
+  matchedStageHours: number
+  /** Descriptive only: the window's peak, which hindsight reveals and matching ignores. */
   peakDriftBps: number
   sessionCloseMs: number
   resolutionBps: number
