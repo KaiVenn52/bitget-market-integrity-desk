@@ -61,9 +61,38 @@ The gate can say "the reference cannot confirm this, and the token has moved 478
 - **It refuses to answer when there is nothing to test.** A drift inside the 20 bps alignment threshold is not an event, so the desk declines to compare it to history rather than dressing up a meaningless match.
 - **It is a base rate, not a forecast.** The sample is weeks of hourly candles, no significance is claimed, and the declared limits are printed on the page.
 
-## The official Skill layer: probed, and withheld
+## The official Bitget MCP: integrated
 
-The hackathon's `@bitget-ai/bitget-signal` layer advertises 19 tools, several of which would genuinely improve this desk — an official price for the underlying, a cross-asset correlation that separates an idiosyncratic move from a market-wide one, a scheduled earnings date, macro release dates. So it was probed properly rather than assumed either way.
+The S2 handbook points AI Trading Desk entries at **`bitget-mcp-server`** (`https://agent.bitget.com/mcp`, HTTP transport, no account or API key) for US stock research data, and recommends it by name for research workbenches. It exposes two tools — `guide` lists the catalog, `do_query` executes one entry — over 67 catalog entries in five categories. Every `equity` entry is `free` tier.
+
+The desk calls four of them on every scan:
+
+| Catalog entry | What it supplies | Reported provider |
+|---|---|---|
+| `equity_price_quote` | Underlying quote with bid/ask and the prior close | `massive` |
+| `equity_price_historical` | Daily OHLCV, corroborating the reference series | `massive` |
+| `equity_fundamental_dividends` | Dividend events with ex-dates | `bitget_data` |
+| `equity_calendar_earnings` | Next scheduled report and consensus EPS | `finnhub` |
+
+Three things about this integration are deliberate:
+
+- **Provenance names the vendor, not just the platform.** The MCP platform returns US equity data from upstream vendors and reports which one answered, so every evidence record reads `bitget-mcp-server v4.0.3 · provider massive`. It is never labelled "Bitget Stock+" and never "exchange-certified": those describe the authenticated Stock+ pipeline, which is a different feed. A desk whose purpose is catching misattributed provenance must not misattribute its own.
+- **The live price and the prior close stay separate numbers.** Inside the main session the live price is the only valid basis; outside it the prior close is. Collapsing them is how a desk talks itself into comparing an overnight token price against a price the underlying never traded at.
+- **It degrades rather than throws.** A failed entry leaves the corporate-action check `UNVERIFIABLE` and says which source was missing, because "we could not retrieve it" is not "there was nothing".
+
+The catalog entries are dispatched **one at a time on a single session**. That is measured, not stylistic: dispatching four concurrently on one session left three hanging until timeout while a single one answered in 233 ms, and the one that did answer came back from a different upstream provider than the same entry returns when asked sequentially.
+
+Measured over 12 consecutive production scans: **12/12 returned all four entries**, 2.96–5.35 s. Before the handshake retry was added the same test produced one all-sources-missing scan in six, caused by a cold CDN handshake consuming the shared budget.
+
+### What the dividend entry does and does not cover
+
+`equity_fundamental_dividends` is a dividend feed. It is **not** a split feed, and the historical candles carry no adjustment or split field — so the corporate-action check reports dividends and explicitly declines to claim split coverage rather than implying it. The check moved from `unknown / UNVERIFIABLE` to a dated result; it did not become a general corporate-actions oracle.
+
+## The `bitget-signal` Skill layer: probed, and withheld
+
+This is a **different** package from the MCP above, and the handbook says so explicitly — `bitget-signal` is Agent Hub's crypto macro / sentiment / technical / news Skills; `bitget-mcp-server` is US stock / ETF data. They share no data sources, package names or credentials.
+
+The `@bitget-ai/bitget-signal` layer advertises 19 tools, several of which would genuinely improve this desk — an official price for the underlying, a cross-asset correlation that separates an idiosyncratic move from a market-wide one, a scheduled earnings date, macro release dates. So it was probed properly rather than assumed either way.
 
 `scripts/probe-bitget-signal.mjs` calls every tool with the argument shape published by `tools/list` — not a guessed one, because a probe that calls a tool wrongly measures the probe, not the source — and classifies each answer as `usable`, `empty`, `error` or `timeout`. The saved result is `benchmark/bitget-signal-probe.json`.
 
@@ -91,6 +120,7 @@ The hackathon's `@bitget-ai/bitget-signal` layer advertises 19 tools, several of
 - **A historical stress test** that builds closed-market episodes, measures the drift distribution, and matches same-direction comparable episodes to what the following session actually did — using Yahoo-reported underlying closes where available and labelling the proxy where not.
 - **A browser-local desk log** that records every sweep including refusals, and reports the refusal rate.
 - **A two-tier reference** so the desk's central case works without an authenticated feed.
+- **An official Bitget MCP perception layer** — four `bitget-mcp-server` catalog entries per scan (underlying quote, daily candles, dividend events, earnings calendar), each evidence record naming the upstream vendor that answered, and the passport stating which entries responded.
 - A clearly labeled snapshot fallback when live sources cannot be reached.
 - A published 16-case frozen benchmark with separate labels, saved Qwen outputs, SHA-256 evidence digests, evaluator code, and a portable report.
 
@@ -123,9 +153,14 @@ ticker + candles + reference ─> measured state ─> ordered gate rules ─> /a
                                                           └─> verdict + evidence ids + conditions ─> desk log
 ```
 
-Retrieval lives in `api/_lib/sources.js`; the deterministic modules (`analysis.js`,
-`gate.js`, `study.js`) retrieve nothing and call no model, which is what makes every
-verdict reproducible from the evidence it cites.
+Retrieval lives in `api/_lib/sources.js` and `api/_lib/bitget-mcp.js`; the
+deterministic modules (`analysis.js`, `gate.js`, `study.js`, `mcp-evidence.js`)
+retrieve nothing and call no model, which is what makes every verdict reproducible
+from the evidence it cites. `mcp-evidence.js` is pure on purpose: labelling and
+abstention behaviour are unit-tested without a network, because three real defects
+in it — a wrong dividend field name, a parallel-dispatch deadlock, and a check that
+read raw MCP entries instead of parsed events — were each found only by testing
+against live responses.
 
 The browser sends only a symbol and a question to `/api/analyze`. Every record the
 answer rests on is retrieved, timestamped and ranked server-side, so a client can
@@ -160,7 +195,9 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 165/165 tests pass across seven suites: query and instrument resolution (5), published deterministic integrity rules mirrored in the browser (22), the decision memo including reported-close semantics, embedded base rates and empty-sample refusal (7), the server analysis engine — session labelling, the U.S. market holiday calendar and half days, session-aware two-tier reference selection including reported-close expiry and client-safe kind preservation, move detection and start location, the 20 bps event boundary, headline timing verdicts (`POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT`, `DISTANT`, `TIME_UNKNOWN`), drift, turnover acceleration, top-of-book spread, verdict assembly, confidence rules, reference provenance, the model deadline, and the citation gate including inline-prose extraction (60), the ordered gate rules with pipeline contract tests that feed real `pickReference` output into `evaluateGate` (36), episode construction, drift distribution, point-in-time scenario matching, example-episode exclusion, underlying-close attachment, outcome classification and the stress-test verdict and same-direction matching (29), and the public-endpoint budget (6).
+- 217/217 tests pass across nine suites: query and instrument resolution (5), published deterministic integrity rules mirrored in the browser (22), the decision memo including reported-close semantics, embedded base rates and empty-sample refusal (7), the server analysis engine — session labelling, the U.S. market holiday calendar and half days, session-aware two-tier reference selection including reported-close expiry and client-safe kind preservation, move detection and start location, the 20 bps event boundary, headline timing verdicts (`POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT`, `DISTANT`, `TIME_UNKNOWN`), drift, turnover acceleration, top-of-book spread, verdict assembly, confidence rules, reference provenance, the model deadline, and the citation gate including inline-prose extraction (60), the ordered gate rules with pipeline contract tests that feed real `pickReference` output into `evaluateGate` (36), episode construction, drift distribution, point-in-time scenario matching, example-episode exclusion, underlying-close attachment, outcome classification and the stress-test verdict and same-direction matching (29), the public-endpoint budget (6), the Bitget MCP client — SSE and bare-JSON parsing, structuredContent preference, notification framing, serial dispatch, handshake retry and shared-budget skipping (19), and the MCP evidence layer — vendor-naming provenance, `ex_dividend_date` parsing, prior-close separation, bounded-window abstention and the corporate-check fold (33).
+- **The official Bitget MCP was exercised against live responses before it was trusted.** Three defects were found only that way and are now regression-guarded: the dividend entry's real field is `ex_dividend_date` (reading a plausible alias reported *no dividend* for an instrument that had just gone ex-dividend), four concurrent queries on one session left three hanging until timeout (dispatch is serial), and the corporate check read raw MCP entries instead of parsed events (it reported "no events in window" beside an evidence record listing one).
+- **Production MCP reliability, measured:** 12 consecutive `/api/scan` calls returned all four catalog entries, 2.96–5.35 s. Before the handshake retry, the same test produced one all-sources-missing scan in six.
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.

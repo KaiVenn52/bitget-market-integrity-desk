@@ -21,6 +21,14 @@ type View = 'live' | 'gate' | 'stress' | 'replay' | 'methodology'
 
 const VIEWS: View[] = ['live', 'gate', 'stress', 'replay', 'methodology']
 
+/**
+ * Mirrors the server's alignment threshold (`ALIGNMENT_PASS_BPS` in
+ * `api/_lib/analysis.js`). Only a drift at or beyond it is worth handing to the
+ * stress study as a target; a few-bps live-versus-live basis is not a
+ * closed-market drift, and testing it returns an empty sample.
+ */
+const MATERIAL_DRIFT_BPS = 20
+
 /** Views are deep-linkable so a specific workspace can be shared or cited directly. */
 const viewFromHash = (): View => {
   const raw = window.location.hash.replace('#', '').toLowerCase()
@@ -37,8 +45,7 @@ const completionNote = (result: Passport, analysis: MoveAnalysis | null) => anal
   ? `${result.mode === 'live' ? 'Live' : 'Snapshot'} passport · ${catalystNote(analysis)} · ${analysis.reasoningMode === 'qwen' ? 'Qwen citation IDs resolved.' : 'deterministic narrative retained.'}`
   : `${result.mode === 'live' ? 'Live' : 'Snapshot'} passport ready · move analysis unavailable.`
 
-export default function App() {
-  const [view, setView] = useState<View>(viewFromHash)
+export default function App() {  const [view, setView] = useState<View>(viewFromHash)
   const [symbol, setSymbol] = useState('rNVDAUSDT')
   const [passport, setPassport] = useState<Passport>(() => snapshotFor(symbol))
   // The analysis carries the instrument it belongs to. The passport is replaced as soon
@@ -72,8 +79,15 @@ export default function App() {
     // The deterministic stress study and model investigation are independent. Start
     // both after the scan supplies the observed drift so the memo gets its base rate
     // without adding another network waterfall to the critical path.
+    //
+    // The drift is only handed over when it is material. Inside the main session the
+    // premium is a live-versus-live basis of a few bps, which is not a closed-market
+    // drift anyone would stress test — asking the study to test it returned an empty
+    // sample and cost the memo its base rate. Below the threshold the study picks its
+    // own example and says which one it picked, which is the more useful answer.
+    const materialDrift = result.premiumBps != null && Math.abs(result.premiumBps) >= MATERIAL_DRIFT_BPS
     setStudyPending(true)
-    void runStudy(nextSymbol, result.premiumBps ?? undefined).then((payload) => {
+    void runStudy(nextSymbol, materialDrift ? (result.premiumBps as number) : undefined).then((payload) => {
       if (requestId !== scanRequest.current) return
       startTransition(() => {
         setStudy(payload ? { symbol: nextSymbol, data: payload } : null)

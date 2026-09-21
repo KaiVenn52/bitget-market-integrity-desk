@@ -1,0 +1,332 @@
+import { priceLabel } from './analysis.js'
+import { providerOf, resultsOf } from './bitget-mcp.js'
+
+/**
+ * Turn `bitget-mcp-server` responses into evidence records the desk can cite.
+ *
+ * Provenance rule this module exists to enforce: the MCP platform returns US
+ * equity data from upstream vendors, and it names them (`massive`, `finnhub`,
+ * ...). So the source line is always "Bitget MCP (bitget-mcp-server vX) ·
+ * provider Y". It is never "Bitget Stock+" and never "exchange-certified": those
+ * describe the authenticated Stock+ feed, which is a different pipeline. A desk
+ * whose whole purpose is catching misattributed provenance cannot misattribute
+ * its own.
+ *
+ * Every builder is pure and takes the raw entry result, so the labelling and the
+ * abstention behaviour are unit-testable without a network.
+ */
+
+/** Source line for an evidence record, naming both the MCP server and the vendor behind it. */
+export function mcpSource(server, entry) {
+  const name = server?.name ?? 'bitget-mcp-server'
+  const version = server?.version ? ` v${server.version}` : ''
+  const provider = providerOf(entry)
+  return `${name}${version} · provider ${provider ?? 'unspecified'}`
+}
+
+/** The catalog entries this desk queries, in the order they are requested. */
+export const MCP_QUERIES = [
+  { id: 'quote', entryId: 'equity_price_quote' },
+  { id: 'history', entryId: 'equity_price_historical' },
+  { id: 'dividends', entryId: 'equity_fundamental_dividends' },
+  { id: 'earnings', entryId: 'equity_calendar_earnings' },
+]
+
+/**
+ * Build the query list for one underlying.
+ *
+ * The history window is bounded because the desk only needs enough recent daily
+ * closes to (a) corroborate the reference and (b) give the corporate-action check
+ * a dated window to report inside.
+ */
+export function buildMcpQueries(underlyingSymbol, nowMs) {
+  const symbol = String(underlyingSymbol ?? '').replace(/\.US$/i, '').toUpperCase()
+  if (!symbol) return []
+  const start = new Date(nowMs - 21 * 86_400_000).toISOString().slice(0, 10)
+  const end = new Date(nowMs).toISOString().slice(0, 10)
+  // Earnings reach further back than the price window: a report that already
+  // happened is what a move may be attributable to, so a window that only looks
+  // forward would hide the very event the narrative needs.
+  const earningsStart = new Date(nowMs - 45 * 86_400_000).toISOString().slice(0, 10)
+  const earningsEnd = new Date(nowMs + 120 * 86_400_000).toISOString().slice(0, 10)
+  return MCP_QUERIES.map((query) => ({
+    ...query,
+    params: query.id === 'history'
+      ? { symbol, start_date: start, end_date: end }
+      : query.id === 'dividends'
+        ? { symbol, start_date: start, end_date: end }
+        : query.id === 'earnings'
+          ? { symbol, start_date: earningsStart, end_date: earningsEnd }
+          : { symbol },
+  }))
+}
+
+const isFinite_ = (value) => typeof value === 'number' && Number.isFinite(value)
+
+/**
+ * Evidence for the underlying quote.
+ *
+ * `prevClose` is carried separately from `last` on purpose: inside the main
+ * session the live price is the only valid basis, and outside it the prior close
+ * is. Collapsing them into one number is how a desk talks itself into comparing
+ * an overnight token price against a price the underlying never traded at.
+ */
+export function quoteEvidence(entry, server, nowMs) {
+  const retrievedAt = new Date(nowMs).toISOString()
+  const row = resultsOf(entry)[0]
+  if (!entry?.ok || !row) {
+    return {
+      id: 'mcp-quote',
+      title: 'Underlying quote (Bitget MCP)',
+      summary: `No underlying quote was returned by Bitget MCP: ${entry?.error ?? 'entry returned no rows'}. Alignment against a live underlying quote is not calculated from this source.`,
+      state: 'unknown',
+      timestamp: retrievedAt.slice(11, 16),
+      source: mcpSource(server, entry),
+      endpoint: 'agent.bitget.com/mcp · equity_price_quote',
+      retrievedAt,
+    }
+  }
+  const last = Number(row.last_price)
+  const prevClose = Number(row.prev_close)
+  const bid = Number(row.bid)
+  const ask = Number(row.ask)
+  const lastMs = Number.isFinite(Date.parse(row.last_timestamp)) ? Date.parse(row.last_timestamp) : null
+  const ageSeconds = lastMs === null ? null : Math.max(0, Math.round((nowMs - lastMs) / 1000))
+  const spread = isFinite_(bid) && isFinite_(ask) && bid > 0 ? Math.round(((ask - bid) / bid) * 10000) : null
+  const parts = [
+    isFinite_(last) ? `last ${priceLabel(last)}` : 'last unavailable',
+    isFinite_(bid) && isFinite_(ask) ? `bid/ask ${priceLabel(bid)}/${priceLabel(ask)}${spread === null ? '' : ` (${spread} bps)`}` : null,
+    isFinite_(prevClose) ? `prior close ${priceLabel(prevClose)}` : null,
+    ageSeconds === null ? null : `quote age ${ageSeconds}s`,
+  ].filter(Boolean)
+  return {
+    id: 'mcp-quote',
+    title: 'Underlying quote (Bitget MCP)',
+    summary: `${parts.join('; ')}.`,
+    state: 'pass',
+    timestamp: lastMs === null ? retrievedAt.slice(11, 16) : new Date(lastMs).toISOString().slice(11, 16),
+    source: mcpSource(server, entry),
+    endpoint: 'agent.bitget.com/mcp · equity_price_quote',
+    retrievedAt,
+    // Carried for the reference layer, which needs the raw numbers rather than prose.
+    quote: isFinite_(last) && lastMs !== null
+      ? { price: last, timestampMs: lastMs, bid: isFinite_(bid) ? bid : null, ask: isFinite_(ask) ? ask : null, ageSeconds }
+      : null,
+    priorClose: isFinite_(prevClose) && prevClose > 0 ? prevClose : null,
+  }
+}
+
+/**
+ * Evidence for the daily history.
+ *
+ * This is corroboration, not a replacement: it exists so a second, independently
+ * sourced series can confirm the closes the reference layer already uses, and so
+ * the corporate-action check has a dated window to speak inside.
+ */
+export function historyEvidence(entry, server, nowMs) {
+  const retrievedAt = new Date(nowMs).toISOString()
+  const rows = resultsOf(entry)
+  if (!entry?.ok || !rows.length) {
+    return {
+      id: 'mcp-history',
+      title: 'Underlying daily history (Bitget MCP)',
+      summary: `No daily candles were returned by Bitget MCP: ${entry?.error ?? 'entry returned no rows'}.`,
+      state: 'unknown',
+      timestamp: retrievedAt.slice(11, 16),
+      source: mcpSource(server, entry),
+      endpoint: 'agent.bitget.com/mcp · equity_price_historical',
+      retrievedAt,
+    }
+  }
+  const usable = rows.filter((row) => isFinite_(Number(row.close)) && row.close > 0)
+  const first = usable[0]
+  const latest = usable[usable.length - 1]
+  return {
+    id: 'mcp-history',
+    title: 'Underlying daily history (Bitget MCP)',
+    summary: `${usable.length} daily candles from ${String(first?.date ?? 'unknown').slice(0, 10)} to ${String(latest?.date ?? 'unknown').slice(0, 10)}; latest close ${priceLabel(Number(latest?.close))}.`,
+    state: 'pass',
+    timestamp: retrievedAt.slice(11, 16),
+    source: mcpSource(server, entry),
+    endpoint: 'agent.bitget.com/mcp · equity_price_historical',
+    retrievedAt,
+    closes: usable.map((row) => ({ dateKey: String(row.date ?? '').slice(0, 10), close: Number(row.close) })),
+  }
+}
+
+/**
+ * Evidence for dividends, and the input to the corporate-action check.
+ *
+ * `equity_fundamental_dividends` is the entry that covers dividend events. It is
+ * not a split feed: the historical candles carry no adjustment or split field, so
+ * this desk reports dividends and explicitly declines to claim split coverage
+ * rather than implying it.
+ */
+export function dividendEvidence(entry, server, nowMs) {
+  const retrievedAt = new Date(nowMs).toISOString()
+  const base = {
+    id: 'mcp-dividends',
+    title: 'Dividend history (Bitget MCP)',
+    timestamp: retrievedAt.slice(11, 16),
+    source: mcpSource(server, entry),
+    endpoint: 'agent.bitget.com/mcp · equity_fundamental_dividends',
+    retrievedAt,
+  }
+  if (!entry?.ok) {
+    return { ...base, summary: `Dividend history could not be retrieved: ${entry?.error ?? 'unknown error'}. Absence of a corporate action is not inferred from a failed retrieval.`, state: 'unknown', events: [] }
+  }
+  const rows = resultsOf(entry)
+  // Field names are taken from the live response, not guessed: the entry returns
+  // `ex_dividend_date` and `amount`. Reading a plausible-looking alias instead
+  // silently produced zero events and reported "no dividend in window" for an
+  // instrument that had just gone ex-dividend — a false negative of exactly the
+  // kind this desk exists to catch.
+  const events = rows
+    .map((row) => ({
+      dateKey: String(row.ex_dividend_date ?? '').slice(0, 10),
+      amount: Number(row.amount),
+      currency: row.currency ?? null,
+      eventType: row.event_type ?? null,
+      special: row.is_special === true,
+    }))
+    .filter((event) => /^\d{4}-\d{2}-\d{2}$/.test(event.dateKey))
+    .sort((a, b) => b.dateKey.localeCompare(a.dateKey))
+  if (!events.length) {
+    return {
+      ...base,
+      summary: rows.length
+        ? `${rows.length} row${rows.length === 1 ? '' : 's'} were returned but none carried a usable ex-dividend date, so no corporate-action event is asserted.`
+        : 'The dividend endpoint answered and returned no dividend events inside the retrieved window. That is a bounded statement about this window, not proof that none occurred.',
+      state: 'pass',
+      events: [],
+    }
+  }
+  const latest = events[0]
+  const amount = Number.isFinite(latest.amount) ? ` at ${priceLabel(latest.amount)}${latest.currency ? ` ${latest.currency}` : ''}` : ''
+  const type = latest.eventType ? ` (${latest.eventType}${latest.special ? ', special' : ''})` : ''
+  return {
+    ...base,
+    summary: `${events.length} dividend event${events.length === 1 ? '' : 's'} in the retrieved window; most recent ex-date ${latest.dateKey}${amount}${type}. Split adjustment is not covered by this entry.`,
+    state: 'pass',
+    events,
+  }
+}
+
+/**
+ * Evidence for the earnings calendar.
+ *
+ * An earnings date inside the catalyst window changes what a move can be
+ * attributed to, so this is context the narrative is allowed to use — it is not
+ * a price and never becomes a reference.
+ */
+export function earningsEvidence(entry, server, nowMs) {
+  const retrievedAt = new Date(nowMs).toISOString()
+  const base = {
+    id: 'mcp-earnings',
+    title: 'Earnings calendar (Bitget MCP)',
+    timestamp: retrievedAt.slice(11, 16),
+    source: mcpSource(server, entry),
+    endpoint: 'agent.bitget.com/mcp · equity_calendar_earnings',
+    retrievedAt,
+  }
+  if (!entry?.ok) {
+    return { ...base, summary: `Earnings calendar could not be retrieved: ${entry?.error ?? 'unknown error'}. No claim is made about upcoming results.`, state: 'unknown', nextReportDateKey: null }
+  }
+  const rows = resultsOf(entry)
+  const dated = rows
+    .map((row) => ({ dateKey: String(row.report_date ?? '').slice(0, 10), epsConsensus: Number(row.eps_consensus) }))
+    .filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.dateKey))
+    .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
+  if (!dated.length) {
+    // An answered-but-unusable response is not the same claim as an empty window,
+    // and conflating them would let the desk assert a quiet calendar it never read.
+    return {
+      ...base,
+      summary: rows.length
+        ? `${rows.length} row${rows.length === 1 ? '' : 's'} were returned but none carried a usable report date, so no scheduled report is asserted.`
+        : 'The earnings endpoint answered and returned no scheduled report inside the retrieved window. This is a bounded statement about the window.',
+      state: rows.length ? 'caution' : 'pass',
+      nextReportDateKey: null,
+    }
+  }
+  const today = new Date(nowMs).toISOString().slice(0, 10)
+  const next = dated.find((row) => row.dateKey >= today) ?? dated[dated.length - 1]
+  const daysOut = Math.round((Date.parse(`${next.dateKey}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000)
+  return {
+    ...base,
+    summary: `Next scheduled report ${next.dateKey}${daysOut >= 0 ? ` (${daysOut} days out)` : ' (in the past relative to the retrieved window)'}${Number.isFinite(next.epsConsensus) ? `; consensus EPS ${next.epsConsensus}` : ''}.`,
+    state: 'pass',
+    nextReportDateKey: next.dateKey,
+    daysOut,
+  }
+}
+
+/**
+ * Fold the MCP entries into the desk's corporate-action check.
+ *
+ * The check starts as `unknown / UNVERIFIABLE` because no corporate-action source
+ * was wired up. Once the dividend entry answers, the honest state is what that
+ * answer supports — and if it did not answer, the check must stay unknown and say
+ * which source was missing, because "we could not retrieve it" is not "there was
+ * nothing".
+ *
+ * This takes the *built* dividend and earnings evidence, not the raw MCP entries:
+ * the parsed event list is what the evidence layer produced, and reading the raw
+ * entry instead silently reported "no events in window" for an instrument that had
+ * just gone ex-dividend.
+ */
+export function corporateCheckFrom(dividends, earnings) {
+  if (!dividends || dividends.state === 'unknown') {
+    return {
+      state: 'unknown',
+      result: 'UNVERIFIABLE',
+      detail: 'Bitget MCP dividend retrieval failed, so corporate-action context stays unverified. Absence is not inferred from a failed retrieval.',
+    }
+  }
+  const events = dividends.events ?? []
+  const earningsNote = earnings?.nextReportDateKey
+    ? ` Next scheduled report ${earnings.nextReportDateKey}.`
+    : ''
+  if (!events.length) {
+    return {
+      state: 'pass',
+      result: 'NO EVENTS IN WINDOW',
+      detail: `Bitget MCP returned no dividend events in the retrieved window, and the earnings calendar was read from the same source.${earningsNote} Split adjustment is not covered by these entries, so no split claim is made.`,
+    }
+  }
+  return {
+    state: 'pass',
+    result: `${events.length} EVENT${events.length === 1 ? '' : 'S'}`,
+    detail: `${events.length} dividend event${events.length === 1 ? '' : 's'} retrieved from Bitget MCP; most recent ex-date ${events[0].dateKey}${Number.isFinite(events[0].amount) ? ` at ${events[0].amount}${events[0].currency ? ` ${events[0].currency}` : ''}` : ''}.${earningsNote} Split adjustment is not covered by these entries, so no split claim is made.`,
+  }
+}
+
+/**
+ * Build every MCP evidence record plus the corporate-action check update.
+ * @param collected - the value returned by `mcpQueryMany`.
+ */
+export function buildMcpEvidence(collected, nowMs) {
+  const server = collected?.server ?? null
+  const entries = collected?.entries ?? {}
+  const quote = quoteEvidence(entries.quote, server, nowMs)
+  const history = historyEvidence(entries.history, server, nowMs)
+  const dividends = dividendEvidence(entries.dividends, server, nowMs)
+  const earnings = earningsEvidence(entries.earnings, server, nowMs)
+  return {
+    server,
+    evidence: [quote, history, dividends, earnings],
+    quote,
+    history,
+    dividends,
+    earnings,
+    corporateCheck: corporateCheckFrom(dividends, earnings),
+    // Reported to the client so the desk can state which official sources answered.
+    integration: {
+      server: server?.name ?? 'bitget-mcp-server',
+      version: server?.version ?? null,
+      requested: MCP_QUERIES.map((query) => query.entryId),
+      answered: MCP_QUERIES.filter((query) => entries[query.id]?.ok).map((query) => query.entryId),
+      failed: MCP_QUERIES.filter((query) => entries[query.id] && !entries[query.id].ok).map((query) => query.entryId),
+    },
+  }
+}

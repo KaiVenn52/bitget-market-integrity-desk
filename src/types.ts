@@ -128,6 +128,20 @@ export interface Passport {
   premiumBps: number | null
   liquidity: 'OBSERVABLE' | 'NOT OBSERVABLE'
   corporateAction: string
+  /**
+   * Which official Bitget MCP catalog entries answered for this scan.
+   *
+   * Carried so the desk can state its own perception layer instead of implying it:
+   * the entries come from `bitget-mcp-server`, and each evidence record names the
+   * upstream vendor that actually returned the data.
+   */
+  integration?: {
+    server: string
+    version: string | null
+    requested: string[]
+    answered: string[]
+    failed: string[]
+  }
   checks: IntegrityCheck[]
   evidence: EvidenceItem[]
   timeline: TimelineEvent[]
