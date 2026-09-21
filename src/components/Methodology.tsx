@@ -5,7 +5,7 @@ export function Methodology() {
     <div className="view-heading">
       <div>
         <h1>Methodology</h1>
-        <p>AI analyzes the move. The integrity layer exposes the records behind its citations, flags missing evidence, and leaves the final judgment of claim support to the trader.</p>
+        <p>The desk stress-tests a thesis before capital follows it. It returns a bounded research disposition, exposes the records behind every claim, and leaves the final trading decision to the human.</p>
       </div>
     </div>
 

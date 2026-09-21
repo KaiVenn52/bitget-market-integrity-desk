@@ -1,6 +1,7 @@
 import { ArrowRight, RefreshCw, ScanLine, ShieldCheck } from 'lucide-react'
 import { startTransition, useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { CatalystPanel } from './components/CatalystPanel'
+import { DecisionMemo } from './components/DecisionMemo'
 import { EvidenceInspector } from './components/EvidenceInspector'
 import { IntegrityGate } from './components/IntegrityGate'
 import { JudgeProof } from './components/JudgeProof'
@@ -122,13 +123,14 @@ export default function App() {
     <header className="topbar"><button className="brand" onClick={() => go('live')} aria-label="Open Live Desk"><span className="brand-mark"><ShieldCheck size={18} /></span><span className="brand-copy"><strong>Market Integrity</strong><small>Evidence desk</small></span></button><nav aria-label="Primary navigation"><button className={view === 'live' ? 'active' : ''} onClick={() => go('live')}>Desk</button><button className={view === 'gate' ? 'active' : ''} onClick={() => go('gate')}>Gate</button><button className={view === 'stress' ? 'active' : ''} onClick={() => go('stress')}>Stress</button><button className={view === 'replay' ? 'active' : ''} onClick={() => go('replay')}>Replay</button><button className={view === 'methodology' ? 'active' : ''} onClick={() => go('methodology')}>Method</button></nav><div className="system-status"><span className="pulse" />Read-only</div></header>
     {view === 'live' ? <main className={`live-view ${scanning ? 'is-scanning' : ''}`}>
       <section className="research-hero">
-        <div className="hero-heading"><span className="eyebrow"><ScanLine size={14} /> Live market research</span><h1>AI explains the move.<br /><em>The desk shows the evidence.</em></h1><p>Rank the catalysts behind a tokenized U.S. equity repricing by publication time, market response, and rejected explanations.</p></div>
+        <div className="hero-heading"><span className="eyebrow"><ScanLine size={14} /> Pre-trade decision stress test</span><h1>Pressure-test the thesis.<br /><em>Before capital follows it.</em></h1><p>Decide whether an rToken opportunity is supported, contradicted, or waiting on evidence — then inspect every claim behind the call.</p></div>
         <form className="research-bar" onSubmit={submitResearchQuestion}><label htmlFor="research-question">Research question</label><div className="question-control"><input id="research-question" value={researchQuestion} onChange={(event) => setResearchQuestion(event.target.value)} autoComplete="off" /><button type="submit" disabled={scanning}>{scanning ? <RefreshCw className="spin" size={18} /> : <ArrowRight size={18} />}<span>{scanning ? 'Checking' : 'Investigate'}</span></button></div><small aria-live="polite">{queryNote}</small></form>
       </section>
       <JudgeProof />
       <Watchlist selected={symbol} liveQuotes={liveQuotes} onSelect={selectSymbol} />
       <section className="workbench">
         <div className="instrument-bar"><div><span>Current passport</span><h2>{passport.instrument.symbol}</h2><p>{passport.instrument.company} · tokenized U.S. equity</p></div><button className="scan-button" aria-label={scanning ? 'Scanning evidence' : 'Refresh evidence'} disabled={scanning} onClick={() => void scan(symbol, passport.researchQuestion ?? researchQuestion)}>{scanning ? <RefreshCw className="spin" size={16} /> : <ScanLine size={16} />}<span>{scanning ? 'Scanning evidence' : 'Refresh evidence'}</span></button></div>
+        <DecisionMemo passport={passport} analysis={analysis?.symbol === passport.instrument.symbol ? analysis.data : null} onGate={() => go('gate')} onStress={() => go('stress')} />
         <PassportPanel passport={passport} />
         {analysis && analysis.symbol === passport.instrument.symbol ? <CatalystPanel analysis={analysis.data} /> : null}
         <EvidenceInspector key={`${passport.instrument.symbol}-${passport.scannedAt}`} passport={passport} />

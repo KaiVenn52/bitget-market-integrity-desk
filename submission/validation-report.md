@@ -11,7 +11,8 @@ the date shown, and rows that describe an earlier state say so.
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic, gate, study, routing and rate-limit unit tests | 158/158 passed, six suites | 5 query and instrument resolution; 22 published deterministic integrity rules; 60 analysis-engine; 36 gate; 29 study; 6 public-endpoint budget. `npm.cmd test` |
+| Deterministic, decision, gate, study, routing and rate-limit unit tests | 162/162 passed, seven suites | 5 query and instrument resolution; 22 published deterministic integrity rules; 4 decision memo; 60 analysis-engine; 36 gate; 29 study; 6 public-endpoint budget. `npm.cmd test` |
+| Decision memo boundaries | Passed locally and rendered | Missing or inconsistent references return `WAIT`; caution states return `INVESTIGATE`; no measured repricing returns `REJECT_THESIS`; a supported passport returns `READY` for human review, never a trade instruction. |
 | Production build | Passed | `npm.cmd run build` — Vite 8, 278 kB JS / 40 kB CSS |
 | Static lint | Passed | `npm.cmd run lint` |
 | API syntax checks | 5/5 passed | `node --check` on `api/analyze.js`, `api/scan.js`, `api/sweep.js`, `api/study.js`, `api/benchmark-source.js` |

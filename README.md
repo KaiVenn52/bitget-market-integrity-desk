@@ -1,11 +1,11 @@
 # Market Integrity Desk
 
-A read-only, evidence-first AI Trading Desk for Bitget tokenized U.S. equities. It produces a reproducible Market State Passport, and explains a repricing by ranking candidate catalysts against publication time — then rejecting the ones whose timing cannot explain the move.
+A read-only pre-trade thesis stress test for Bitget tokenized U.S. equities. It turns a research question into a decision memo — ready for review, investigate, wait, or reject the current thesis — then exposes the Market State Passport, historical base rate, and evidence behind that call.
 
 **Live demo:** https://bitget-market-integrity-desk.vercel.app
 
-> Can the current state of a 24/7 tokenized-equity market be supported by fresh, internally consistent evidence?
-> And when it reprices, which explanation is actually supported by the record?
+> Is this rToken opportunity supported strongly enough to keep researching before capital follows it?
+> What supports the thesis, what blocks it, and exactly what evidence would change the call?
 
 ![Market Integrity Desk](design/implementation-desktop-final.png)
 
@@ -19,13 +19,13 @@ A tokenized U.S. equity can trade while its underlying market is closed, stale, 
 4. **Gate:** decide whether the market state can be trusted at all, and record the refusals.
 5. **Abstain:** expose `UNVERIFIABLE`, `NOT OBSERVABLE` and `NO_STRONG_CATALYST` instead of inventing confidence or a cause.
 
-The target user is a research-driven, medium-frequency Bitget rToken trader who checks a small watchlist before acting, trades while the U.S. market is closed, and values evidence quality over directional predictions. The desk presents analysis; the human makes the decision. It places no orders.
+The target user is a research-driven, medium-frequency Bitget rToken trader who checks a small watchlist before acting, trades while the U.S. market is closed, and values evidence quality over directional predictions. The unified Decision Memo rejects a catalyst thesis when there is no measured event, waits when a required reference is missing or inconsistent, and sends unresolved states to investigation. These are research dispositions, never trade instructions: the human makes the decision and the desk places no orders.
 
 ## The four workspaces
 
 | Workspace | Question it answers |
 | --- | --- |
-| **Desk** (`#live`) | Why did this instrument move, and which explanation does the record actually support? |
+| **Desk** (`#live`) | Should this thesis proceed to human review, be investigated, wait for confirmation, or be rejected — and why? |
 | **Gate** (`#gate`) | Can I trust this market state at all, right now, and what exactly blocks it? |
 | **Stress** (`#stress`) | When this token drifted like this before, what did the following session do? |
 | **Replay / Method** (`#replay`, `#method`) | Frozen cases, and the boundary the desk refuses to cross. |
@@ -160,7 +160,7 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 158/158 tests pass across six suites: query and instrument resolution (5), published deterministic integrity rules mirrored in the browser (22), the server analysis engine — session labelling, the U.S. market holiday calendar and half days, session-aware two-tier reference selection including reported-close expiry and client-safe kind preservation, move detection and start location, the 20 bps event boundary, headline timing verdicts (`POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT`, `DISTANT`, `TIME_UNKNOWN`), drift, turnover acceleration, top-of-book spread, verdict assembly, confidence rules, reference provenance, the model deadline, and the citation gate including inline-prose extraction (60), the ordered gate rules with pipeline contract tests that feed real `pickReference` output into `evaluateGate` (36), episode construction, drift distribution, point-in-time scenario matching, example-episode exclusion, underlying-close attachment, outcome classification and the stress-test verdict and same-direction matching (29), and the public-endpoint budget (6).
+- 162/162 tests pass across seven suites: query and instrument resolution (5), published deterministic integrity rules mirrored in the browser (22), the decision memo and its wait/investigate/reject/ready boundaries (4), the server analysis engine — session labelling, the U.S. market holiday calendar and half days, session-aware two-tier reference selection including reported-close expiry and client-safe kind preservation, move detection and start location, the 20 bps event boundary, headline timing verdicts (`POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT`, `DISTANT`, `TIME_UNKNOWN`), drift, turnover acceleration, top-of-book spread, verdict assembly, confidence rules, reference provenance, the model deadline, and the citation gate including inline-prose extraction (60), the ordered gate rules with pipeline contract tests that feed real `pickReference` output into `evaluateGate` (36), episode construction, drift distribution, point-in-time scenario matching, example-episode exclusion, underlying-close attachment, outcome classification and the stress-test verdict and same-direction matching (29), and the public-endpoint budget (6).
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.
