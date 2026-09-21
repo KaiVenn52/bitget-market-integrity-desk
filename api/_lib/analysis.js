@@ -330,6 +330,23 @@ export function referenceEvidence(reference, nowMs) {
   }
 }
 
+// Keep every field the client uses to distinguish a live quote from a reported
+// close. Hand-building this object in the route previously dropped `kind`, which
+// made a prior close render as a live basis even though the narrative was correct.
+export function publicReference(reference) {
+  return {
+    chosen: reference.chosen,
+    stale: reference.stale,
+    staleReason: reference.staleReason,
+    kind: reference.kind,
+    closeDateKey: reference.closeDateKey ?? null,
+    underlyingTradable: reference.underlyingTradable,
+    currentSession: reference.currentSession,
+    note: reference.note,
+    candidates: reference.candidates,
+  }
+}
+
 /**
  * How long a model call may be given, derived from what is left of the function budget.
  *

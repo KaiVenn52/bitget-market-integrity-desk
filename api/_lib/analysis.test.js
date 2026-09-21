@@ -7,6 +7,7 @@ import {
   modelDeadlineMs,
   pickReference,
   priceLabel,
+  publicReference,
   rankHeadlines,
   referenceEvidence,
   sessionOf,
@@ -275,6 +276,27 @@ describe('price formatting', () => {
 })
 
 describe('reference evidence provenance', () => {
+  it('preserves reference kind and close date in the public response', () => {
+    const source = {
+      chosen: { price: 222.27, timestampMs: Date.parse('2026-09-18T20:00:00Z'), session: 'closed', ageSeconds: null, source: 'Yahoo Finance chart' },
+      candidates: [],
+      stale: false,
+      staleReason: null,
+      kind: 'reported-close',
+      closeDateKey: '2026-09-18',
+      underlyingTradable: false,
+      currentSession: 'overnight',
+      note: 'Prior-session close only.',
+    }
+
+    expect(publicReference(source)).toMatchObject({
+      kind: 'reported-close',
+      closeDateKey: '2026-09-18',
+      underlyingTradable: false,
+      currentSession: 'overnight',
+    })
+  })
+
   const reportedClose = {
     chosen: { price: 336.1300048828125, timestampMs: AFTERHOURS - 86_400_000, session: 'closed', ageSeconds: null, source: 'Yahoo Finance chart API' },
     candidates: [],

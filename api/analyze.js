@@ -4,6 +4,7 @@ import {
   driftSeries,
   modelDeadlineMs,
   pickReference,
+  publicReference,
   rankHeadlines,
   referenceEvidence,
   sessionLabel,
@@ -152,7 +153,7 @@ export default async function handler(req, res) {
     // shared builder, so the two endpoints cannot drift apart on provenance.
     evidence.push(referenceEvidence(reference, now))
     evidence.push({
-      id: 'drift', title: reference.stale ? 'Token drift versus closed reference' : 'Basis versus live reference', state: drift.currentBps === null ? 'unknown' : Math.abs(drift.currentBps) <= 20 ? 'pass' : Math.abs(drift.currentBps) <= 100 ? 'caution' : 'fail',
+      id: 'drift', title: reference.kind === 'reported-close' ? 'Token drift versus prior close' : reference.stale ? 'Token drift versus unavailable reference' : 'Basis versus live reference', state: drift.currentBps === null ? 'unknown' : Math.abs(drift.currentBps) <= 20 ? 'pass' : Math.abs(drift.currentBps) <= 100 ? 'caution' : 'fail',
       summary: drift.currentBps === null ? drift.note : `${drift.currentBps} bps now against ${drift.priorBps} bps ${drift.lookbackMinutes} minutes ago. ${drift.note}`,
       source: 'Deterministic calculation', endpoint: 'api/_lib/analysis.js#driftSeries', retrievedAt: new Date(now).toISOString(),
     })
@@ -281,7 +282,7 @@ export default async function handler(req, res) {
       generatedAt: new Date(now).toISOString(),
       session,
       sessionLabel: sessionLabel(session),
-      reference: { chosen: reference.chosen, stale: reference.stale, underlyingTradable: reference.underlyingTradable, note: reference.note, candidates: reference.candidates },
+      reference: publicReference(reference),
       metrics: { move, drift: { currentBps: drift.currentBps, priorBps: drift.priorBps, deltaBps: drift.deltaBps, trend: drift.trend, lookbackMinutes: drift.lookbackMinutes }, spread, turnover },
       verdicts,
       news: { status: news.status, retrieved: ranked.length, note: news.note },
