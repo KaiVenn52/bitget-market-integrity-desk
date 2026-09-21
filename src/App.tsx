@@ -49,6 +49,7 @@ export default function App() {
   const [scanning, setScanning] = useState(false)
   const [researchQuestion, setResearchQuestion] = useState('Can I trust rNVDAUSDT right now?')
   const [queryNote, setQueryNote] = useState('Ask about NVDA, AAPL, TSLA, or QQQ.')
+  const [gateRunRequest, setGateRunRequest] = useState(0)
   const scanRequest = useRef(0)
 
   const scan = useCallback(async (nextSymbol: string, question = `Can I trust ${nextSymbol} right now?`) => {
@@ -112,6 +113,11 @@ export default function App() {
     selectSymbol(next)
   }
 
+  const runWatchlistGate = () => {
+    setGateRunRequest((current) => current + 1)
+    go('gate')
+  }
+
   // Following a pasted deep link or editing the hash by hand switches workspace.
   useEffect(() => {
     const onHashChange = () => setView(viewFromHash())
@@ -130,12 +136,12 @@ export default function App() {
       <Watchlist selected={symbol} liveQuotes={liveQuotes} onSelect={selectSymbol} />
       <section className="workbench">
         <div className="instrument-bar"><div><span>Current passport</span><h2>{passport.instrument.symbol}</h2><p>{passport.instrument.company} · tokenized U.S. equity</p></div><button className="scan-button" aria-label={scanning ? 'Scanning evidence' : 'Refresh evidence'} disabled={scanning} onClick={() => void scan(symbol, passport.researchQuestion ?? researchQuestion)}>{scanning ? <RefreshCw className="spin" size={16} /> : <ScanLine size={16} />}<span>{scanning ? 'Scanning evidence' : 'Refresh evidence'}</span></button></div>
-        <DecisionMemo passport={passport} analysis={analysis?.symbol === passport.instrument.symbol ? analysis.data : null} onGate={() => go('gate')} onStress={() => go('stress')} />
+        <DecisionMemo passport={passport} analysis={analysis?.symbol === passport.instrument.symbol ? analysis.data : null} onGate={runWatchlistGate} onStress={() => go('stress')} />
         <PassportPanel passport={passport} />
         {analysis && analysis.symbol === passport.instrument.symbol ? <CatalystPanel analysis={analysis.data} /> : null}
         <EvidenceInspector key={`${passport.instrument.symbol}-${passport.scannedAt}`} passport={passport} />
       </section>
-    </main> : view === 'gate' ? <IntegrityGate onInspect={inspectFromGate} /> : view === 'stress' ? <StressTest symbol={symbol} onSymbol={selectSymbol} /> : view === 'replay' ? <ReplayLab /> : <Methodology />}
+    </main> : view === 'gate' ? <IntegrityGate onInspect={inspectFromGate} autoRunKey={gateRunRequest} /> : view === 'stress' ? <StressTest symbol={symbol} onSymbol={selectSymbol} /> : view === 'replay' ? <ReplayLab /> : <Methodology />}
     <footer><div><b>Market Integrity Desk</b><span>Built for transparent tokenized markets.</span></div><div>Source-bound · Reproducible · Read-only</div><div>Research only. Not investment advice.</div></footer>
   </div>
 }

@@ -1,5 +1,5 @@
 import { AlertOctagon, ArrowRight, CheckCircle2, History, PauseCircle, RefreshCw, ScanLine, ShieldCheck, Trash2 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { appendDeskLog, clearDeskLog, logStats, readDeskLog, toLogEntry } from '../lib/desklog'
 import { runSweep } from '../services/sweep'
 import type { DeskLogEntry, GateDecision, SweepEntry, SweepResult } from '../types'
@@ -80,7 +80,7 @@ function LogRow({ run }: { run: DeskLogEntry }) {
   </li>
 }
 
-export function IntegrityGate({ onInspect }: { onInspect: (symbol: string) => void }) {
+export function IntegrityGate({ onInspect, autoRunKey = 0 }: { onInspect: (symbol: string) => void; autoRunKey?: number }) {
   const [result, setResult] = useState<SweepResult | null>(null)
   const [log, setLog] = useState<DeskLogEntry[]>(() => readDeskLog())
   const [running, setRunning] = useState(false)
@@ -95,6 +95,13 @@ export function IntegrityGate({ onInspect }: { onInspect: (symbol: string) => vo
     }
     setRunning(false)
   }, [])
+
+  const lastAutoRun = useRef(0)
+  useEffect(() => {
+    if (autoRunKey <= 0 || lastAutoRun.current === autoRunKey) return
+    lastAutoRun.current = autoRunKey
+    void sweep()
+  }, [autoRunKey, sweep])
 
   const stats = logStats(log)
 
