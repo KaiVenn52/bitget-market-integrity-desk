@@ -11,7 +11,7 @@ the date shown, and rows that describe an earlier state say so.
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic, decision, gate, study, routing and rate-limit unit tests | 162/162 passed, seven suites | 5 query and instrument resolution; 22 published deterministic integrity rules; 4 decision memo; 60 analysis-engine; 36 gate; 29 study; 6 public-endpoint budget. `npm.cmd test` |
+| Deterministic, decision, gate, study, routing and rate-limit unit tests | 165/165 passed, seven suites | 5 query and instrument resolution; 22 published deterministic integrity rules; 7 decision memo, including reported-close semantics, embedded base rates and empty-sample refusal; 60 analysis-engine; 36 gate; 29 study; 6 public-endpoint budget. `npm.cmd test` |
 | Decision memo boundaries | Passed locally and rendered | Missing or inconsistent references return `WAIT`; caution states return `INVESTIGATE`; no measured repricing returns `REJECT_THESIS`; a supported passport returns `READY` for human review, never a trade instruction. |
 | Production build | Passed | `npm.cmd run build` — Vite 8, 278 kB JS / 40 kB CSS |
 | Static lint | Passed | `npm.cmd run lint` |

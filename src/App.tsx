@@ -14,7 +14,8 @@ import { snapshotFor } from './data/snapshots'
 import { resolveInstrument } from './lib/query'
 import { runAnalysis } from './services/analyze'
 import { runScan } from './services/scan'
-import type { MoveAnalysis, Passport } from './types'
+import { runStudy } from './services/study'
+import type { MoveAnalysis, Passport, StudyResult } from './types'
 
 type View = 'live' | 'gate' | 'stress' | 'replay' | 'methodology'
 
@@ -45,6 +46,8 @@ export default function App() {
   // this the previous instrument's explanation sat next to the new instrument's passport
   // for the whole of that window.
   const [analysis, setAnalysis] = useState<{ symbol: string; data: MoveAnalysis } | null>(null)
+  const [study, setStudy] = useState<{ symbol: string; data: StudyResult } | null>(null)
+  const [studyPending, setStudyPending] = useState(false)
   const [liveQuotes, setLiveQuotes] = useState<Record<string, Passport['instrument']>>({})
   const [scanning, setScanning] = useState(false)
   const [researchQuestion, setResearchQuestion] = useState('Can I trust rNVDAUSDT right now?')
@@ -56,12 +59,26 @@ export default function App() {
     const requestId = ++scanRequest.current
     setScanning(true)
     setAnalysis(null)
+    setStudy(null)
+    setStudyPending(false)
     setQueryNote('Checking Bitget sources for the integrity passport.')
     const result = await runScan(nextSymbol, question, setQueryNote)
     if (requestId !== scanRequest.current) return
     startTransition(() => {
       setPassport(result)
       if (result.mode === 'live') setLiveQuotes((current) => ({ ...current, [result.instrument.symbol]: result.instrument }))
+    })
+
+    // The deterministic stress study and model investigation are independent. Start
+    // both after the scan supplies the observed drift so the memo gets its base rate
+    // without adding another network waterfall to the critical path.
+    setStudyPending(true)
+    void runStudy(nextSymbol, result.premiumBps ?? undefined).then((payload) => {
+      if (requestId !== scanRequest.current) return
+      startTransition(() => {
+        setStudy(payload ? { symbol: nextSymbol, data: payload } : null)
+        setStudyPending(false)
+      })
     })
     const next = await runAnalysis(nextSymbol, question, setQueryNote)
     if (requestId !== scanRequest.current) return
@@ -136,7 +153,7 @@ export default function App() {
       <Watchlist selected={symbol} liveQuotes={liveQuotes} onSelect={selectSymbol} />
       <section className="workbench">
         <div className="instrument-bar"><div><span>Current passport</span><h2>{passport.instrument.symbol}</h2><p>{passport.instrument.company} · tokenized U.S. equity</p></div><button className="scan-button" aria-label={scanning ? 'Scanning evidence' : 'Refresh evidence'} disabled={scanning} onClick={() => void scan(symbol, passport.researchQuestion ?? researchQuestion)}>{scanning ? <RefreshCw className="spin" size={16} /> : <ScanLine size={16} />}<span>{scanning ? 'Scanning evidence' : 'Refresh evidence'}</span></button></div>
-        <DecisionMemo passport={passport} analysis={analysis?.symbol === passport.instrument.symbol ? analysis.data : null} onGate={runWatchlistGate} onStress={() => go('stress')} />
+        <DecisionMemo passport={passport} analysis={analysis?.symbol === passport.instrument.symbol ? analysis.data : null} study={study?.symbol === passport.instrument.symbol ? study.data : null} studyPending={studyPending} onGate={runWatchlistGate} onStress={() => go('stress')} />
         <PassportPanel passport={passport} />
         {analysis && analysis.symbol === passport.instrument.symbol ? <CatalystPanel analysis={analysis.data} /> : null}
         <EvidenceInspector key={`${passport.instrument.symbol}-${passport.scannedAt}`} passport={passport} />
