@@ -1,7 +1,7 @@
 # Validation Record
 
 Updated: 2026-09-21
-Scope: local engine, public production workflow, and two adversarial review rounds
+Scope: local engine, public production workflow, and three adversarial review rounds
 Operator: project developer
 
 This record is linked directly from the deployed desk. Every row below was observed on
@@ -11,7 +11,7 @@ the date shown, and rows that describe an earlier state say so.
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic, gate, study, routing and rate-limit unit tests | 154/154 passed, six suites | 5 query and instrument resolution; 22 published deterministic integrity rules; 58 analysis-engine; 34 gate; 29 study; 6 public-endpoint budget. `npm.cmd test` |
+| Deterministic, gate, study, routing and rate-limit unit tests | 157/157 passed, six suites | 5 query and instrument resolution; 22 published deterministic integrity rules; 59 analysis-engine; 36 gate; 29 study; 6 public-endpoint budget. `npm.cmd test` |
 | Production build | Passed | `npm.cmd run build` — Vite 8, 278 kB JS / 40 kB CSS |
 | Static lint | Passed | `npm.cmd run lint` |
 | API syntax checks | 5/5 passed | `node --check` on `api/analyze.js`, `api/scan.js`, `api/sweep.js`, `api/study.js`, `api/benchmark-source.js` |
@@ -23,10 +23,14 @@ the date shown, and rows that describe an earlier state say so.
 | The example episode is excluded from its own sample | Passed | When the market is open the most recent closed episode supplies the target and is removed from the pool it is compared against, so it cannot match itself at zero distance |
 | Opposite-direction episodes are not called comparable | Passed locally | A +40 bps target does not match a -40 bps-only episode, even at equal absolute magnitude; same-direction matches remain eligible |
 | Daily-close provenance | Passed locally | The API and interface identify Yahoo Finance as a secondary daily-close feed, not an exchange-certified primary source; the JSON reference kind is `reported-close` |
+| Reported-close expiry | Passed locally | A daily close older than five calendar days is rejected rather than treated as a current comparison baseline |
+| Closed-market gate completeness | Passed locally | An aligned prior close no longer bypasses independent repricing and quoted-spread checks; a 200 bps spread returns `INVESTIGATE`, not `CLEAR` |
+| Source-time chronology | Passed locally | Token and Stock+ timeline events use their source timestamps and display their individual ages; a stale Stock+ quote is never labelled `Current underlying` |
 | Initial scan concurrency | Passed | Token ticker and Stock+ quote are requested together; production `/api/scan` returns a real premium in ~2 s |
 | Public endpoint budget | Passed | `/api/analyze` returns `x-ratelimit-limit: 12`, `x-ratelimit-remaining`, and `retry-after` on refusal. Per warm instance, not a global quota — stated as such rather than implied otherwise. |
 | Core browser tasks | Passed | Natural-language query, question-aware Qwen answer, instrument switch, live/fallback scan, row expansion, evidence selection, provenance reveal, Gate, Stress, Replay and Method navigation |
 | Instrument switch does not show the previous narrative | Passed | The analysis carries its instrument and is withheld while the passport belongs to a different one, closing the 15–20 s window between retrieval finishing and the model answering |
+| Same-instrument refresh does not show the previous narrative | Passed locally | Starting any scan clears the previous analysis, and Qwen completion replaces the passport's pending note with the completed investigation state |
 | Desktop viewport | Passed | 1440 × 1000, no document-level horizontal overflow |
 | Mobile viewport | Passed | 390 × 844, no document-level horizontal overflow |
 | Public deployment | Passed | `https://bitget-market-integrity-desk.vercel.app` returned HTTP 200 |
@@ -97,6 +101,22 @@ before being fixed, and each carries a regression test.
 8. **The submission documents were stale**, quoting earlier test counts, a deleted
    endpoint, and an older product state — including this file, which a judge reaches by
    clicking "Validation record" on the deployed site.
+9. **Closed-market alignment bypassed independent risks.** The reported-close branch
+   returned `CLEAR` before repricing and quoted-spread rules ran; a synthetic 200 bps
+   spread now returns `INVESTIGATE` and has a regression test.
+10. **A reported close had no expiry.** A month-old daily close could be treated as the
+    current comparison baseline. Reported closes now have a five-calendar-day ceiling.
+11. **The chronology used retrieval time as source time.** A stale Stock+ quote appeared
+    as `Current underlying`. Token and underlying events now show their separate source
+    clocks and ages.
+12. **The browser timeout could discard a successful live scan.** One production scan
+    returned in 5.752 seconds against a 5.5-second client ceiling. The client now leaves
+    eight seconds for the server budget plus cold-start, serialization and network time.
+13. **A reported prior close was labelled as a live reference** in the move panel. The
+    label now keys on the reference kind and reads `Drift vs prior close`.
+14. **Refresh state could contradict itself.** A same-instrument refresh left the old
+    narrative visible, and the passport still said Qwen was pending after it completed.
+    Every scan now clears the old narrative and synchronizes the completion note.
 
 Every published metric must be labeled observed, estimated, or targeted. Demonstration
 fixtures must never be described as historical evidence.

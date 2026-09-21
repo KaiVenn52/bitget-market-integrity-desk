@@ -69,7 +69,7 @@ export function StressTest({ symbol, onSymbol }: { symbol: string; onSymbol: (ne
         <h1>Historical stress test</h1>
         <p>When this token drifted like this before, what did the following session actually do? A base rate with its sample size attached — not a forecast.</p>
       </div>
-      <button className="scan-button" onClick={() => rerun(symbol)} disabled={running}>
+      <button className="scan-button" aria-label={running ? `Testing ${symbol}` : `Re-run stress test for ${symbol}`} onClick={() => rerun(symbol)} disabled={running}>
         {running ? <RefreshCw className="spin" size={16} /> : <History size={16} />}
         <span>{running ? 'Testing' : 'Re-run test'}</span>
       </button>

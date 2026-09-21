@@ -188,6 +188,10 @@ export const isReferenceLive = (session) => session === 'regular'
 // whose label matches. Session labels alone are not freshness: a stalled feed
 // still reports "Intraday" hours later.
 export const REFERENCE_STALE_SECONDS = 300
+// A daily close is a session boundary, not an evergreen price. Five calendar
+// days covers an ordinary weekend plus a U.S. market holiday, while refusing a
+// feed that has silently stopped publishing for a week or longer.
+export const REPORTED_CLOSE_MAX_AGE_DAYS = 5
 
 /** ET calendar date of an instant, used to line a token up with reported daily closes. */
 export function etDateKey(ms) {
@@ -233,19 +237,29 @@ export function pickReference(candidates, nowMs, options = {}) {
   const chosen = sameSession[0] ?? [...usable].sort((a, b) => a.ageSeconds - b.ageSeconds)[0]
   const closes = (options.dailyCloses ?? []).filter((row) => row && Number.isFinite(row.close) && row.close > 0)
   const latestClose = closes.length ? closes[closes.length - 1] : null
+  const nowDateMs = Date.parse(`${etDateKey(nowMs)}T00:00:00Z`)
+  const keyedCloseDateMs = latestClose?.dateKey ? Date.parse(`${latestClose.dateKey}T00:00:00Z`) : Number.NaN
+  const closeDateMs = Number.isFinite(keyedCloseDateMs) ? keyedCloseDateMs : Number(latestClose?.ts)
+  const closeAgeDays = Number.isFinite(closeDateMs) ? Math.floor((nowDateMs - closeDateMs) / 86_400_000) : null
+  const reportedCloseUsable = Boolean(latestClose && closeAgeDays !== null && closeAgeDays >= 0 && closeAgeDays <= REPORTED_CLOSE_MAX_AGE_DAYS)
+  const reportedCloseFailure = latestClose && !reportedCloseUsable
+    ? `The latest reported daily close is ${closeAgeDays === null ? 'undated' : `${closeAgeDays} calendar days old`}, beyond the ${REPORTED_CLOSE_MAX_AGE_DAYS}-day ceiling, so it is not used as a reference.`
+    : null
 
   // The main session is the only window where the underlying trades continuously,
   // so inside it a live quote is the only valid basis.
   const liveQuote = chosen && chosen.session === current && chosen.ageSeconds <= REFERENCE_STALE_SECONDS ? chosen : null
-  const useReportedClose = !liveQuote && current !== 'regular' && latestClose
+  const useReportedClose = !liveQuote && current !== 'regular' && reportedCloseUsable
 
   if (!liveQuote && !useReportedClose) {
     // No quote can serve as a basis. Either nothing was retrieved at all, or the
     // main session is running — where the previous close is not a basis because the
     // underlying is trading at a different price right now.
     if (!chosen) {
-      const note = latestClose
-        ? 'No reference quote was retrieved, and a prior-session close cannot stand in for one while the underlying is in its main session, so there is no basis to compare against.'
+      const note = reportedCloseFailure
+        ? reportedCloseFailure
+        : latestClose
+          ? 'No reference quote was retrieved, and a prior-session close cannot stand in for one while the underlying is in its main session, so there is no basis to compare against.'
         : 'No reference quote or reported daily close was retrieved; alignment is not calculated.'
       return { chosen: null, candidates: [], stale: true, staleReason: 'missing', kind: null, underlyingTradable: current !== 'overnight', currentSession: current, note }
     }
@@ -255,13 +269,13 @@ export function pickReference(candidates, nowMs, options = {}) {
       ? `The freshest reference comes from the ${sessionLabel(chosen.session)} window, not the current ${sessionLabel(current)} window, and no reported daily close was retrieved to stand in for it.`
       : staleReason === 'quote-age'
         ? `The freshest reference quote is ${chosen.ageSeconds}s old, beyond the ${REFERENCE_STALE_SECONDS}s ceiling for a live basis, so the reference cannot price-verify this token right now.`
-        : 'The underlying market is closed and no reported daily close was retrieved, so there is no reference to compare against.'
+        : reportedCloseFailure ?? 'The underlying market is closed and no reported daily close was retrieved, so there is no reference to compare against.'
     return { chosen, candidates: usable.sort((a, b) => a.ageSeconds - b.ageSeconds), stale: true, staleReason, kind: null, underlyingTradable, currentSession: current, note }
   }
 
   if (useReportedClose) {
     return {
-      chosen: { price: latestClose.close, timestampMs: latestClose.ts ?? nowMs, session: 'closed', ageSeconds: null, source: latestClose.source ?? 'Daily-close source unspecified' },
+      chosen: { price: latestClose.close, timestampMs: latestClose.ts ?? closeDateMs, session: 'closed', ageSeconds: null, source: latestClose.source ?? 'Daily-close source unspecified' },
       candidates: usable.sort((a, b) => a.ageSeconds - b.ageSeconds),
       stale: false,
       staleReason: null,

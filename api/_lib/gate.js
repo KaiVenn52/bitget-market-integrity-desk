@@ -133,16 +133,8 @@ export function evaluateGate(input) {
         referenceKind: 'reported-close',
       })
     }
-    return verdict({
-      decision: 'CLEAR',
-      code: 'CLOSED_MARKET_ALIGNED',
-      headline: `Near the reported prior close (${bpsLabel(premiumBps ?? 0)})`,
-      reason: `${reference.note} The gap is ${gapBps ?? 0} bps, inside the ${MOVE_THRESHOLD_BPS} bps alignment threshold, so the token is not pricing unconfirmed information.`,
-      evidenceIds: ['token', 'reference', 'drift', 'session'],
-      conditions: ['A gap beyond the alignment threshold opens while the underlying is still not in its main session'],
-      nextStep: 'No integrity obstacle. Standard research applies.',
-      referenceKind: 'reported-close',
-    })
+    // An aligned prior close only settles the reference question. Repricing and
+    // execution-quality checks below must still run before this can be CLEAR.
   }
 
   // 4. A live underlying disagrees beyond the fail threshold: a state contradiction.
@@ -184,15 +176,8 @@ export function evaluateGate(input) {
         nextStep: 'Run the historical stress test for a drift of this size before acting, then run catalyst attribution on this instrument.',
       })
     }
-    return verdict({
-      decision: 'CLEAR',
-      code: 'STALE_REFERENCE_ALIGNED',
-      headline: `Tracking the stale reference (${driftBps ?? 0} bps)`,
-      reason: `${reference.note} The token is within ${MOVE_THRESHOLD_BPS} bps of that reference, so nothing in the record suggests it is pricing unconfirmed information.`,
-      evidenceIds: ['token', 'reference', 'drift', 'session'],
-      conditions: ['A drift beyond the alignment threshold appears while the reference is still unable to confirm it'],
-      nextStep: 'No integrity obstacle. Standard research applies.',
-    })
+    // A small drift does not erase an independent repricing or spread problem.
+    // Those common checks run below before the stale-reference state can clear.
   }
 
   // 6. A live reference with a premium inside the caution band.
@@ -238,6 +223,33 @@ export function evaluateGate(input) {
       evidenceIds: ['spread', 'token'],
       conditions: ['The quoted spread narrows inside the pass threshold'],
       nextStep: 'Re-check top-of-book before sizing anything against this price.',
+    })
+  }
+
+  if (reference.kind === 'reported-close') {
+    const gapBps = absBps(premiumBps)
+    return verdict({
+      decision: 'CLEAR',
+      code: 'CLOSED_MARKET_ALIGNED',
+      headline: `Near the reported prior close (${bpsLabel(premiumBps ?? 0)})`,
+      reason: `${reference.note} The gap is ${gapBps ?? 0} bps, inside the ${MOVE_THRESHOLD_BPS} bps alignment threshold, and no independent repricing or quoted-spread problem was observed.`,
+      evidenceIds: ['token', 'reference', 'drift', 'spread', 'session'],
+      conditions: ['A gap beyond the alignment threshold opens while the underlying is still not in its main session', 'A material repricing or wide quoted spread appears'],
+      nextStep: 'No integrity obstacle. Standard research applies.',
+      referenceKind: 'reported-close',
+    })
+  }
+
+  if (reference.stale) {
+    const driftBps = absBps(drift?.currentBps)
+    return verdict({
+      decision: 'CLEAR',
+      code: 'STALE_REFERENCE_ALIGNED',
+      headline: `Tracking the stale reference (${driftBps ?? 0} bps)`,
+      reason: `${reference.note} The token is within ${MOVE_THRESHOLD_BPS} bps of that reference, and no independent repricing or quoted-spread problem was observed.`,
+      evidenceIds: ['token', 'reference', 'drift', 'spread', 'session'],
+      conditions: ['A drift beyond the alignment threshold appears while the reference is still unable to confirm it', 'A material repricing or wide quoted spread appears'],
+      nextStep: 'No integrity obstacle. Standard research applies.',
     })
   }
 

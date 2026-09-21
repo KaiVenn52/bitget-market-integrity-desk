@@ -104,7 +104,7 @@ export function IntegrityGate({ onInspect }: { onInspect: (symbol: string) => vo
         <h1>Pre-trade integrity gate</h1>
         <p>The desk gates its own watchlist and writes down what it refused. AI presents the analysis; the human makes the decision.</p>
       </div>
-      <button className="scan-button" onClick={() => void sweep()} disabled={running}>
+      <button className="scan-button" aria-label={running ? 'Gating watchlist' : 'Run integrity sweep'} onClick={() => void sweep()} disabled={running}>
         {running ? <RefreshCw className="spin" size={16} /> : <ShieldCheck size={16} />}
         <span>{running ? 'Gating watchlist' : 'Run integrity sweep'}</span>
       </button>

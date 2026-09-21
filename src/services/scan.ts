@@ -1,7 +1,10 @@
 import { snapshotFor } from '../data/snapshots'
 import type { Passport } from '../types'
 
-const TIMEOUT_MS = 5500
+// The server's own source budget is 5.5s. Leave room for a cold start,
+// serialization and network transit so a successful live response is not
+// discarded in favour of a fixture just before it reaches the browser.
+const TIMEOUT_MS = 8000
 export type ScanProgress = (message: string) => void
 
 /**

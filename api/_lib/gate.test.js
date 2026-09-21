@@ -107,6 +107,30 @@ describe('gate rules', () => {
     expect(result.code).toBe('WIDE_SPREAD')
   })
 
+  it('does not clear an aligned reported close when the quoted spread is wide', () => {
+    const result = gate({
+      reference: { ...closedReference, kind: 'reported-close' },
+      premiumBps: 0,
+      alignmentState: 'pass',
+      drift: { currentBps: 0, priorBps: 0, deltaBps: 0, trend: 'stable' },
+      spread: { spreadBps: 200, state: 'fail', note: 'Top-of-book spread is 200 bps.' },
+    })
+    expect(result.decision).toBe('INVESTIGATE')
+    expect(result.code).toBe('WIDE_SPREAD')
+  })
+
+  it('does not clear an aligned reported close when a material repricing was measured', () => {
+    const result = gate({
+      reference: { ...closedReference, kind: 'reported-close' },
+      premiumBps: 0,
+      alignmentState: 'pass',
+      drift: { currentBps: 0, priorBps: 0, deltaBps: 0, trend: 'stable' },
+      move: { detected: true, moveBps: 90, windowMinutes: 15, reason: 'Up 90 bps.' },
+    })
+    expect(result.decision).toBe('INVESTIGATE')
+    expect(result.code).toBe('UNEXPLAINED_REPRICING')
+  })
+
   it('clears a state whose observable checks agree', () => {
     const result = gate()
     expect(result.decision).toBe('CLEAR')

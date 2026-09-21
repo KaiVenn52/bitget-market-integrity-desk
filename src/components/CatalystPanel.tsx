@@ -56,7 +56,7 @@ export function CatalystPanel({ analysis }: { analysis: MoveAnalysis }) {
 
     <dl className="catalyst-metrics">
       <div><dt>Repricing</dt><dd>{metrics.move.detected ? `${metrics.move.direction === 'up' ? '+' : '−'}${Math.abs(metrics.move.moveBps ?? 0)} bps / ${metrics.move.windowMinutes}m` : 'below threshold'}</dd></div>
-      <div><dt>{reference.stale ? 'Drift vs closed ref' : 'Basis vs live ref'}</dt><dd>{metrics.drift.currentBps === null ? 'not computable' : `${metrics.drift.currentBps} bps · ${metrics.drift.trend}`}</dd></div>
+      <div><dt>{reference.kind === 'reported-close' ? 'Drift vs prior close' : reference.stale ? 'Drift vs unavailable ref' : 'Basis vs live ref'}</dt><dd>{metrics.drift.currentBps === null ? 'not computable' : `${metrics.drift.currentBps} bps · ${metrics.drift.trend}`}</dd></div>
       <div><dt>Turnover</dt><dd>{metrics.turnover.ratio === null ? 'not computable' : `${metrics.turnover.ratio}× baseline`}</dd></div>
       <div><dt>Top-of-book</dt><dd>{metrics.spread.spreadBps === null ? 'not published' : `${metrics.spread.spreadBps} bps`}</dd></div>
     </dl>

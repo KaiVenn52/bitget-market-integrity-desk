@@ -83,6 +83,8 @@ export interface MoveAnalysis {
   reference: {
     chosen: { price: number; ageSeconds: number; session: string; label?: string } | null
     stale: boolean
+    kind?: 'live-quote' | 'reported-close' | null
+    closeDateKey?: string | null
     underlyingTradable: boolean
     note: string
   }

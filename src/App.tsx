@@ -53,6 +53,7 @@ export default function App() {
   const scan = useCallback(async (nextSymbol: string, question = `Can I trust ${nextSymbol} right now?`) => {
     const requestId = ++scanRequest.current
     setScanning(true)
+    setAnalysis(null)
     setQueryNote('Checking Bitget sources for the integrity passport.')
     const result = await runScan(nextSymbol, question, setQueryNote)
     if (requestId !== scanRequest.current) return
@@ -64,6 +65,16 @@ export default function App() {
     if (requestId !== scanRequest.current) return
     startTransition(() => {
       setAnalysis(next ? { symbol: nextSymbol, data: next } : null)
+      setPassport((current) => current.instrument.symbol === nextSymbol && current.scannedAt === result.scannedAt
+        ? {
+          ...current,
+          reasoningNote: next?.reasoningMode === 'qwen'
+            ? 'Deterministic passport · Qwen investigation completed and is displayed above.'
+            : next
+              ? 'Deterministic passport · deterministic move investigation displayed above.'
+              : 'Deterministic passport · move investigation unavailable.',
+        }
+        : current)
       setQueryNote(completionNote(result, next))
       setScanning(false)
     })

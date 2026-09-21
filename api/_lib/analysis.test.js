@@ -138,17 +138,28 @@ describe('reference selection', () => {
 
   // While the underlying cannot trade, the price it last traded at is the correct
   // basis, and it must be usable without an authenticated live quote.
-  it('falls back to the last official close while the market is closed', () => {
+  it('falls back to the latest reported close while the market is closed', () => {
     const result = pickReference([], WEEKEND, {
-      dailyCloses: [{ dateKey: '2026-09-04', close: 366.0 }, { dateKey: '2026-09-08', close: 373.5 }],
+      dailyCloses: [{ dateKey: '2026-09-17', close: 366.0 }, { dateKey: '2026-09-18', close: 373.5 }],
     })
     expect(result.kind).toBe('reported-close')
     expect(result.chosen.price).toBe(373.5)
-    expect(result.closeDateKey).toBe('2026-09-08')
+    expect(result.closeDateKey).toBe('2026-09-18')
     expect(result.stale).toBe(false)
     expect(result.staleReason).toBeNull()
     expect(result.underlyingTradable).toBe(false)
     expect(result.note).toMatch(/prior-session close of 373.5 reported by an unspecified source is the available comparison baseline/i)
+  })
+
+  it('rejects a reported close whose feed has not updated within five calendar days', () => {
+    const result = pickReference([], WEEKEND, {
+      dailyCloses: [{ dateKey: '2026-08-20', close: 366.0, source: 'Yahoo Finance chart API' }],
+    })
+    expect(result.kind).toBeNull()
+    expect(result.chosen).toBeNull()
+    expect(result.stale).toBe(true)
+    expect(result.note).toMatch(/30 calendar days old/i)
+    expect(result.note).toMatch(/5-day ceiling/i)
   })
 
   it('prefers a live same-session quote over the official close', () => {
@@ -255,7 +266,7 @@ describe('price formatting', () => {
 
   it('uses the formatted price in the reported-close note', () => {
     const result = pickReference([], AFTERHOURS, {
-      dailyCloses: [{ dateKey: '2026-09-18', ts: AFTERHOURS - 86_400_000, close: 222.27000427246094, source: 'official daily close' }],
+      dailyCloses: [{ dateKey: '2026-09-16', ts: AFTERHOURS - 86_400_000, close: 222.27000427246094, source: 'Yahoo Finance chart API' }],
     })
     expect(result.kind).toBe('reported-close')
     expect(result.note).toContain('222.27')
