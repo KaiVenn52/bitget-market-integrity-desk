@@ -63,8 +63,8 @@
 /* Judge-facing proof of the production evidence stack. */
 .judge-proof {
   display: grid;
-  grid-template-columns: minmax(230px, .85fr) minmax(450px, 1.45fr) auto;
-  gap: 28px;
+  grid-template-columns: minmax(260px, .8fr) minmax(0, 1.45fr) minmax(135px, auto);
+  gap: 24px;
   align-items: center;
   margin-top: 18px;
   padding: 22px 24px;
@@ -75,12 +75,12 @@
 
 .proof-intro h2 { margin: 7px 0 4px; font-size: 18px; letter-spacing: -.035em; }
 .proof-intro p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
-.proof-stack { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.proof-stack { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); }
 .proof-stack > div { min-width: 0; display: grid; grid-template-columns: auto 1fr; gap: 9px; align-items: center; padding: 9px 12px; background: var(--surface); }
 .proof-stack svg { color: var(--blue); }
 .proof-stack span { min-width: 0; display: grid; }
 .proof-stack b { font-size: 11px; white-space: nowrap; }
-.proof-stack small { margin-top: 2px; color: var(--muted); font-size: 9px; white-space: nowrap; }
+.proof-stack small { margin-top: 2px; color: var(--muted); font-size: 9px; line-height: 1.35; }
 .proof-stack em { margin-top: 4px; color: var(--mint); font: 600 8px var(--mono); letter-spacing: .08em; font-style: normal; }
 @media (max-width: 900px) { .proof-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
