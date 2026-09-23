@@ -1,6 +1,6 @@
 # Validation Record
 
-Updated: 2026-09-21
+Updated: 2026-09-23
 Scope: local engine, public production workflow, and three adversarial review rounds
 Operator: project developer
 
@@ -11,9 +11,10 @@ the date shown, and rows that describe an earlier state say so.
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic, decision, gate, study, routing and rate-limit unit tests | 217/217 passed, nine suites | 5 query and instrument resolution; 22 published deterministic integrity rules; 7 decision memo, including reported-close semantics, embedded base rates and empty-sample refusal; 60 analysis-engine; 36 gate; 29 study; 6 public-endpoint budget; 19 Bitget MCP client; 33 MCP evidence layer. `npm.cmd test` |
-| Official Bitget MCP integration | Live, 4/4 entries | `/api/scan` calls `equity_price_quote`, `equity_price_historical`, `equity_fundamental_dividends` and `equity_calendar_earnings` against `bitget-mcp-server v4.0.3`. Each evidence record names the upstream vendor that answered (`massive`, `bitget_data`, `finnhub`); none is labelled Stock+ or exchange-certified. |
-| MCP production reliability | 12/12 scans returned all four entries, 2.96–5.35 s | Before the handshake retry was added, the same test produced one all-sources-missing scan in six — a cold CDN handshake consuming the shared budget. |
+| Deterministic, decision, gate, study, routing and rate-limit unit tests | 223/223 passed, nine suites | Includes six new regressions for invalid quote/history values, MCP quote/history coherence, unusable dividend rows and missing earnings context. `npm.cmd test` |
+| Official Bitget MCP integration | Four catalog entries requested per scan | `/api/scan` calls `equity_price_quote`, `equity_price_historical`, `equity_fundamental_dividends` and `equity_calendar_earnings`. Evidence names upstream vendors when disclosed (`massive`, `bitget_data`, `finnhub` in observed responses), otherwise `provider unspecified`; none is labelled Stock+ or exchange-certified. |
+| MCP quote/history coherence | Unit-tested; live result depends on source availability | The quote's prior close is checked against the preceding dated daily candle with a 2 bps rounding tolerance. It explicitly says when both entries came from the same provider; this is not independent price confirmation. Missing or unusable values yield `UNVERIFIABLE`, not a pass. |
+| MCP production reliability | Earlier 12/12-scan sample returned all four entries, 2.96–5.35 s | This is an observed sample, not an availability guarantee. A 2026-09-23 production probe returned three answered entries and an empty historical result, which must leave coherence `UNVERIFIABLE`. Before the handshake retry, one scan in six missed all MCP entries. |
 | MCP dispatch model | Serial, measured | Four concurrent queries on one session left three hanging until timeout while a single one answered in 233 ms, and the one that answered came from a different upstream provider than the same entry returns sequentially. Dispatch is therefore one entry at a time on one session. |
 | MCP defects found by testing against live responses | 3 found, 3 fixed, all regression-guarded | The dividend entry's real field is `ex_dividend_date` (a plausible alias reported no dividend for an instrument that had just gone ex-dividend); parallel dispatch deadlocked; the corporate check read raw MCP entries instead of parsed events and reported "no events in window" beside an evidence record listing one. |
 | Corporate-action check | Moved from `unknown / UNVERIFIABLE` to a dated result | `1 dividend event retrieved from Bitget MCP; most recent ex-date 2026-09-09 at 0.25 USD. Next scheduled report 2026-11-17.` Split adjustment is explicitly not claimed: the dividend entry is not a split feed and the historical candles carry no adjustment field. |

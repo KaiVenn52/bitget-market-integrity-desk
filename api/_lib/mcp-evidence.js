@@ -1,13 +1,13 @@
-import { priceLabel } from './analysis.js'
+import { etDateKey, priceLabel } from './analysis.js'
 import { providerOf, resultsOf } from './bitget-mcp.js'
 
 /**
  * Turn `bitget-mcp-server` responses into evidence records the desk can cite.
  *
  * Provenance rule this module exists to enforce: the MCP platform returns US
- * equity data from upstream vendors, and it names them (`massive`, `finnhub`,
- * ...). So the source line is always "Bitget MCP (bitget-mcp-server vX) ·
- * provider Y". It is never "Bitget Stock+" and never "exchange-certified": those
+ * equity data from upstream vendors, and names them when disclosed (`massive`,
+ * `finnhub`, ...). An undisclosed provider stays `unspecified`. It is never
+ * "Bitget Stock+" and never "exchange-certified": those
  * describe the authenticated Stock+ feed, which is a different pipeline. A desk
  * whose whole purpose is catching misattributed provenance cannot misattribute
  * its own.
@@ -86,10 +86,11 @@ export function quoteEvidence(entry, server, nowMs) {
       retrievedAt,
     }
   }
-  const last = Number(row.last_price)
-  const prevClose = Number(row.prev_close)
-  const bid = Number(row.bid)
-  const ask = Number(row.ask)
+  const numeric = (value) => value === null || value === undefined || value === '' ? NaN : Number(value)
+  const last = numeric(row.last_price)
+  const prevClose = numeric(row.prev_close)
+  const bid = numeric(row.bid)
+  const ask = numeric(row.ask)
   const lastMs = Number.isFinite(Date.parse(row.last_timestamp)) ? Date.parse(row.last_timestamp) : null
   const ageSeconds = lastMs === null ? null : Math.max(0, Math.round((nowMs - lastMs) / 1000))
   const spread = isFinite_(bid) && isFinite_(ask) && bid > 0 ? Math.round(((ask - bid) / bid) * 10000) : null
@@ -103,13 +104,13 @@ export function quoteEvidence(entry, server, nowMs) {
     id: 'mcp-quote',
     title: 'Underlying quote (Bitget MCP)',
     summary: `${parts.join('; ')}.`,
-    state: 'pass',
+    state: isFinite_(last) && last > 0 && lastMs !== null ? 'pass' : 'unknown',
     timestamp: lastMs === null ? retrievedAt.slice(11, 16) : new Date(lastMs).toISOString().slice(11, 16),
     source: mcpSource(server, entry),
     endpoint: 'agent.bitget.com/mcp · equity_price_quote',
     retrievedAt,
     // Carried for the reference layer, which needs the raw numbers rather than prose.
-    quote: isFinite_(last) && lastMs !== null
+    quote: isFinite_(last) && last > 0 && lastMs !== null
       ? { price: last, timestampMs: lastMs, bid: isFinite_(bid) ? bid : null, ask: isFinite_(ask) ? ask : null, ageSeconds }
       : null,
     priorClose: isFinite_(prevClose) && prevClose > 0 ? prevClose : null,
@@ -119,9 +120,9 @@ export function quoteEvidence(entry, server, nowMs) {
 /**
  * Evidence for the daily history.
  *
- * This is corroboration, not a replacement: it exists so a second, independently
- * sourced series can confirm the closes the reference layer already uses, and so
- * the corporate-action check has a dated window to speak inside.
+ * This is a dated series, not a replacement for the authenticated Stock+ feed.
+ * Quote/history agreement from the same upstream vendor is an internal
+ * consistency check, never independent price confirmation.
  */
 export function historyEvidence(entry, server, nowMs) {
   const retrievedAt = new Date(nowMs).toISOString()
@@ -138,7 +139,11 @@ export function historyEvidence(entry, server, nowMs) {
       retrievedAt,
     }
   }
-  const usable = rows.filter((row) => isFinite_(Number(row.close)) && row.close > 0)
+  const usable = rows.filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(String(row.date ?? '').slice(0, 10)) && row.close !== null && row.close !== undefined && isFinite_(Number(row.close)) && Number(row.close) > 0)
+  if (!usable.length) {
+    return { id: 'mcp-history', title: 'Underlying daily history (Bitget MCP)', summary: `${rows.length} candle rows were returned but none had a usable date and positive close.`, state: 'unknown', timestamp: retrievedAt.slice(11, 16), source: mcpSource(server, entry), endpoint: 'agent.bitget.com/mcp · equity_price_historical', retrievedAt, closes: [] }
+  }
+  usable.sort((a, b) => String(a.date).localeCompare(String(b.date)))
   const first = usable[0]
   const latest = usable[usable.length - 1]
   return {
@@ -152,6 +157,39 @@ export function historyEvidence(entry, server, nowMs) {
     retrievedAt,
     closes: usable.map((row) => ({ dateKey: String(row.date ?? '').slice(0, 10), close: Number(row.close) })),
   }
+}
+
+/** A within-feed reconciliation only; it cannot establish an independent price. */
+export function priceCoherenceFrom(quote, history, nowMs) {
+  const timestamp = new Date(nowMs).toISOString().slice(11, 16)
+  const base = { id: 'mcp-coherence', title: 'MCP price-series coherence', summary: 'Prior close in the MCP quote agrees with the previous dated MCP daily close' }
+  const quoteMs = quote?.quote?.timestampMs
+  const priorClose = quote?.priorClose
+  const previous = Number.isFinite(quoteMs) && Array.isArray(history?.closes)
+    ? history.closes.filter((row) => row.dateKey < etDateKey(quoteMs)).at(-1)
+    : null
+  if (!previous || !Number.isFinite(priorClose) || priorClose <= 0) {
+    const detail = 'A timestamped quote, its prior close, and an earlier dated daily close were not all available. No coherence result is asserted.'
+    return {
+      check: { ...base, state: 'unknown', result: 'UNVERIFIABLE', detail, observations: [{ label: 'Scope', value: 'MCP within-feed only' }] },
+      evidence: { ...base, state: 'unknown', summary: detail, timestamp, source: `${quote?.source ?? 'Bitget MCP · quote unavailable'} + ${history?.source ?? 'Bitget MCP · history unavailable'}`, endpoint: 'equity_price_quote + equity_price_historical', retrievedAt: new Date(nowMs).toISOString() },
+    }
+  }
+  const deltaBps = Math.round(((priorClose - previous.close) / previous.close) * 10_000)
+  const matched = Math.abs(deltaBps) <= 2
+  const sameProvider = quote.source === history.source && !quote.source.endsWith('provider unspecified')
+  const scope = sameProvider ? 'same upstream provider; not independent confirmation' : 'MCP catalog entries; upstream independence not established'
+  const detail = `Quote prior close ${priceLabel(priorClose)} versus ${previous.dateKey} daily close ${priceLabel(previous.close)}: ${deltaBps > 0 ? '+' : ''}${deltaBps} bps. ${scope}. Tolerance: 2 bps for published-price rounding.`
+  return {
+    check: { ...base, state: matched ? 'pass' : 'caution', result: matched ? 'CONSISTENT' : 'MISMATCH', detail, observations: [{ label: 'Quote prior close', value: priceLabel(priorClose) }, { label: `${previous.dateKey} daily close`, value: priceLabel(previous.close) }, { label: 'Scope', value: scope }] },
+    evidence: { ...base, state: matched ? 'pass' : 'caution', summary: detail, timestamp, source: `${quote.source} + ${history.source}`, endpoint: 'equity_price_quote + equity_price_historical', retrievedAt: new Date(nowMs).toISOString() },
+  }
+}
+
+const dividendType = (value) => {
+  if (value === '现金分红') return 'cash dividend'
+  if (typeof value !== 'string') return null
+  return /^[\x20-\x7E]+$/.test(value) ? value : null
 }
 
 /**
@@ -186,7 +224,7 @@ export function dividendEvidence(entry, server, nowMs) {
       dateKey: String(row.ex_dividend_date ?? '').slice(0, 10),
       amount: Number(row.amount),
       currency: row.currency ?? null,
-      eventType: row.event_type ?? null,
+      eventType: dividendType(row.event_type),
       special: row.is_special === true,
     }))
     .filter((event) => /^\d{4}-\d{2}-\d{2}$/.test(event.dateKey))
@@ -197,7 +235,7 @@ export function dividendEvidence(entry, server, nowMs) {
       summary: rows.length
         ? `${rows.length} row${rows.length === 1 ? '' : 's'} were returned but none carried a usable ex-dividend date, so no corporate-action event is asserted.`
         : 'The dividend endpoint answered and returned no dividend events inside the retrieved window. That is a bounded statement about this window, not proof that none occurred.',
-      state: 'pass',
+      state: rows.length ? 'unknown' : 'pass',
       events: [],
     }
   }
@@ -280,18 +318,18 @@ export function corporateCheckFrom(dividends, earnings) {
     return {
       state: 'unknown',
       result: 'UNVERIFIABLE',
-      detail: 'Bitget MCP dividend retrieval failed, so corporate-action context stays unverified. Absence is not inferred from a failed retrieval.',
+      detail: 'Bitget MCP dividend data was unavailable or could not be parsed, so corporate-action context stays unverified. Absence is not inferred.',
     }
   }
   const events = dividends.events ?? []
   const earningsNote = earnings?.nextReportDateKey
     ? ` Next scheduled report ${earnings.nextReportDateKey}.`
-    : ''
+    : earnings?.state === 'pass' ? ' The earnings calendar returned no dated report in its retrieved window.' : ' Earnings-calendar context is unavailable or unusable.'
   if (!events.length) {
     return {
       state: 'pass',
       result: 'NO EVENTS IN WINDOW',
-      detail: `Bitget MCP returned no dividend events in the retrieved window, and the earnings calendar was read from the same source.${earningsNote} Split adjustment is not covered by these entries, so no split claim is made.`,
+      detail: `Bitget MCP returned no dividend events in the retrieved window.${earningsNote} Split adjustment is not covered by these entries, so no split claim is made.`,
     }
   }
   return {
@@ -312,11 +350,13 @@ export function buildMcpEvidence(collected, nowMs) {
   const history = historyEvidence(entries.history, server, nowMs)
   const dividends = dividendEvidence(entries.dividends, server, nowMs)
   const earnings = earningsEvidence(entries.earnings, server, nowMs)
+  const coherence = priceCoherenceFrom(quote, history, nowMs)
   return {
     server,
-    evidence: [quote, history, dividends, earnings],
+    evidence: [quote, history, coherence.evidence, dividends, earnings],
     quote,
     history,
+    coherence,
     dividends,
     earnings,
     corporateCheck: corporateCheckFrom(dividends, earnings),

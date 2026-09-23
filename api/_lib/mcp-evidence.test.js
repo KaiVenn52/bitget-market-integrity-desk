@@ -7,6 +7,7 @@ import {
   earningsEvidence,
   historyEvidence,
   mcpSource,
+  priceCoherenceFrom,
   quoteEvidence,
 } from './mcp-evidence.js'
 
@@ -100,6 +101,12 @@ describe('quote evidence', () => {
     const record = quoteEvidence(ok([], 'massive'), SERVER, AT)
     expect(record.state).toBe('unknown')
   })
+
+  it('does not turn a null price into a zero-price quote', () => {
+    const record = quoteEvidence(ok([{ ...LIVE_QUOTE, last_price: null }], 'massive'), SERVER, AT)
+    expect(record.state).toBe('unknown')
+    expect(record.quote).toBeNull()
+  })
 })
 
 describe('history evidence', () => {
@@ -117,6 +124,34 @@ describe('history evidence', () => {
   it('abstains when the entry failed', () => {
     expect(historyEvidence(failed('timeout'), SERVER, AT).state).toBe('unknown')
   })
+
+  it('does not call entirely unusable candles a successful history', () => {
+    const record = historyEvidence(ok([{ date: '2026-09-18', close: null }], 'massive'), SERVER, AT)
+    expect(record.state).toBe('unknown')
+    expect(record.closes).toEqual([])
+  })
+})
+
+describe('MCP price-series coherence', () => {
+  it('reconciles the quote prior close with the preceding dated daily candle', () => {
+    const quote = quoteEvidence(ok([LIVE_QUOTE], 'massive'), SERVER, AT)
+    const history = historyEvidence(ok([{ ...LIVE_CANDLE, close: 222.27 }], 'massive'), SERVER, AT)
+    const result = priceCoherenceFrom(quote, history, AT)
+    expect(result.check.result).toBe('CONSISTENT')
+    expect(result.check.detail).toMatch(/not independent confirmation/)
+  })
+
+  it('flags a mismatch without claiming external verification', () => {
+    const quote = quoteEvidence(ok([LIVE_QUOTE], 'massive'), SERVER, AT)
+    const history = historyEvidence(ok([LIVE_CANDLE], 'massive'), SERVER, AT)
+    expect(priceCoherenceFrom(quote, history, AT).check.result).toBe('MISMATCH')
+  })
+
+  it('abstains when the quote or dated history is unavailable', () => {
+    const quote = quoteEvidence(ok([LIVE_QUOTE], 'massive'), SERVER, AT)
+    const history = historyEvidence(failed('timeout'), SERVER, AT)
+    expect(priceCoherenceFrom(quote, history, AT).check.state).toBe('unknown')
+  })
 })
 
 describe('dividend evidence', () => {
@@ -132,6 +167,8 @@ describe('dividend evidence', () => {
     expect(record.events[0].currency).toBe('USD')
     expect(record.summary).toContain('2026-09-09')
     expect(record.summary).toContain('0.25 USD')
+    expect(record.summary).toContain('cash dividend')
+    expect(record.summary).not.toContain('现金分红')
   })
 
   it('does not claim split coverage', () => {
@@ -156,6 +193,7 @@ describe('dividend evidence', () => {
     const record = dividendEvidence(ok([{ symbol: 'NVDA', amount: 0.25 }], 'bitget_data'), SERVER, AT)
     expect(record.events).toHaveLength(0)
     expect(record.summary).toMatch(/none carried a usable ex-dividend date/)
+    expect(record.state).toBe('unknown')
   })
 
   it('stays unknown and refuses to infer absence when retrieval failed', () => {
@@ -228,6 +266,13 @@ describe('corporate check', () => {
     expect(check.state).toBe('pass')
     expect(check.result).toBe('NO EVENTS IN WINDOW')
     expect(check.detail).toMatch(/no split claim is made/)
+    expect(check.detail).toMatch(/Earnings-calendar context is unavailable/)
+    expect(check.detail).not.toMatch(/calendar was read/)
+  })
+
+  it('does not claim no events when dividend rows could not be parsed', () => {
+    const dividends = dividendEvidence(ok([{ symbol: 'NVDA', amount: 0.25 }], 'bitget_data'), SERVER, AT)
+    expect(corporateCheckFrom(dividends, null).result).toBe('UNVERIFIABLE')
   })
 })
 
@@ -245,7 +290,7 @@ describe('buildMcpEvidence', () => {
 
   it('emits all four evidence records even when nothing was collected', () => {
     const built = buildMcpEvidence(null, AT)
-    expect(built.evidence.map((record) => record.id)).toEqual(['mcp-quote', 'mcp-history', 'mcp-dividends', 'mcp-earnings'])
+    expect(built.evidence.map((record) => record.id)).toEqual(['mcp-quote', 'mcp-history', 'mcp-coherence', 'mcp-dividends', 'mcp-earnings'])
     for (const record of built.evidence) expect(record.state).toBe('unknown')
   })
 

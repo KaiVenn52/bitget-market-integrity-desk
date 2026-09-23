@@ -70,13 +70,14 @@ The desk calls four of them on every scan:
 | Catalog entry | What it supplies | Reported provider |
 |---|---|---|
 | `equity_price_quote` | Underlying quote with bid/ask and the prior close | `massive` |
-| `equity_price_historical` | Daily OHLCV, corroborating the reference series | `massive` |
+| `equity_price_historical` | Daily OHLCV, checked against the MCP quote's prior close | `massive` in observed responses |
 | `equity_fundamental_dividends` | Dividend events with ex-dates | `bitget_data` |
 | `equity_calendar_earnings` | Next scheduled report and consensus EPS | `finnhub` |
 
 Three things about this integration are deliberate:
 
-- **Provenance names the vendor, not just the platform.** The MCP platform returns US equity data from upstream vendors and reports which one answered, so every evidence record reads `bitget-mcp-server v4.0.3 · provider massive`. It is never labelled "Bitget Stock+" and never "exchange-certified": those describe the authenticated Stock+ pipeline, which is a different feed. A desk whose purpose is catching misattributed provenance must not misattribute its own.
+- **Provenance names the vendor when disclosed.** The MCP platform returns US equity data from upstream vendors; a record says `provider massive` when reported, or `provider unspecified` when it is not. It is never labelled "Bitget Stock+" or "exchange-certified": those describe a different feed.
+- **The quote and history are reconciled, with limits stated.** A dated previous close in `equity_price_historical` is compared with `equity_price_quote.prev_close` at a 2 bps rounding tolerance. This is a within-MCP consistency check, often from the same vendor; it is not independent confirmation of the underlying price.
 - **The live price and the prior close stay separate numbers.** Inside the main session the live price is the only valid basis; outside it the prior close is. Collapsing them is how a desk talks itself into comparing an overnight token price against a price the underlying never traded at.
 - **It degrades rather than throws.** A failed entry leaves the corporate-action check `UNVERIFIABLE` and says which source was missing, because "we could not retrieve it" is not "there was nothing".
 
@@ -195,7 +196,7 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 217/217 tests pass across nine suites: query and instrument resolution (5), published deterministic integrity rules mirrored in the browser (22), the decision memo including reported-close semantics, embedded base rates and empty-sample refusal (7), the server analysis engine — session labelling, the U.S. market holiday calendar and half days, session-aware two-tier reference selection including reported-close expiry and client-safe kind preservation, move detection and start location, the 20 bps event boundary, headline timing verdicts (`POSSIBLE`, `POSSIBLE_CONTRIBUTING`, `TIMING_INCONSISTENT`, `DISTANT`, `TIME_UNKNOWN`), drift, turnover acceleration, top-of-book spread, verdict assembly, confidence rules, reference provenance, the model deadline, and the citation gate including inline-prose extraction (60), the ordered gate rules with pipeline contract tests that feed real `pickReference` output into `evaluateGate` (36), episode construction, drift distribution, point-in-time scenario matching, example-episode exclusion, underlying-close attachment, outcome classification and the stress-test verdict and same-direction matching (29), the public-endpoint budget (6), the Bitget MCP client — SSE and bare-JSON parsing, structuredContent preference, notification framing, serial dispatch, handshake retry and shared-budget skipping (19), and the MCP evidence layer — vendor-naming provenance, `ex_dividend_date` parsing, prior-close separation, bounded-window abstention and the corporate-check fold (33).
+- 223/223 tests pass across nine suites, including the deterministic integrity rules, decision memo, analysis engine, gate, study, public-endpoint budget, Bitget MCP client and MCP evidence layer. The added MCP regressions cover invalid quote/history values, within-feed price coherence, unusable dividend rows and missing earnings context.
 - **The official Bitget MCP was exercised against live responses before it was trusted.** Three defects were found only that way and are now regression-guarded: the dividend entry's real field is `ex_dividend_date` (reading a plausible alias reported *no dividend* for an instrument that had just gone ex-dividend), four concurrent queries on one session left three hanging until timeout (dispatch is serial), and the corporate check read raw MCP entries instead of parsed events (it reported "no events in window" beside an evidence record listing one).
 - **Production MCP reliability, measured:** 12 consecutive `/api/scan` calls returned all four catalog entries, 2.96–5.35 s. Before the handshake retry, the same test produced one all-sources-missing scan in six.
 - Production build and lint pass.
