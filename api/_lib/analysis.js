@@ -20,8 +20,9 @@ export const CATALYST_WINDOW_MS = 45 * MINUTE
 // A headline published this long after the move started cannot explain its start.
 export const REINFORCEMENT_WINDOW_MS = 15 * MINUTE
 
-/** Alignment state from a signed premium, using the published thresholds. */
-export function alignmentStateOf(premiumBps) {
+/** Alignment state from a signed premium and its reference freshness. */
+export function alignmentStateOf(premiumBps, referenceStale = false) {
+  if (referenceStale) return 'unknown'
   if (!Number.isFinite(premiumBps)) return 'unknown'
   const distance = Math.abs(premiumBps)
   if (distance <= ALIGNMENT_PASS_BPS) return 'pass'

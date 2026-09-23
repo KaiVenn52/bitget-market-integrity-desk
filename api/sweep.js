@@ -145,7 +145,9 @@ async function sweepOne(symbol, meta, signal) {
   const reference = pickReference(referenceQuotes, now, { dailyCloses })
   const referencePrice = reference.chosen?.price ?? null
   const premiumBps = Number.isFinite(tokenPrice) && referencePrice != null ? bpsBetween(tokenPrice, referencePrice) : null
-  const alignmentState = alignmentStateOf(premiumBps)
+  // The premium is still observable against an old quote, but it cannot pass
+  // a current-market alignment check until the reference itself is fresh.
+  const alignmentState = alignmentStateOf(premiumBps, reference.stale)
   const spread = spreadOf(token)
   const move = detectMove(candles)
   const drift = driftSeries(candles, referencePrice)

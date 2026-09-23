@@ -246,6 +246,11 @@ describe('gate contract with the analysis pipeline', () => {
   const regularNoon = Date.UTC(2026, 8, 18, 16, 0) // 12:00 ET, regular session
   const overnight = Date.UTC(2026, 8, 18, 6, 0) // 02:00 ET, market closed
 
+  it('does not mark a small premium against a stale quote as a passed alignment', () => {
+    expect(alignmentStateOf(2, true)).toBe('unknown')
+    expect(alignmentStateOf(2, false)).toBe('pass')
+  })
+
   const pipeline = (atMs, referencePrice, tokenPrice) => {
     const candles = Array.from({ length: 40 }, (_, i) => ({
       timestamp: atMs - (40 - i) * 5 * 60_000,
