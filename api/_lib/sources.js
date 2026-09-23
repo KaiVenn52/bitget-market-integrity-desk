@@ -71,29 +71,38 @@ export function fetchCandles(symbol, interval, limit, signal) {
   return getJson(`/api/v3/market/candles?category=SPOT&symbol=${symbol}&interval=${interval}&limit=${limit}`, signal)
 }
 
-/** Stock+ quotes for each session, so the desk can pick the one that applies now. */
+/** Parse the ISO-8601 Stock+ quote and its optional pre/post/overnight children. */
+export function parseStockQuoteCandidates(row) {
+  if (!row || typeof row !== 'object') return []
+  const path = '/api/v3/stockplus/market/quote'
+  const candidates = [
+    { value: row, session: 'regular', label: 'Intraday' },
+    { value: row.preMarketQuote, session: 'premarket', label: 'PreMarket' },
+    { value: row.postMarketQuote, session: 'afterhours', label: 'PostMarket' },
+    { value: row.overnightQuote, session: 'overnight', label: 'Overnight' },
+  ]
+  return candidates.flatMap(({ value, session, label }) => {
+    if (!value) return []
+    const price = Number(value.lastDone)
+    const numericTime = Number(value.timestamp)
+    const timestampMs = Number.isFinite(numericTime) && value.timestamp !== null && value.timestamp !== ''
+      ? numericTime < 1_000_000_000_000 ? numericTime * 1000 : numericTime
+      : Date.parse(value.timestamp)
+    if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(timestampMs)) return []
+    return [{ session, label, price, timestampMs, tradeStatus: row.tradeStatus ?? null, endpoint: path }]
+  })
+}
+
+/** One authenticated request; the quote response itself carries session variants. */
 export async function fetchReferenceQuotes(meta, signal) {
   const path = '/api/v3/stockplus/market/quote'
-  const sessions = ['Intraday', 'PreMarket', 'PostMarket', 'Overnight']
-  const results = await Promise.all(sessions.map(async (tradeSession) => {
-    const query = `symbol=${encodeURIComponent(meta.underlyingSymbol)}&tradeSessions=${tradeSession}`
-    const headers = stockAuthHeaders(path, query)
-    if (!headers) return null
-    try {
-      const json = await getJson(`${path}?${query}`, signal, headers)
-      const row = json?.data?.list?.[0]
-      if (!row) return null
-      return {
-        session: tradeSession === 'Intraday' ? 'regular' : tradeSession === 'PreMarket' ? 'premarket' : tradeSession === 'PostMarket' ? 'afterhours' : 'overnight',
-        label: tradeSession,
-        price: Number(row.lastDone),
-        timestampMs: Number(row.timestamp),
-        tradeStatus: row.tradeStatus ?? null,
-        endpoint: `${path}?tradeSessions=${tradeSession}`,
-      }
-    } catch { return null }
-  }))
-  return results.filter((item) => item && Number.isFinite(item.price) && Number.isFinite(item.timestampMs))
+  const query = `symbol=${encodeURIComponent(meta.underlyingSymbol)}`
+  const headers = stockAuthHeaders(path, query)
+  if (!headers) return []
+  try {
+    const json = await getJson(`${path}?${query}`, signal, headers)
+    return parseStockQuoteCandidates(json?.data?.list?.[0])
+  } catch { return [] }
 }
 
 const escapeRe = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

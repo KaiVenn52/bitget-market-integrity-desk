@@ -196,7 +196,7 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 226/226 tests pass across nine suites, including the deterministic integrity rules, decision memo, analysis engine, gate, study, public-endpoint budget, Bitget MCP client and MCP evidence layer. The MCP regressions cover invalid quote/history values, within-feed price coherence, unusable dividend rows, out-of-window history, weekend ex-dates and missing earnings context.
+- 230/230 tests pass across ten suites, including the deterministic integrity rules, decision memo, analysis engine, gate, study, public-endpoint budget, Bitget MCP client, MCP evidence layer and Stock+ source parser. The source regression covers the official ISO quote timestamp and embedded session variants, which previously caused Gate and analysis to discard a quote that Passport could display.
 - **The official Bitget MCP was exercised against live responses before it was trusted.** Three defects were found only that way and are now regression-guarded: the dividend entry's real field is `ex_dividend_date` (reading a plausible alias reported *no dividend* for an instrument that had just gone ex-dividend), four concurrent queries on one session left three hanging until timeout (dispatch is serial), and the corporate check read raw MCP entries instead of parsed events (it reported "no events in window" beside an evidence record listing one).
 - **Production MCP reliability, measured:** 12 consecutive `/api/scan` calls returned all four catalog entries, 2.96–5.35 s. Before the handshake retry, the same test produced one all-sources-missing scan in six.
 - Production build and lint pass.

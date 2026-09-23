@@ -21,7 +21,7 @@ Two questions, in the order a trader actually asks them:
 4. Read the Passport state and each fact cell. Interpret the state from the displayed alignment and independent source ages. During the 2026-09-14 verification run, AAPL was `CAUTION` because the weekend Stock+ quote was stale even though price alignment passed.
 5. Expand **Price alignment**. Confirm that no premium is calculated from the token price alone. When both sources are available, the declared formula is `(token - underlying) / underlying × 10,000` with a 20 bps pass threshold.
 6. Expand **Quote freshness**. Compare each source age with the 30-second pass and 120-second caution boundaries.
-7. Inspect **Corporate actions** and **Liquidity observability**. They must remain `UNVERIFIABLE` and `NOT OBSERVABLE` when the required endpoints are absent.
+7. Inspect **Corporate actions** and **Liquidity observability**. Dividend events can be shown when the official MCP entry answers with usable in-window dates; unusable or implausible dates must remain `UNVERIFIABLE`. Liquidity depth stays `NOT OBSERVABLE` without Reality access. Earnings are separate catalyst context, not dividend verification.
 8. Select an item in the **Evidence** rail. Confirm the source name, endpoint, retrieval timestamp, and recorded state.
 9. Open **Inspect provenance**. Confirm that the raw record agrees with the selected evidence item.
 10. Read **Research action**. When reference evidence is missing, it must tell the researcher not to use the unavailable comparison and when to re-run the task.
