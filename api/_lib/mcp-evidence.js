@@ -218,6 +218,13 @@ export function dividendEvidence(entry, server, nowMs) {
   // Enforce the same UTC date window that buildMcpQueries requested locally.
   const start = new Date(nowMs - 21 * 86_400_000).toISOString().slice(0, 10)
   const end = new Date(nowMs).toISOString().slice(0, 10)
+  const weekendDates = rows
+    .map((row) => String(row.ex_dividend_date ?? '').slice(0, 10))
+    .filter((dateKey) => /^\d{4}-\d{2}-\d{2}$/.test(dateKey) && dateKey >= start && dateKey <= end)
+    .filter((dateKey) => [0, 6].includes(new Date(`${dateKey}T12:00:00Z`).getUTCDay()))
+  if (weekendDates.length) {
+    return { ...base, summary: `The provider returned ${weekendDates.length} ex-dividend date${weekendDates.length === 1 ? '' : 's'} on a weekend inside ${start}–${end} (${weekendDates.join(', ')}). Corporate-action context is not verified from this response.`, state: 'unknown', events: [] }
+  }
   // Field names are taken from the live response, not guessed: the entry returns
   // `ex_dividend_date` and `amount`. Reading a plausible-looking alias instead
   // silently produced zero events and reported "no dividend in window" for an

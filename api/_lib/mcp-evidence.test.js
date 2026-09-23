@@ -176,9 +176,9 @@ describe('dividend evidence', () => {
   })
 
   it('sorts events by ex-date, newest first', () => {
-    const older = { ...LIVE_DIVIDEND, ex_dividend_date: '2026-09-05', amount: 0.01 }
+    const older = { ...LIVE_DIVIDEND, ex_dividend_date: '2026-09-04', amount: 0.01 }
     const record = dividendEvidence(ok([older, LIVE_DIVIDEND], 'bitget_data'), SERVER, AT)
-    expect(record.events.map((event) => event.dateKey)).toEqual(['2026-09-09', '2026-09-05'])
+    expect(record.events.map((event) => event.dateKey)).toEqual(['2026-09-09', '2026-09-04'])
   })
 
   it('excludes decades of out-of-window history even if the provider ignores query dates', () => {
@@ -195,6 +195,15 @@ describe('dividend evidence', () => {
     expect(record.state).toBe('pass')
     expect(record.events).toEqual([])
     expect(record.summary).toMatch(/out-of-window history was excluded/)
+  })
+
+  it('abstains when an in-window ex-dividend date falls on a weekend', () => {
+    const sunday = { ...LIVE_DIVIDEND, ex_dividend_date: '2026-09-20' }
+    const record = dividendEvidence(ok([sunday], 'bitget_data'), SERVER, AT)
+    expect(record.state).toBe('unknown')
+    expect(record.events).toEqual([])
+    expect(record.summary).toMatch(/weekend/)
+    expect(corporateCheckFrom(record, null).result).toBe('UNVERIFIABLE')
   })
 
   it('scopes an empty window as a bounded statement, not proof of absence', () => {
