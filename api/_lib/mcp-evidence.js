@@ -214,6 +214,10 @@ export function dividendEvidence(entry, server, nowMs) {
     return { ...base, summary: `Dividend history could not be retrieved: ${entry?.error ?? 'unknown error'}. Absence of a corporate action is not inferred from a failed retrieval.`, state: 'unknown', events: [] }
   }
   const rows = resultsOf(entry)
+  // The live provider returned decades of history despite start_date/end_date.
+  // Enforce the same UTC date window that buildMcpQueries requested locally.
+  const start = new Date(nowMs - 21 * 86_400_000).toISOString().slice(0, 10)
+  const end = new Date(nowMs).toISOString().slice(0, 10)
   // Field names are taken from the live response, not guessed: the entry returns
   // `ex_dividend_date` and `amount`. Reading a plausible-looking alias instead
   // silently produced zero events and reported "no dividend in window" for an
@@ -227,15 +231,17 @@ export function dividendEvidence(entry, server, nowMs) {
       eventType: dividendType(row.event_type),
       special: row.is_special === true,
     }))
-    .filter((event) => /^\d{4}-\d{2}-\d{2}$/.test(event.dateKey))
+    .filter((event) => /^\d{4}-\d{2}-\d{2}$/.test(event.dateKey) && event.dateKey >= start && event.dateKey <= end)
     .sort((a, b) => b.dateKey.localeCompare(a.dateKey))
   if (!events.length) {
     return {
       ...base,
       summary: rows.length
-        ? `${rows.length} row${rows.length === 1 ? '' : 's'} were returned but none carried a usable ex-dividend date, so no corporate-action event is asserted.`
-        : 'The dividend endpoint answered and returned no dividend events inside the retrieved window. That is a bounded statement about this window, not proof that none occurred.',
-      state: rows.length ? 'unknown' : 'pass',
+        ? rows.some((row) => !/^\d{4}-\d{2}-\d{2}$/.test(String(row.ex_dividend_date ?? '').slice(0, 10)))
+          ? `${rows.length} rows were returned, including unusable ex-dividend dates. Absence inside ${start}–${end} cannot be asserted.`
+          : `No dividend events dated ${start}–${end} were found among ${rows.length} returned rows; out-of-window history was excluded. This is not proof of global absence.`
+        : `The dividend endpoint answered with no events dated ${start}–${end}. That is a bounded statement about this window, not proof that none occurred.`,
+      state: rows.some((row) => !/^\d{4}-\d{2}-\d{2}$/.test(String(row.ex_dividend_date ?? '').slice(0, 10))) ? 'unknown' : 'pass',
       events: [],
     }
   }
@@ -244,7 +250,7 @@ export function dividendEvidence(entry, server, nowMs) {
   const type = latest.eventType ? ` (${latest.eventType}${latest.special ? ', special' : ''})` : ''
   return {
     ...base,
-    summary: `${events.length} dividend event${events.length === 1 ? '' : 's'} in the retrieved window; most recent ex-date ${latest.dateKey}${amount}${type}. Split adjustment is not covered by this entry.`,
+    summary: `${events.length} dividend event${events.length === 1 ? '' : 's'} dated ${start}–${end} among ${rows.length} returned rows; most recent ex-date ${latest.dateKey}${amount}${type}. Out-of-window history is excluded. Split adjustment is not covered by this entry.`,
     state: 'pass',
     events,
   }

@@ -176,9 +176,25 @@ describe('dividend evidence', () => {
   })
 
   it('sorts events by ex-date, newest first', () => {
-    const older = { ...LIVE_DIVIDEND, ex_dividend_date: '2026-06-10', amount: 0.01 }
+    const older = { ...LIVE_DIVIDEND, ex_dividend_date: '2026-09-05', amount: 0.01 }
     const record = dividendEvidence(ok([older, LIVE_DIVIDEND], 'bitget_data'), SERVER, AT)
-    expect(record.events.map((event) => event.dateKey)).toEqual(['2026-09-09', '2026-06-10'])
+    expect(record.events.map((event) => event.dateKey)).toEqual(['2026-09-09', '2026-09-05'])
+  })
+
+  it('excludes decades of out-of-window history even if the provider ignores query dates', () => {
+    const old = { ...LIVE_DIVIDEND, ex_dividend_date: '2000-06-26', amount: 0.01 }
+    const record = dividendEvidence(ok([old, LIVE_DIVIDEND], 'bitget_data'), SERVER, AT)
+    expect(record.events.map((event) => event.dateKey)).toEqual(['2026-09-09'])
+    expect(record.summary).toMatch(/1 dividend event dated/)
+    expect(record.summary).toMatch(/among 2 returned rows/)
+  })
+
+  it('reports a bounded quiet window when all returned rows are older', () => {
+    const old = { ...LIVE_DIVIDEND, ex_dividend_date: '2000-06-26' }
+    const record = dividendEvidence(ok([old], 'bitget_data'), SERVER, AT)
+    expect(record.state).toBe('pass')
+    expect(record.events).toEqual([])
+    expect(record.summary).toMatch(/out-of-window history was excluded/)
   })
 
   it('scopes an empty window as a bounded statement, not proof of absence', () => {
@@ -192,7 +208,7 @@ describe('dividend evidence', () => {
   it('distinguishes unusable rows from an empty window', () => {
     const record = dividendEvidence(ok([{ symbol: 'NVDA', amount: 0.25 }], 'bitget_data'), SERVER, AT)
     expect(record.events).toHaveLength(0)
-    expect(record.summary).toMatch(/none carried a usable ex-dividend date/)
+    expect(record.summary).toMatch(/unusable ex-dividend dates/)
     expect(record.state).toBe('unknown')
   })
 
