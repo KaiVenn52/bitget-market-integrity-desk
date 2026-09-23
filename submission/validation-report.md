@@ -1,6 +1,6 @@
 # Validation Record
 
-Updated: 2026-09-23
+Updated: 2026-09-24 (Malaysia time)
 Scope: local engine, public production workflow, and three adversarial review rounds
 Operator: project developer
 
@@ -12,8 +12,9 @@ the date shown, and rows that describe an earlier state say so.
 | Check | Result | Evidence |
 |---|---:|---|
 | Deterministic, decision, gate, study, routing and rate-limit unit tests | 231/231 passed, ten suites | Includes Stock+ ISO timestamp and embedded-session parsing, stale-reference Gate refusal, plus MCP price coherence, dividend-window and weekend-date regressions. `npm.cmd test` |
-| Stale-reference Gate policy | Corrected locally; production recheck pending | Once the quote parser was fixed, live Gate exposed a 907-second-old Stock+ quote yielding `CLEAR` when token drift was small. An expired quote now returns `WAIT` even when aligned; a valid dated prior close remains a distinct closed-market basis. |
-| Stock+ reference retrieval contract | Corrected locally; production recheck pending | The official real-time quote response carries an ISO timestamp and optional pre/post/overnight children in one response. Gate/analysis previously used `Number(timestamp)` and four session-parameter requests, filtering out the returned quote; Passport's separate route used `Date` and could display it. Both now parse the documented response shape. |
+| Complete research task | Production-verified | A live NVDA question returned a Qwen narrative with six inline evidence IDs. It named the 903-second-old Stock+ reference as a limitation and did not claim it could price-verify the token. Desk, Gate, Stress, Replay and Method were exercised at 1440px and 390px without browser exceptions or document-level horizontal overflow. |
+| Stale-reference Gate policy | Corrected and production-verified | Once the quote parser was fixed, live Gate exposed a 907-second-old Stock+ quote yielding `CLEAR` when token drift was small. An expired quote now returns `WAIT` even when aligned; a valid dated prior close remains a distinct closed-market basis. The four-symbol live sweep returned 4 WAIT, 0 CLEAR. |
+| Stock+ reference retrieval contract | Corrected and production-verified | The official real-time quote response carries an ISO timestamp and optional pre/post/overnight children in one response. Gate/analysis previously used `Number(timestamp)` and four session-parameter requests, filtering out the returned quote; Passport's separate route used `Date` and could display it. The deployed Gate now receives and ages the actual quote. |
 | Dividend window enforcement | Fixed after live production probe | The provider returned 62 NVDA dividend rows back to 2000 despite a 21-day request. The desk now filters ex-dates against the requested UTC window itself before counting or claiming `NO EVENTS IN WINDOW`. |
 | Implausible ex-dividend date | Abstains | A live QQQ row had a Sunday ex-date (2026-09-20). The desk now marks corporate-action context `UNVERIFIABLE` if any in-window ex-date falls on a weekend; it does not silently count the row as a valid market event. |
 | Official Bitget MCP integration | Four catalog entries requested per scan | `/api/scan` calls `equity_price_quote`, `equity_price_historical`, `equity_fundamental_dividends` and `equity_calendar_earnings`. Evidence names upstream vendors when disclosed (`massive`, `bitget_data`, `finnhub` in observed responses), otherwise `provider unspecified`; none is labelled Stock+ or exchange-certified. |
