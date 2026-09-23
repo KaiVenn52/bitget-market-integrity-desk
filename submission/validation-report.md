@@ -11,7 +11,8 @@ the date shown, and rows that describe an earlier state say so.
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic, decision, gate, study, routing and rate-limit unit tests | 230/230 passed, ten suites | Includes Stock+ ISO timestamp and embedded-session parsing, plus MCP price coherence, dividend-window and weekend-date regressions. `npm.cmd test` |
+| Deterministic, decision, gate, study, routing and rate-limit unit tests | 231/231 passed, ten suites | Includes Stock+ ISO timestamp and embedded-session parsing, stale-reference Gate refusal, plus MCP price coherence, dividend-window and weekend-date regressions. `npm.cmd test` |
+| Stale-reference Gate policy | Corrected locally; production recheck pending | Once the quote parser was fixed, live Gate exposed a 907-second-old Stock+ quote yielding `CLEAR` when token drift was small. An expired quote now returns `WAIT` even when aligned; a valid dated prior close remains a distinct closed-market basis. |
 | Stock+ reference retrieval contract | Corrected locally; production recheck pending | The official real-time quote response carries an ISO timestamp and optional pre/post/overnight children in one response. Gate/analysis previously used `Number(timestamp)` and four session-parameter requests, filtering out the returned quote; Passport's separate route used `Date` and could display it. Both now parse the documented response shape. |
 | Dividend window enforcement | Fixed after live production probe | The provider returned 62 NVDA dividend rows back to 2000 despite a 21-day request. The desk now filters ex-dates against the requested UTC window itself before counting or claiming `NO EVENTS IN WINDOW`. |
 | Implausible ex-dividend date | Abstains | A live QQQ row had a Sunday ex-date (2026-09-20). The desk now marks corporate-action context `UNVERIFIABLE` if any in-window ex-date falls on a weekend; it does not silently count the row as a valid market event. |

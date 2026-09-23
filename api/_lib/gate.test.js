@@ -80,10 +80,18 @@ describe('gate rules', () => {
     expect(result.reason).toMatch(/478 bps/)
   })
 
-  it('clears a closed reference the token is still tracking', () => {
+  it('waits when a stale quote is aligned but still cannot verify the token', () => {
     const result = gate({ reference: closedReference, drift: { currentBps: -8, priorBps: -6, deltaBps: -2, trend: 'stable' } })
-    expect(result.decision).toBe('CLEAR')
-    expect(result.code).toBe('STALE_REFERENCE_ALIGNED')
+    expect(result.decision).toBe('WAIT')
+    expect(result.code).toBe('STALE_REFERENCE_UNCONFIRMED')
+    expect(result.reason).toMatch(/does not verify the current market state/)
+  })
+
+  it('does not let a regular-session stale quote clear a live market', () => {
+    const staleRegular = { ...closedReference, currentSession: 'regular', note: 'The quote is 907s old.' }
+    const result = gate({ reference: staleRegular, drift: { currentBps: 5, priorBps: 3, deltaBps: 2, trend: 'stable' } })
+    expect(result.decision).toBe('WAIT')
+    expect(result.code).toBe('STALE_REFERENCE_UNCONFIRMED')
   })
 
   it('flags a premium inside the caution band without calling it a break', () => {
@@ -109,7 +117,7 @@ describe('gate rules', () => {
 
   it('does not clear an aligned reported close when the quoted spread is wide', () => {
     const result = gate({
-      reference: { ...closedReference, kind: 'reported-close' },
+      reference: { ...closedReference, kind: 'reported-close', stale: false },
       premiumBps: 0,
       alignmentState: 'pass',
       drift: { currentBps: 0, priorBps: 0, deltaBps: 0, trend: 'stable' },
@@ -121,7 +129,7 @@ describe('gate rules', () => {
 
   it('does not clear an aligned reported close when a material repricing was measured', () => {
     const result = gate({
-      reference: { ...closedReference, kind: 'reported-close' },
+      reference: { ...closedReference, kind: 'reported-close', stale: false },
       premiumBps: 0,
       alignmentState: 'pass',
       drift: { currentBps: 0, priorBps: 0, deltaBps: 0, trend: 'stable' },
@@ -184,7 +192,7 @@ describe('gate output contract', () => {
     ['stale token', { token: { price: 1, ageSeconds: 400 } }],
     ['break', { premiumBps: 200, alignmentState: 'fail' }],
     ['closed drift', { reference: closedReference, drift: { currentBps: 90, priorBps: 80, deltaBps: 10, trend: 'widening' } }],
-    ['closed aligned', { reference: closedReference, drift: { currentBps: 3, priorBps: 2, deltaBps: 1, trend: 'stable' } }],
+    ['closed aligned but unconfirmed', { reference: closedReference, drift: { currentBps: 3, priorBps: 2, deltaBps: 1, trend: 'stable' } }],
     ['caution', { premiumBps: 40, alignmentState: 'caution' }],
     ['move', { move: { detected: true, moveBps: 90, windowMinutes: 15, reason: 'Up 90 bps.' } }],
     ['spread', { spread: { spreadBps: 500, state: 'fail', note: 'Wide.' } }],

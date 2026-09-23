@@ -34,6 +34,7 @@ Two questions, in the order a trader actually asks them:
 14. Confirm the headline is the **worst** verdict across the watchlist, not an average. A desk is only as clear as its least verifiable instrument.
 15. Expand an instrument. Each verdict must name its code, its reason, what it means, the evidence ids it cites, the conditions that would change it, and a next research step. The gate never says buy or sell.
 16. Check the reference line. The desk reports which basis the verdict rests on: a fresh authenticated same-session quote, or the Yahoo-reported prior close while the underlying cannot trade. A closed-market gap must be reported as drift, never as an alignment break — there is no live underlying price for the token to disagree with.
+    A Stock+ quote older than the live-basis ceiling does not become a valid basis merely because the token is close to that old price: the Gate must say `WAIT`, not `CLEAR`.
 17. Choose **Open in the Desk** and confirm the instrument carries into the analysis workspace.
 18. Read the **desk log**. Every sweep is recorded, including refusals, with the refusal rate. A refusal is a recorded outcome, not a failure. Reload the page and confirm the log persists.
 

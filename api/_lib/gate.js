@@ -176,12 +176,22 @@ export function evaluateGate(input) {
         nextStep: 'Run the historical stress test for a drift of this size before acting, then run catalyst attribution on this instrument.',
       })
     }
-    // A small drift does not erase an independent repricing or spread problem.
-    // Those common checks run below before the stale-reference state can clear.
+    // A small drift does not make an expired quote a valid comparison basis.
+    // Unlike a dated reported close, a stale quote cannot clear the desk even
+    // when the token happens to be near its old price.
+    return verdict({
+      decision: 'WAIT',
+      code: 'STALE_REFERENCE_UNCONFIRMED',
+      headline: 'Reference quote is not fresh enough to verify',
+      reason: `${reference.note} The token is within ${MOVE_THRESHOLD_BPS} bps of that old quote, but this does not verify the current market state.${move?.detected ? ` ${move.reason}` : ''}${spread?.state === 'fail' ? ` ${spread.note}` : ''}`,
+      evidenceIds: ['token', 'reference', 'drift', 'session'],
+      conditions: ['A fresh same-session reference quote becomes available', 'During a closed market, a dated reported prior close becomes available as a declared comparison baseline'],
+      nextStep: 'Wait for a valid reference, then repeat the alignment and repricing checks before treating this instrument as clear.',
+    })
   }
 
   // 6. A live reference with a premium inside the caution band.
-  if (alignmentState === 'caution') {
+  if (alignmentState === 'caution' && !reference.stale) {
     return verdict({
       decision: 'INVESTIGATE',
       code: 'ALIGNMENT_CAUTION',
@@ -237,19 +247,6 @@ export function evaluateGate(input) {
       conditions: ['A gap beyond the alignment threshold opens while the underlying is still not in its main session', 'A material repricing or wide quoted spread appears'],
       nextStep: 'No integrity obstacle. Standard research applies.',
       referenceKind: 'reported-close',
-    })
-  }
-
-  if (reference.stale) {
-    const driftBps = absBps(drift?.currentBps)
-    return verdict({
-      decision: 'CLEAR',
-      code: 'STALE_REFERENCE_ALIGNED',
-      headline: `Tracking the stale reference (${driftBps ?? 0} bps)`,
-      reason: `${reference.note} The token is within ${MOVE_THRESHOLD_BPS} bps of that reference, and no independent repricing or quoted-spread problem was observed.`,
-      evidenceIds: ['token', 'reference', 'drift', 'spread', 'session'],
-      conditions: ['A drift beyond the alignment threshold appears while the reference is still unable to confirm it', 'A material repricing or wide quoted spread appears'],
-      nextStep: 'No integrity obstacle. Standard research applies.',
     })
   }
 
