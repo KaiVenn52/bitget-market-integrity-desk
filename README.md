@@ -78,7 +78,7 @@ The desk calls four of them on every scan:
 | `equity_price_quote` | Underlying quote with bid/ask and the prior close | `massive` |
 | `equity_price_historical` | Daily OHLCV, checked against the MCP quote's prior close | `massive` in observed responses |
 | `equity_fundamental_dividends` | Dividend events with ex-dates | `bitget_data` |
-| `equity_calendar_earnings` | Next scheduled report and consensus EPS | `finnhub` |
+| `equity_calendar` | Next scheduled report and consensus EPS | `finnhub` in earlier observations |
 
 Three things about this integration are deliberate:
 
@@ -87,7 +87,7 @@ Three things about this integration are deliberate:
 - **The live price and the prior close stay separate numbers.** Inside the main session the live price is the only valid basis; outside it the prior close is. Collapsing them is how a desk talks itself into comparing an overnight token price against a price the underlying never traded at.
 - **It degrades rather than throws.** A failed entry leaves the corporate-action check `UNVERIFIABLE` and says which source was missing, because "we could not retrieve it" is not "there was nothing".
 
-The catalog entries are dispatched **one at a time on a single session**. That is measured, not stylistic: dispatching four concurrently on one session left three hanging until timeout while a single one answered in 233 ms, and the one that did answer came back from a different upstream provider than the same entry returns when asked sequentially.
+The catalog entries are dispatched **one at a time** under a shared deadline. The current server advertises the stateless `2026-07-28` MCP protocol, so requests no longer create or close sessions. The serial policy is conservative: concurrent calls on the earlier session-based transport hung in a live test; concurrency on the new transport has not yet been validated.
 
 In an earlier 2026-09-21 sample of 12 consecutive production scans, **12/12 returned all four entries**, 2.96–5.35 s. Before the handshake retry was added the same test produced one all-sources-missing scan in six, caused by a cold CDN handshake consuming the shared budget. This is historical evidence, not a current availability guarantee; see the 2026-09-26 incident in the validation section below.
 
@@ -203,10 +203,10 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 244/244 tests pass across eleven suites, including the deterministic integrity rules, decision memo, thesis checkpoint, analysis engine, gate, study, public-endpoint budget, Bitget MCP client, MCP evidence layer and Stock+ source parser. The checkpoint regressions cover snapshot refusal, per-symbol browser storage, corrupt/blocked storage, same-scan refusal, later evidence differences, reference-basis changes, and suppression of quote-age-only noise.
+- 231/231 tests pass across eleven suites, including the deterministic integrity rules, decision memo, thesis checkpoint, analysis engine, gate, study, public-endpoint budget, stateless Bitget MCP client, MCP evidence layer and Stock+ source parser. The checkpoint regressions cover snapshot refusal, per-symbol browser storage, corrupt/blocked storage, same-scan refusal, later evidence differences, reference-basis changes, and suppression of quote-age-only noise.
 - **The official Bitget MCP was exercised against live responses before it was trusted.** Three defects were found only that way and are now regression-guarded: the dividend entry's real field is `ex_dividend_date` (reading a plausible alias reported *no dividend* for an instrument that had just gone ex-dividend), four concurrent queries on one session left three hanging until timeout (dispatch is serial), and the corporate check read raw MCP entries instead of parsed events (it reported "no events in window" beside an evidence record listing one).
 - **Production MCP reliability, measured:** 12 consecutive `/api/scan` calls returned all four catalog entries, 2.96–5.35 s. Before the handshake retry, the same test produced one all-sources-missing scan in six.
-- **Current availability is not that earlier sample.** On 2026-09-26 the official MCP endpoint returned `503 Too many open sessions`, and repeated production scans received no usable catalog data. The client now closes its HTTP session after every query batch, including failed handshakes that minted a session, and preserves upstream error text. The live UI reports how many entries answered. The desk continues with the Stock+/reported-close reference and labels MCP-dependent checks `UNVERIFIABLE`; upstream recovery is outside this deployment's control.
+- **Current availability is not that earlier sample.** On 2026-09-26 the official MCP endpoint returned `503 Too many open sessions` to the legacy handshake; repeated production scans received no usable catalog data. A direct probe using the new stateless protocol reached all four catalog entries but each returned a nested upstream `HTTP 503`. The client has been updated to the advertised stateless protocol and current calendar entry ID; this is a local code change, not proof of a recovered production data source or deployment. The live UI reports how many entries answered. The desk continues with the Stock+/reported-close reference and labels MCP-dependent checks `UNVERIFIABLE`.
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.

@@ -53,7 +53,7 @@ describe('buildMcpQueries', () => {
       'equity_price_quote',
       'equity_price_historical',
       'equity_fundamental_dividends',
-      'equity_calendar_earnings',
+      'equity_calendar',
     ])
   })
 
@@ -61,6 +61,12 @@ describe('buildMcpQueries', () => {
     const earnings = buildMcpQueries('NVDA.US', AT).find((query) => query.id === 'earnings')
     expect(earnings.params.start_date).toBe('2026-08-07')
     expect(earnings.params.end_date).toBe('2027-01-19')
+  })
+
+  it('does not send obsolete string date filters to historical or dividends entries', () => {
+    const queries = buildMcpQueries('NVDA.US', AT)
+    expect(queries.find((query) => query.id === 'history').params).toEqual({ symbol: 'NVDA' })
+    expect(queries.find((query) => query.id === 'dividends').params).toEqual({ symbol: 'NVDA' })
   })
 
   it('returns nothing for an empty symbol', () => {
@@ -309,7 +315,7 @@ describe('buildMcpEvidence', () => {
     }, AT)
     expect(built.integration.server).toBe('bitget-mcp-server')
     expect(built.integration.version).toBe('4.0.3')
-    expect(built.integration.answered).toEqual(['equity_price_quote', 'equity_fundamental_dividends', 'equity_calendar_earnings'])
+    expect(built.integration.answered).toEqual(['equity_price_quote', 'equity_fundamental_dividends', 'equity_calendar'])
     expect(built.integration.failed).toEqual(['equity_price_historical'])
   })
 

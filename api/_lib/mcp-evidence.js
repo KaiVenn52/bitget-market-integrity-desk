@@ -29,21 +29,19 @@ export const MCP_QUERIES = [
   { id: 'quote', entryId: 'equity_price_quote' },
   { id: 'history', entryId: 'equity_price_historical' },
   { id: 'dividends', entryId: 'equity_fundamental_dividends' },
-  { id: 'earnings', entryId: 'equity_calendar_earnings' },
+  { id: 'earnings', entryId: 'equity_calendar' },
 ]
 
 /**
  * Build the query list for one underlying.
  *
- * The history window is bounded because the desk only needs enough recent daily
- * closes to (a) corroborate the reference and (b) give the corporate-action check
- * a dated window to report inside.
+ * Historical and dividend entries take optional integer timestamps, not date
+ * strings. Until the vendor documents the timestamp unit, omit those filters
+ * and apply the evidence window locally. The calendar accepts date strings.
  */
 export function buildMcpQueries(underlyingSymbol, nowMs) {
   const symbol = String(underlyingSymbol ?? '').replace(/\.US$/i, '').toUpperCase()
   if (!symbol) return []
-  const start = new Date(nowMs - 21 * 86_400_000).toISOString().slice(0, 10)
-  const end = new Date(nowMs).toISOString().slice(0, 10)
   // Earnings reach further back than the price window: a report that already
   // happened is what a move may be attributable to, so a window that only looks
   // forward would hide the very event the narrative needs.
@@ -51,11 +49,7 @@ export function buildMcpQueries(underlyingSymbol, nowMs) {
   const earningsEnd = new Date(nowMs + 120 * 86_400_000).toISOString().slice(0, 10)
   return MCP_QUERIES.map((query) => ({
     ...query,
-    params: query.id === 'history'
-      ? { symbol, start_date: start, end_date: end }
-      : query.id === 'dividends'
-        ? { symbol, start_date: start, end_date: end }
-        : query.id === 'earnings'
+    params: query.id === 'earnings'
           ? { symbol, start_date: earningsStart, end_date: earningsEnd }
           : { symbol },
   }))
@@ -214,8 +208,8 @@ export function dividendEvidence(entry, server, nowMs) {
     return { ...base, summary: `Dividend history could not be retrieved: ${entry?.error ?? 'unknown error'}. Absence of a corporate action is not inferred from a failed retrieval.`, state: 'unknown', events: [] }
   }
   const rows = resultsOf(entry)
-  // The live provider returned decades of history despite start_date/end_date.
-  // Enforce the same UTC date window that buildMcpQueries requested locally.
+  // The live provider previously returned decades of history even with date
+  // filters. Enforce the desk's bounded UTC date window locally.
   const start = new Date(nowMs - 21 * 86_400_000).toISOString().slice(0, 10)
   const end = new Date(nowMs).toISOString().slice(0, 10)
   const weekendDates = rows
@@ -277,7 +271,7 @@ export function earningsEvidence(entry, server, nowMs) {
     title: 'Earnings calendar (Bitget MCP)',
     timestamp: retrievedAt.slice(11, 16),
     source: mcpSource(server, entry),
-    endpoint: 'agent.bitget.com/mcp · equity_calendar_earnings',
+    endpoint: 'agent.bitget.com/mcp · equity_calendar',
     retrievedAt,
   }
   if (!entry?.ok) {
