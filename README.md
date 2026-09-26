@@ -23,7 +23,7 @@ The target user is a research-driven, medium-frequency Bitget rToken trader who 
 
 ## Thesis Checkpoint
 
-In the Desk, write a thesis and the condition that would change your mind after a **LIVE** research run. Saving freezes that instrument's decision disposition, measured gap, checks, source summaries, and reference basis in this browser. A later scan of the **same** instrument compares the two observations: decision and reference-basis changes, gap movement, changed check results, and changed source records. The original baseline remains intact until the trader explicitly replaces or removes it. A demonstration snapshot cannot be saved or passed off as a live recheck.
+In the Desk, write a thesis and the condition that would change your mind after a **LIVE** research run. Saving freezes that instrument's decision disposition, measured gap, checks, source summaries, and reference basis in this browser. A later scan of the **same** instrument compares the two observations: decision and reference-basis changes, gap movement, changed check states, and changed source records. A few seconds of quote-age text advancing does not count as a changed check. The original baseline remains intact until the trader explicitly replaces or removes it. A demonstration snapshot cannot be saved or passed off as a live recheck.
 
 This is a manual research checkpoint, not a price alert or a verdict on the trader's free-text thesis. It does not run in the background, send notifications, sync between devices, or survive clearing this browser's site data. The saved text and source summaries never enter the Qwen request through this feature.
 
@@ -203,7 +203,7 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 240/240 tests pass across eleven suites, including the deterministic integrity rules, decision memo, thesis checkpoint, analysis engine, gate, study, public-endpoint budget, Bitget MCP client, MCP evidence layer and Stock+ source parser. The checkpoint regressions cover snapshot refusal, per-symbol browser storage, corrupt/blocked storage, same-scan refusal, later evidence differences, and reference-basis changes.
+- 241/241 tests pass across eleven suites, including the deterministic integrity rules, decision memo, thesis checkpoint, analysis engine, gate, study, public-endpoint budget, Bitget MCP client, MCP evidence layer and Stock+ source parser. The checkpoint regressions cover snapshot refusal, per-symbol browser storage, corrupt/blocked storage, same-scan refusal, later evidence differences, reference-basis changes, and suppression of quote-age-only noise.
 - **The official Bitget MCP was exercised against live responses before it was trusted.** Three defects were found only that way and are now regression-guarded: the dividend entry's real field is `ex_dividend_date` (reading a plausible alias reported *no dividend* for an instrument that had just gone ex-dividend), four concurrent queries on one session left three hanging until timeout (dispatch is serial), and the corporate check read raw MCP entries instead of parsed events (it reported "no events in window" beside an evidence record listing one).
 - **Production MCP reliability, measured:** 12 consecutive `/api/scan` calls returned all four catalog entries, 2.96–5.35 s. Before the handshake retry, the same test produced one all-sources-missing scan in six.
 - Production build and lint pass.

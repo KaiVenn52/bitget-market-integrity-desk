@@ -109,7 +109,9 @@ export function compareCheckpoint(saved: ThesisCheckpoint, passport: Passport, m
   const oldChecks = new Map(saved.checks.map((check) => [check.id, check]))
   const checkChanges = passport.checks.flatMap((check) => {
     const before = oldChecks.get(check.id)
-    if (before?.state === check.state && before.result === check.result) return []
+    // Result strings often include quote age in seconds. A new scan should not
+    // report a changed check merely because the same failed feed is two seconds older.
+    if (before?.state === check.state) return []
     return [{ id: check.id, title: check.title, before: before ? `${before.state} · ${before.result}` : 'not recorded', after: `${check.state} · ${check.result}` }]
   })
   for (const before of saved.checks) if (!passport.checks.some((check) => check.id === before.id)) checkChanges.push({ id: before.id, title: before.title, before: `${before.state} · ${before.result}`, after: 'no longer reported' })

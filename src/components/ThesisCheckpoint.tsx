@@ -84,7 +84,7 @@ export function ThesisCheckpoint({ passport, analysis, study, scanning, onRescan
           {changeRows.length ? <>
             <ul className="checkpoint-change-list">{changeRows.slice(0, showAll ? undefined : 4).map((item) => <li key={`${item.kind}-${item.id}`}><span>{item.kind} · {item.title}</span><small>Before: {item.before}</small><small>Now: {item.after}</small></li>)}</ul>
             {changeRows.length > 4 ? <button type="button" className="checkpoint-text-button" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show fewer changes' : `Show all ${changeRows.length} changes`}</button> : null}
-          </> : <p className="checkpoint-no-change">No check result or evidence content changed between these two scans.</p>}
+          </> : <p className="checkpoint-no-change">No check state or evidence content changed between these two scans.</p>}
           <p className="checkpoint-caveat">The desk compares observations; it does not decide whether your free-text thesis was proved or disproved.</p>
         </div> : <div className="checkpoint-pending">{passport.mode === 'snapshot' ? 'The page opened on a labelled demonstration snapshot. Run a live scan to compare it with your saved baseline.' : 'This is the scan the baseline was saved from. Run a new scan to see a before-and-after comparison.'}</div>}
 

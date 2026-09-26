@@ -104,6 +104,12 @@ describe('thesis checkpoint', () => {
     expect(review.evidenceChanges).toEqual([])
   })
 
+  it('does not report a changed check when only its age text advances', () => {
+    const saved = checkpoint()
+    const later = { ...livePassport(), scannedAt: laterAt, checks: livePassport().checks.map((check, index) => index === 0 ? { ...check, result: `${check.result} · 2s later` } : check) }
+    expect(compareCheckpoint(saved, later, buildDecisionMemo(later, null), null).checkChanges).toEqual([])
+  })
+
   it('surfaces a change in reference tier without calling it thesis confirmation', () => {
     const saved = checkpoint()
     const later = { ...livePassport(), scannedAt: laterAt }
