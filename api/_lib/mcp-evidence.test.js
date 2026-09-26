@@ -22,6 +22,7 @@ const failed = (error) => ({ ok: false, ms: 100, error })
 const LIVE_QUOTE = { symbol: 'NVDA', bid: 224.83, ask: 224.86, last_price: 224.865, last_timestamp: '2026-09-21T15:24:54.084260Z', prev_close: 222.27 }
 const LIVE_DIVIDEND = { symbol: 'NVDA', ex_dividend_date: '2026-09-09', amount: 0.25, currency: 'USD', declaration_date: '2026-08-25', record_date: '2026-09-09', payment_date: '2026-09-30', event_type: '现金分红', is_special: false }
 const LIVE_EARNINGS = { report_date: '2026-11-17', symbol: 'NVDA', name: null, eps_previous: null, eps_consensus: 2.5231, time: 1794873600000 }
+const CURRENT_CALENDAR = { symbol: 'NVDA', period_ending: '2026-09-30', perf_report_fore_dsclsr_date: '2026-11-17', perf_report_dsclsr_date: null, fiscal_year: 2026 }
 const LIVE_CANDLE = { date: '2026-09-18T04:00:00Z', open: 223.5, high: 225.5, low: 222.1, close: 225.29, volume: 90000000, symbol: 'NVDA' }
 
 describe('provenance labelling', () => {
@@ -63,10 +64,11 @@ describe('buildMcpQueries', () => {
     expect(earnings.params.end_date).toBe('2027-01-19')
   })
 
-  it('does not send obsolete string date filters to historical or dividends entries', () => {
+  it('uses documented Unix-millisecond filters for historical and dividends entries', () => {
     const queries = buildMcpQueries('NVDA.US', AT)
-    expect(queries.find((query) => query.id === 'history').params).toEqual({ symbol: 'NVDA' })
-    expect(queries.find((query) => query.id === 'dividends').params).toEqual({ symbol: 'NVDA' })
+    const params = { symbol: 'NVDA', start_time: AT - 21 * 86_400_000, end_time: AT }
+    expect(queries.find((query) => query.id === 'history').params).toEqual(params)
+    expect(queries.find((query) => query.id === 'dividends').params).toEqual(params)
   })
 
   it('returns nothing for an empty symbol', () => {
@@ -218,6 +220,19 @@ describe('dividend evidence', () => {
     expect(record.summary).toMatch(/bounded statement about this window/)
   })
 
+  it('does not mislabel a documented stock split as a cash dividend', () => {
+    const split = { symbol: 'NVDA', ex_dividend_date: '2026-09-09', split_valid_date: '2026-09-09', event_type: '股票拆分', split_numerator: 2, split_denominator: 1 }
+    const record = dividendEvidence(ok([split], 'bitget_data'), SERVER, AT)
+    expect(record.state).toBe('unknown')
+    expect(record.events).toEqual([])
+    expect(record.summary).toMatch(/split or stock-dividend event/)
+  })
+
+  it('recognizes the current special-dividend flag without inventing one', () => {
+    const record = dividendEvidence(ok([{ ...LIVE_DIVIDEND, is_special_dividend: '1' }], 'bitget_data'), SERVER, AT)
+    expect(record.events[0].special).toBe(true)
+  })
+
   // Rows that arrived but carry no usable date are not the same claim as an empty
   // window, and must not be reported as one.
   it('distinguishes unusable rows from an empty window', () => {
@@ -235,6 +250,20 @@ describe('dividend evidence', () => {
 })
 
 describe('earnings evidence', () => {
+  it('parses current equity_calendar disclosure fields without mistaking fiscal period end for report date', () => {
+    const record = earningsEvidence(ok([CURRENT_CALENDAR], 'bitget_data'), SERVER, AT)
+    expect(record.nextReportDateKey).toBe('2026-11-17')
+    expect(record.summary).toContain('Next scheduled report 2026-11-17')
+    expect(record.summary).not.toContain('consensus EPS')
+    expect(record.summary).not.toContain('2026-09-30')
+  })
+
+  it('treats an actual disclosure date as a recorded report, not a scheduled forecast', () => {
+    const record = earningsEvidence(ok([{ ...CURRENT_CALENDAR, perf_report_dsclsr_date: '2026-08-27' }], 'bitget_data'), SERVER, AT)
+    expect(record.nextReportDateKey).toBe('2026-08-27')
+    expect(record.summary).toContain('Latest recorded report')
+  })
+
   it('reports the next report and how far out it is', () => {
     const record = earningsEvidence(ok([LIVE_EARNINGS], 'finnhub'), SERVER, AT)
     expect(record.state).toBe('pass')

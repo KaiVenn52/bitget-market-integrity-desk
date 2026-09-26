@@ -35,13 +35,15 @@ export const MCP_QUERIES = [
 /**
  * Build the query list for one underlying.
  *
- * Historical and dividend entries take optional integer timestamps, not date
- * strings. Until the vendor documents the timestamp unit, omit those filters
- * and apply the evidence window locally. The calendar accepts date strings.
+ * Historical and dividend entries require Unix timestamps in milliseconds,
+ * while the calendar accepts YYYY-MM-DD strings. The evidence window is also
+ * enforced locally because a provider has previously ignored date filters.
  */
 export function buildMcpQueries(underlyingSymbol, nowMs) {
   const symbol = String(underlyingSymbol ?? '').replace(/\.US$/i, '').toUpperCase()
   if (!symbol) return []
+  const startTime = Math.trunc(nowMs - 21 * 86_400_000)
+  const endTime = Math.trunc(nowMs)
   // Earnings reach further back than the price window: a report that already
   // happened is what a move may be attributable to, so a window that only looks
   // forward would hide the very event the narrative needs.
@@ -50,8 +52,10 @@ export function buildMcpQueries(underlyingSymbol, nowMs) {
   return MCP_QUERIES.map((query) => ({
     ...query,
     params: query.id === 'earnings'
-          ? { symbol, start_date: earningsStart, end_date: earningsEnd }
-          : { symbol },
+      ? { symbol, start_date: earningsStart, end_date: earningsEnd }
+      : query.id === 'history' || query.id === 'dividends'
+        ? { symbol, start_time: startTime, end_time: endTime }
+        : { symbol },
   }))
 }
 
@@ -189,10 +193,9 @@ const dividendType = (value) => {
 /**
  * Evidence for dividends, and the input to the corporate-action check.
  *
- * `equity_fundamental_dividends` is the entry that covers dividend events. It is
- * not a split feed: the historical candles carry no adjustment or split field, so
- * this desk reports dividends and explicitly declines to claim split coverage
- * rather than implying it.
+ * The documented entry can also include stock splits and stock dividends. Its
+ * presence does not prove historical prices were split-adjusted. A non-cash
+ * event in the window is therefore flagged, never called a cash dividend.
  */
 export function dividendEvidence(entry, server, nowMs) {
   const retrievedAt = new Date(nowMs).toISOString()
@@ -219,6 +222,13 @@ export function dividendEvidence(entry, server, nowMs) {
   if (weekendDates.length) {
     return { ...base, summary: `The provider returned ${weekendDates.length} ex-dividend date${weekendDates.length === 1 ? '' : 's'} on a weekend inside ${start}–${end} (${weekendDates.join(', ')}). Corporate-action context is not verified from this response.`, state: 'unknown', events: [] }
   }
+  const nonCash = rows.filter((row) => {
+    const dateKey = String(row.ex_dividend_date ?? row.split_valid_date ?? '').slice(0, 10)
+    return dateKey >= start && dateKey <= end && (row.event_type === '股票拆分' || row.event_type === '股票分红')
+  })
+  if (nonCash.length) {
+    return { ...base, summary: `${nonCash.length} split or stock-dividend event${nonCash.length === 1 ? '' : 's'} appeared inside ${start}–${end}. The reference's split adjustment was not verified, so corporate-action context stays unverified.`, state: 'unknown', events: [] }
+  }
   // Field names are taken from the live response, not guessed: the entry returns
   // `ex_dividend_date` and `amount`. Reading a plausible-looking alias instead
   // silently produced zero events and reported "no dividend in window" for an
@@ -230,7 +240,7 @@ export function dividendEvidence(entry, server, nowMs) {
       amount: Number(row.amount),
       currency: row.currency ?? null,
       eventType: dividendType(row.event_type),
-      special: row.is_special === true,
+      special: row.is_special === true || row.is_special_dividend === true || String(row.is_special_dividend ?? '') === '1',
     }))
     .filter((event) => /^\d{4}-\d{2}-\d{2}$/.test(event.dateKey) && event.dateKey >= start && event.dateKey <= end)
     .sort((a, b) => b.dateKey.localeCompare(a.dateKey))
@@ -279,7 +289,18 @@ export function earningsEvidence(entry, server, nowMs) {
   }
   const rows = resultsOf(entry)
   const dated = rows
-    .map((row) => ({ dateKey: String(row.report_date ?? '').slice(0, 10), epsConsensus: Number(row.eps_consensus) }))
+    .map((row) => {
+      // `equity_calendar` (v4.0.5) uses disclosure dates, not the old
+      // `equity_calendar_earnings.report_date`. `period_ending` is the fiscal
+      // period boundary and must never be presented as an earnings date.
+      const hasDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? '').slice(0, 10))
+      const forecast = [row.perf_report_fore_dsclsr_date, row.perf_briefing_fore_dsclsr_date].find(hasDate)
+      const actual = [row.perf_report_dsclsr_date, row.perf_brief_dsclsr_date].find(hasDate)
+      const legacy = row.report_date
+      const dateKey = String(actual ?? forecast ?? legacy ?? '').slice(0, 10)
+      const rawEps = row.eps_consensus
+      return { dateKey, kind: actual ? 'actual' : forecast ? 'forecast' : 'legacy', epsConsensus: rawEps == null || rawEps === '' ? null : Number(rawEps) }
+    })
     .filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.dateKey))
     .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
   if (!dated.length) {
@@ -297,9 +318,10 @@ export function earningsEvidence(entry, server, nowMs) {
   const today = new Date(nowMs).toISOString().slice(0, 10)
   const next = dated.find((row) => row.dateKey >= today) ?? dated[dated.length - 1]
   const daysOut = Math.round((Date.parse(`${next.dateKey}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000)
+  const label = daysOut < 0 ? 'Latest recorded report' : next.kind === 'actual' ? 'Recorded report date' : 'Next scheduled report'
   return {
     ...base,
-    summary: `Next scheduled report ${next.dateKey}${daysOut >= 0 ? ` (${daysOut} days out)` : ' (in the past relative to the retrieved window)'}${Number.isFinite(next.epsConsensus) ? `; consensus EPS ${next.epsConsensus}` : ''}.`,
+    summary: `${label} ${next.dateKey}${daysOut >= 0 ? ` (${daysOut} days out)` : ' (in the past relative to the retrieved window)'}${next.epsConsensus !== null && Number.isFinite(next.epsConsensus) ? `; consensus EPS ${next.epsConsensus}` : ''}.`,
     state: 'pass',
     nextReportDateKey: next.dateKey,
     daysOut,

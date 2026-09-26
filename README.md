@@ -77,8 +77,8 @@ The desk calls four of them on every scan:
 |---|---|---|
 | `equity_price_quote` | Underlying quote with bid/ask and the prior close | `massive` |
 | `equity_price_historical` | Daily OHLCV, checked against the MCP quote's prior close | `massive` in observed responses |
-| `equity_fundamental_dividends` | Dividend events with ex-dates | `bitget_data` |
-| `equity_calendar` | Next scheduled report and consensus EPS | `finnhub` in earlier observations |
+| `equity_fundamental_dividends` | Dividend events with ex-dates; non-cash split events trigger abstention on adjustment | `bitget_data` in earlier observations |
+| `equity_calendar` | Forecast or actual earnings-disclosure date; no EPS claim from this schema | Vendor reported per response |
 
 Three things about this integration are deliberate:
 
@@ -93,7 +93,7 @@ In an earlier 2026-09-21 sample of 12 consecutive production scans, **12/12 retu
 
 ### What the dividend entry does and does not cover
 
-`equity_fundamental_dividends` is a dividend feed. It is **not** a split feed, and the historical candles carry no adjustment or split field — so the corporate-action check reports dividends and explicitly declines to claim split coverage rather than implying it. The check moved from `unknown / UNVERIFIABLE` to a dated result; it did not become a general corporate-actions oracle.
+The current `equity_fundamental_dividends` documentation includes cash dividends, stock dividends and splits. The historical candles still have no adjustment field, so a split or stock-dividend event in the evidence window makes the corporate-action check `UNVERIFIABLE` rather than being mislabelled a cash dividend. An ordinary dated cash-dividend result is reported as such; the desk does not infer that the reference price was split-adjusted.
 
 ## The `bitget-signal` Skill layer: probed, and withheld
 
@@ -203,10 +203,11 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 231/231 tests pass across eleven suites, including the deterministic integrity rules, decision memo, thesis checkpoint, analysis engine, gate, study, public-endpoint budget, stateless Bitget MCP client, MCP evidence layer and Stock+ source parser. The checkpoint regressions cover snapshot refusal, per-symbol browser storage, corrupt/blocked storage, same-scan refusal, later evidence differences, reference-basis changes, and suppression of quote-age-only noise.
+- 235/235 tests pass across eleven suites, including the deterministic integrity rules, decision memo, thesis checkpoint, analysis engine, gate, study, public-endpoint budget, stateless Bitget MCP client, MCP evidence layer and Stock+ source parser. The checkpoint regressions cover snapshot refusal, per-symbol browser storage, corrupt/blocked storage, same-scan refusal, later evidence differences, reference-basis changes, and suppression of quote-age-only noise.
 - **The official Bitget MCP was exercised against live responses before it was trusted.** Three defects were found only that way and are now regression-guarded: the dividend entry's real field is `ex_dividend_date` (reading a plausible alias reported *no dividend* for an instrument that had just gone ex-dividend), four concurrent queries on one session left three hanging until timeout (dispatch is serial), and the corporate check read raw MCP entries instead of parsed events (it reported "no events in window" beside an evidence record listing one).
 - **Production MCP reliability, measured:** 12 consecutive `/api/scan` calls returned all four catalog entries, 2.96–5.35 s. Before the handshake retry, the same test produced one all-sources-missing scan in six.
 - **Current availability is not that earlier sample.** On 2026-09-26 the official MCP endpoint returned `503 Too many open sessions` to the legacy handshake; repeated production scans received no usable catalog data. A direct probe using the new stateless protocol reached all four catalog entries but each returned a nested upstream `HTTP 503`. The updated client was deployed to production as `dpl_CwrXRbyrTnmC2aedkB6Z6swzBSLy`; a post-deployment scan requested the current `equity_calendar` and received four explicit `HTTP 503` failures, not the old `Unknown entry_id`. This proves the code change is live, **not** that the upstream recovered. The desk continues with the Stock+/reported-close reference and labels MCP-dependent checks `UNVERIFIABLE`.
+- **Independent REST check:** the four documented `GET /api/v1/equity/...` routes also returned HTTP 503, as did a valid crypto ticker and news query. The docs themselves remain readable. Thus switching from MCP to Bitget's REST wrapper does not currently restore the data. The same documentation exposed two more client mismatches, now corrected: history/dividend filters require Unix milliseconds, and `equity_calendar` reports forecast/actual disclosure dates rather than `report_date` or consensus EPS.
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.
