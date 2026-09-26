@@ -1,6 +1,6 @@
 # Market Integrity Desk
 
-A read-only pre-trade thesis stress test for Bitget tokenized U.S. equities. It turns a research question into a decision memo — ready for review, investigate, wait, or reject the current thesis — then exposes the Market State Passport, historical base rate, and evidence behind that call.
+A read-only pre-trade thesis stress test for Bitget tokenized U.S. equities. It turns a research question into a decision memo — ready for review, investigate, wait, or reject the current thesis — then exposes the Market State Passport, historical base rate, and evidence behind that call. A browser-local Thesis Checkpoint lets the trader save a thesis and compare a later scan against that evidence baseline.
 
 **Live demo:** https://bitget-market-integrity-desk.vercel.app
 
@@ -20,6 +20,12 @@ A tokenized U.S. equity can trade while its underlying market is closed, stale, 
 5. **Abstain:** expose `UNVERIFIABLE`, `NOT OBSERVABLE` and `NO_STRONG_CATALYST` instead of inventing confidence or a cause.
 
 The target user is a research-driven, medium-frequency Bitget rToken trader who checks a small watchlist before acting, trades while the U.S. market is closed, and values evidence quality over directional predictions. The unified Decision Memo rejects a catalyst thesis when there is no measured event, waits when a required reference is missing or inconsistent, and sends unresolved states to investigation. These are research dispositions, never trade instructions: the human makes the decision and the desk places no orders.
+
+## Thesis Checkpoint
+
+In the Desk, write a thesis and the condition that would change your mind after a **LIVE** research run. Saving freezes that instrument's decision disposition, measured gap, checks, source summaries, and reference basis in this browser. A later scan of the **same** instrument compares the two observations: decision and reference-basis changes, gap movement, changed check results, and changed source records. The original baseline remains intact until the trader explicitly replaces or removes it. A demonstration snapshot cannot be saved or passed off as a live recheck.
+
+This is a manual research checkpoint, not a price alert or a verdict on the trader's free-text thesis. It does not run in the background, send notifications, sync between devices, or survive clearing this browser's site data. The saved text and source summaries never enter the Qwen request through this feature.
 
 ## The four workspaces
 
@@ -132,9 +138,10 @@ The `@bitget-ai/bitget-signal` layer advertises 19 tools, several of which would
 3. Expand **Quote freshness** to audit thresholds and source ages.
 4. Read the **Move explanation** panel: likely catalyst, supporting evidence, alternative explanations, and headlines rejected on timing.
 5. Select an evidence item and open **Inspect provenance** to reveal its endpoint and retrieval timestamp.
-6. Open **Gate** and run the integrity sweep: four verdicts, each naming its evidence, its conditions and its next step. Expand one to audit the evidence provenance, then open the flagged instrument in the Desk.
-7. Open **Stress** to see the closed-market drift distribution for an instrument, the comparable historical episodes, and what the following session did in each.
-8. Open **Replay Lab** to inspect frozen cases and **Methodology** to see the Observe → Verify → Explain → Gate → Abstain boundary and the declared limits.
+6. Under the Decision Memo, save a **Thesis Checkpoint** with your own thesis and invalidation condition. Run the same instrument again to see the before/after evidence; reload to verify the saved baseline remains local to this browser.
+7. Open **Gate** and run the integrity sweep: four verdicts, each naming its evidence, its conditions and its next step. Expand one to audit the evidence provenance, then open the flagged instrument in the Desk.
+8. Open **Stress** to see the closed-market drift distribution for an instrument, the comparable historical episodes, and what the following session did in each.
+9. Open **Replay Lab** to inspect frozen cases and **Methodology** to see the Observe → Verify → Explain → Gate → Abstain boundary and the declared limits.
 
 ## Architecture
 
@@ -196,7 +203,7 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 232/232 tests pass across ten suites, including the deterministic integrity rules, decision memo, analysis engine, gate, study, public-endpoint budget, Bitget MCP client, MCP evidence layer and Stock+ source parser. The final regressions cover the official ISO quote timestamp and ensure an expired reference quote cannot produce a `CLEAR` Gate verdict or a passed alignment merely because the token remains near its old price.
+- 240/240 tests pass across eleven suites, including the deterministic integrity rules, decision memo, thesis checkpoint, analysis engine, gate, study, public-endpoint budget, Bitget MCP client, MCP evidence layer and Stock+ source parser. The checkpoint regressions cover snapshot refusal, per-symbol browser storage, corrupt/blocked storage, same-scan refusal, later evidence differences, and reference-basis changes.
 - **The official Bitget MCP was exercised against live responses before it was trusted.** Three defects were found only that way and are now regression-guarded: the dividend entry's real field is `ex_dividend_date` (reading a plausible alias reported *no dividend* for an instrument that had just gone ex-dividend), four concurrent queries on one session left three hanging until timeout (dispatch is serial), and the corporate check read raw MCP entries instead of parsed events (it reported "no events in window" beside an evidence record listing one).
 - **Production MCP reliability, measured:** 12 consecutive `/api/scan` calls returned all four catalog entries, 2.96–5.35 s. Before the handshake retry, the same test produced one all-sources-missing scan in six.
 - Production build and lint pass.
@@ -219,6 +226,7 @@ The application never turns an unavailable endpoint into a negative fact. In par
 - **While the underlying's main session is running, the gate needs the authenticated Stock+ quote.** If that credential is absent or the endpoint fails, every instrument is blocked as `UNVERIFIABLE_REFERENCE` — correctly, because a live basis cannot be established without it — and the desk reports the retrieval layer's own account of why rather than a market finding. Outside the main session the Yahoo-reported prior-close tier keeps the desk functional without credentials; it is not an exchange-certified feed.
 - The stress test covers the retrieved window only: 500 hourly candles, roughly three weeks and a dozen or so closed-market episodes. It claims no statistical significance, and its excursion figures come from hourly highs and lows.
 - The desk log is stored in the browser, so it is per-device and does not survive clearing site data. It is an audit trail, not a server-side record, and it holds no positions because the desk places no orders.
+- Thesis Checkpoints are also browser-local and manual. They do not trigger background monitoring or evaluate whether a free-text invalidation condition has been satisfied.
 - The frozen benchmark is published, but matched Stock+ candle cases remain absent. On 2026-09-15, both official current and historical Stock+ candle endpoints authenticated but returned empty lists across all four supported symbols during a U.S. intraday probe, so the original missing-reference slice has not been overwritten or replaced with synthetic history.
 - The official `bitget-signal` MCP was investigated as a macro/news perception layer. Its current stock-price and selected-news probes were slow and returned errors or empty data, so it is not represented as a production integration.
 - Headlines come from keyless public feeds (Yahoo Finance search, with Google News RSS as fallback) and are accepted only when the headline names the instrument. A genuine catalyst that never names it will be missed, and the lookback window is bounded at 8 hours.
@@ -238,6 +246,7 @@ The application never turns an unavailable endpoint into a negative fact. In par
 - `api/_lib/study.js` — pure episode construction, outcome classification and scenario matching.
 - `src/lib/integrity.ts` — published deterministic rules.
 - `src/lib/desklog.ts` — the browser-local audit trail and its refusal statistics.
+- `src/lib/checkpoint.ts` — versioned browser-local thesis baselines and deterministic before/after comparison.
 - `src/data/snapshots.ts` — labeled product demonstration snapshots.
 - `benchmark/` — immutable cases, separate labels, Qwen outputs, evaluator results, and portable report.
 - `benchmark/bitget-signal-probe.json` — saved decision gate for the optional official macro/news perception layer.

@@ -28,6 +28,13 @@ Two questions, in the order a trader actually asks them:
 11. If the badge is `QWEN`, confirm that the visible **Question answered** matches the submitted question. Select a bracketed citation and confirm it opens the corresponding evidence item supplied to the model.
 12. Read the **Move explanation** panel: the likely catalyst, the supporting evidence, the alternative explanations, and the headlines rejected on timing.
 
+### A2 · Keep the thesis accountable over time
+
+- After a `LIVE` run finishes, open **Thesis Checkpoint** below the Decision Memo. Write a thesis and a specific observation that would change your mind, then save the baseline. The opening `SNAPSHOT` fixture cannot be saved.
+- Reload the page: the checkpoint remains in this browser, while the page again labels its initial market data as a demonstration snapshot. No comparison is claimed yet.
+- Choose **Recheck this thesis**. The desk runs the same instrument again; only a later `LIVE` scan can show the comparison. Inspect the prior/current disposition, gap, reference basis when changed, check results and source summaries. A changed source is not automatically proof or refutation of the trader's free-text thesis.
+- **Replace baseline** and **Forget** are explicit user actions. Checkpoints are local to this browser, with no background monitoring, notification, account sync or order execution.
+
 ### B · The Gate: decide whether the state can be trusted
 
 13. Open **Gate** and run the integrity sweep. It applies ordered deterministic rules to the whole watchlist in one pass.

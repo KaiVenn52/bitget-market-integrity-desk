@@ -9,6 +9,7 @@ import { Methodology } from './components/Methodology'
 import { PassportPanel } from './components/PassportPanel'
 import { ReplayLab } from './components/ReplayLab'
 import { StressTest } from './components/StressTest'
+import { ThesisCheckpoint } from './components/ThesisCheckpoint'
 import { Watchlist } from './components/Watchlist'
 import { snapshotFor } from './data/snapshots'
 import { resolveInstrument } from './lib/query'
@@ -168,6 +169,7 @@ export default function App() {  const [view, setView] = useState<View>(viewFrom
       <section className="workbench">
         <div className="instrument-bar"><div><span>Current passport</span><h2>{passport.instrument.symbol}</h2><p>{passport.instrument.company} · tokenized U.S. equity</p></div><button className="scan-button" aria-label={scanning ? 'Scanning evidence' : 'Refresh evidence'} disabled={scanning} onClick={() => void scan(symbol, passport.researchQuestion ?? researchQuestion)}>{scanning ? <RefreshCw className="spin" size={16} /> : <ScanLine size={16} />}<span>{scanning ? 'Scanning evidence' : 'Refresh evidence'}</span></button></div>
         <DecisionMemo passport={passport} analysis={analysis?.symbol === passport.instrument.symbol ? analysis.data : null} study={study?.symbol === passport.instrument.symbol ? study.data : null} studyPending={studyPending} onGate={runWatchlistGate} onStress={() => go('stress')} />
+        <ThesisCheckpoint key={passport.instrument.symbol} passport={passport} analysis={analysis?.symbol === passport.instrument.symbol ? analysis.data : null} study={study?.symbol === passport.instrument.symbol ? study.data : null} scanning={scanning} onRescan={() => void scan(symbol, passport.researchQuestion ?? researchQuestion)} />
         <PassportPanel passport={passport} />
         {analysis && analysis.symbol === passport.instrument.symbol ? <CatalystPanel analysis={analysis.data} /> : null}
         <EvidenceInspector key={`${passport.instrument.symbol}-${passport.scannedAt}`} passport={passport} />

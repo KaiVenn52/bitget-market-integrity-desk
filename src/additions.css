@@ -10,7 +10,7 @@
 
 .workbench > .passport-stack {
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 4;
 }
 
 .workbench > .decision-memo {
@@ -18,9 +18,14 @@
   grid-row: 2;
 }
 
+.workbench > .thesis-checkpoint {
+  grid-column: 1;
+  grid-row: 3;
+}
+
 .workbench > .evidence-panel {
   grid-column: 2;
-  grid-row: 1 / 4;
+  grid-row: 1 / 5;
 }
 
 @media (max-width: 1050px) {
@@ -35,7 +40,7 @@
 
   .workbench > .evidence-panel {
     grid-column: 1;
-    grid-row: 5;
+    grid-row: 6;
   }
 
   .workbench > .decision-memo {
@@ -45,8 +50,13 @@
 
   .workbench > .passport-stack {
     grid-column: 1;
-    grid-row: 3;
+    grid-row: 4;
     padding-top: 0;
+  }
+
+  .workbench > .thesis-checkpoint {
+    grid-column: 1;
+    grid-row: 3;
   }
 }
 
@@ -141,8 +151,8 @@
 }
 
 /* Move explanation: deterministic verdicts first, model narrative last. */
-.workbench > .catalyst-panel { grid-column: 1; grid-row: 4; }
-.workbench > .evidence-panel { grid-column: 2; grid-row: 1 / 5; }
+.workbench > .catalyst-panel { grid-column: 1; grid-row: 5; }
+.workbench > .evidence-panel { grid-column: 2; grid-row: 1 / 6; }
 
 /* One decision, before the supporting dashboard. */
 .decision-memo { margin-top: 28px; overflow: hidden; border: 1px solid var(--line); border-left: 4px solid var(--amber); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 18px 50px rgba(30,39,45,.05); }
@@ -182,6 +192,63 @@
 .decision-actions button { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; border: 1px solid var(--line-strong); border-radius: 8px; padding: 0 13px; background: var(--surface); color: var(--text); font-size: 10px; font-weight: 700; }
 .decision-actions button:first-child { border-color: var(--blue); background: var(--blue); color: #fff; }
 .decision-actions button:hover { transform: translateY(-1px); }
+
+/* A user-owned thesis, frozen against one observed scan, then compared with a later one. */
+.thesis-checkpoint { min-width: 0; margin-top: 18px; padding: 26px 28px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.checkpoint-heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.checkpoint-heading h3 { margin: 10px 0 5px; font-size: 22px; letter-spacing: -.04em; }
+.checkpoint-heading p { max-width: 580px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.checkpoint-scope { flex: 0 0 auto; margin-top: 2px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font: 600 9px var(--mono); white-space: nowrap; }
+.checkpoint-saved { display: grid; gap: 14px; margin-top: 22px; padding: 18px 20px; border-left: 3px solid var(--blue); border-radius: 0 12px 12px 0; background: var(--surface-soft); }
+.checkpoint-saved-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; }
+.checkpoint-saved-head strong { font-size: 12px; }
+.checkpoint-saved-head time, .checkpoint-baseline { color: var(--muted); font: 10px var(--mono); }
+.checkpoint-thesis span, .checkpoint-delta span { color: var(--muted); font: 600 9px var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.checkpoint-thesis p { margin: 5px 0 0; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.checkpoint-baseline { display: flex; flex-wrap: wrap; gap: 8px 16px; padding-top: 10px; border-top: 1px solid var(--line-strong); }
+.checkpoint-pending { display: flex; align-items: center; gap: 9px; margin-top: 16px; padding: 15px 16px; border: 1px dashed var(--line-strong); border-radius: 10px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.checkpoint-review { margin-top: 16px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; }
+.checkpoint-review-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
+.checkpoint-review-head span { color: var(--muted); font: 10px var(--mono); }
+.checkpoint-review-head strong { font-size: 12px; }
+.checkpoint-delta { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.checkpoint-delta > div { display: grid; gap: 6px; min-width: 0; }
+.checkpoint-delta strong { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font: 600 11px var(--mono); overflow-wrap: anywhere; }
+.checkpoint-reference-change { display: grid; gap: 5px; margin-top: 14px; padding: 12px 14px; border-left: 2px solid var(--blue); background: var(--surface-soft); }
+.checkpoint-reference-change span { font: 600 9px var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.checkpoint-reference-change p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.checkpoint-diff-count { margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--text); font-size: 11px; }
+.checkpoint-change-list { display: grid; gap: 0; margin: 10px 0 0; padding: 0; list-style: none; }
+.checkpoint-change-list li { display: grid; gap: 5px; padding: 12px 0; border-top: 1px solid var(--line); }
+.checkpoint-change-list span { font-size: 11px; font-weight: 700; }
+.checkpoint-change-list small { color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.checkpoint-caveat, .checkpoint-no-change, .checkpoint-hint { margin: 12px 0 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.checkpoint-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.checkpoint-actions button, .checkpoint-form button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--line-strong); border-radius: 8px; padding: 0 12px; background: var(--surface); color: var(--text); font-size: 11px; font-weight: 700; }
+.checkpoint-actions button:hover:not(:disabled), .checkpoint-form button:hover:not(:disabled) { border-color: var(--blue); }
+.checkpoint-actions .checkpoint-primary, .checkpoint-form .checkpoint-primary { border-color: var(--blue); background: var(--blue); color: #fff; }
+.checkpoint-actions .checkpoint-danger { color: var(--coral); }
+.checkpoint-actions button:disabled, .checkpoint-form button:disabled { opacity: .55; cursor: wait; }
+.checkpoint-form { display: grid; gap: 12px; margin-top: 18px; }
+.checkpoint-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.checkpoint-fields > div { display: grid; gap: 7px; min-width: 0; }
+.checkpoint-fields label { font-size: 11px; font-weight: 700; }
+.checkpoint-fields textarea { width: 100%; min-height: 88px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 9px; padding: 12px; background: var(--surface); color: var(--text); font-size: 12px; line-height: 1.55; }
+.checkpoint-fields textarea::placeholder { color: var(--muted); opacity: 1; }
+.checkpoint-fields textarea[aria-invalid="true"] { border-color: var(--coral); }
+.checkpoint-form > button { justify-self: start; }
+.checkpoint-form .checkpoint-text-button, .checkpoint-text-button { width: fit-content; min-height: 40px; border: 0; padding: 0 4px; background: transparent; color: var(--blue); font-size: 11px; font-weight: 700; }
+.checkpoint-error, .checkpoint-note { margin: 8px 0 0; font-size: 11px; line-height: 1.5; }
+.checkpoint-error { color: var(--coral); }
+.checkpoint-note { color: var(--mint); }
+
+@media (max-width: 720px) {
+  .thesis-checkpoint { padding: 20px 18px; }
+  .checkpoint-heading { display: grid; gap: 12px; }
+  .checkpoint-scope { justify-self: start; }
+  .checkpoint-fields, .checkpoint-delta { grid-template-columns: 1fr; }
+  .checkpoint-actions button { flex: 1 1 auto; }
+}
 
 .catalyst-panel {
   margin-top: 30px;
@@ -251,9 +318,10 @@
 
 @media (max-width: 1050px) {
   .workbench > .decision-memo { grid-column: 1; grid-row: 2; }
-  .workbench > .passport-stack { grid-column: 1; grid-row: 3; padding-top: 0; }
-  .workbench > .catalyst-panel { grid-column: 1; grid-row: 4; }
-  .workbench > .evidence-panel { grid-column: 1; grid-row: 5; }
+  .workbench > .thesis-checkpoint { grid-column: 1; grid-row: 3; }
+  .workbench > .passport-stack { grid-column: 1; grid-row: 4; padding-top: 0; }
+  .workbench > .catalyst-panel { grid-column: 1; grid-row: 5; }
+  .workbench > .evidence-panel { grid-column: 1; grid-row: 6; }
   .catalyst-columns, .catalyst-footer { grid-template-columns: 1fr; gap: 22px; }
 }
 

@@ -1,6 +1,6 @@
 # Validation Record
 
-Updated: 2026-09-24 (Malaysia time)
+Updated: 2026-09-26 (Malaysia time)
 Scope: local engine, public production workflow, and three adversarial review rounds
 Operator: project developer
 
@@ -11,7 +11,8 @@ the date shown, and rows that describe an earlier state say so.
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Deterministic, decision, gate, study, routing and rate-limit unit tests | 232/232 passed, ten suites | Includes Stock+ ISO timestamp and embedded-session parsing, stale-reference Gate refusal and unknown alignment, plus MCP price coherence, dividend-window and weekend-date regressions. `npm.cmd test` |
+| Deterministic, decision, checkpoint, gate, study, routing and rate-limit unit tests | 240/240 passed, eleven suites | Includes Stock+ ISO timestamp and embedded-session parsing, stale-reference Gate refusal and unknown alignment, MCP provenance checks, and eight browser-local checkpoint regressions. `npm.cmd test` |
+| Thesis Checkpoint | Local browser QA passed; production deployment pending | A labelled opening snapshot could not be saved. After a controlled live scan, the trader's thesis and invalidation condition persisted through reload; only a later same-symbol live scan produced a before/after diff. Replacement and two-step removal worked. Checked at 1440px and 390px with no document overflow or console errors. The comparison does not adjudicate free-text claims or send alerts. |
 | Complete research task | Production-verified | A live NVDA question returned a Qwen narrative with six inline evidence IDs. It named the 903-second-old Stock+ reference as a limitation and did not claim it could price-verify the token. Desk, Gate, Stress, Replay and Method were exercised at 1440px and 390px without browser exceptions or document-level horizontal overflow. |
 | Stale-reference Gate policy | Corrected and production-verified | Once the quote parser was fixed, live Gate exposed a 907-second-old Stock+ quote yielding `CLEAR` when token drift was small. An expired quote now returns `WAIT` even when aligned; a valid dated prior close remains a distinct closed-market basis. The four-symbol live sweep returned 4 WAIT, 0 CLEAR. |
 | Stock+ reference retrieval contract | Corrected and production-verified | The official real-time quote response carries an ISO timestamp and optional pre/post/overnight children in one response. Gate/analysis previously used `Number(timestamp)` and four session-parameter requests, filtering out the returned quote; Passport's separate route used `Date` and could display it. The deployed Gate now receives and ages the actual quote. |
