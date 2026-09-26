@@ -30,7 +30,7 @@ Two questions, in the order a trader actually asks them:
 
 ### A2 · Keep the thesis accountable over time
 
-- After a `LIVE` run finishes, open **Thesis Checkpoint** below the Decision Memo. Write a thesis and a specific observation that would change your mind, then save the baseline. The opening `SNAPSHOT` fixture cannot be saved.
+- After a `LIVE` run and its historical context both finish, open **Thesis Checkpoint** below the Decision Memo. Write a thesis and a specific observation that would change your mind, then save the baseline. The opening `SNAPSHOT` fixture cannot be saved; neither can a partial run while its historical context is still loading.
 - Reload the page: the checkpoint remains in this browser, while the page again labels its initial market data as a demonstration snapshot. No comparison is claimed yet.
 - Choose **Recheck this thesis**. The desk runs the same instrument again; only a later `LIVE` scan can show the comparison. Inspect the prior/current disposition, gap, reference basis when changed, check states and source summaries. Quote-age text advancing by a few seconds is not counted as a changed check. A changed source is not automatically proof or refutation of the trader's free-text thesis.
 - **Replace baseline** and **Forget** are explicit user actions. Checkpoints are local to this browser, with no background monitoring, notification, account sync or order execution.

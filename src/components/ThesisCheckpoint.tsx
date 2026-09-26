@@ -7,11 +7,12 @@ import type { MoveAnalysis, Passport, StudyResult } from '../types'
 const timestamp = (value: string) => new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }).format(new Date(value)) + ' UTC'
 const premium = (value: number | null) => value === null ? 'not measured' : `${value > 0 ? '+' : ''}${value} bps`
 
-export function ThesisCheckpoint({ passport, analysis, study, scanning, onRescan }: {
+export function ThesisCheckpoint({ passport, analysis, study, scanning, studyPending, onRescan }: {
   passport: Passport
   analysis: MoveAnalysis | null
   study: StudyResult | null
   scanning: boolean
+  studyPending: boolean
   onRescan: () => void
 }) {
   const symbol = passport.instrument.symbol
@@ -24,13 +25,14 @@ export function ThesisCheckpoint({ passport, analysis, study, scanning, onRescan
   const [showAll, setShowAll] = useState(false)
   const [error, setError] = useState('')
   const [note, setNote] = useState('')
-  const review = saved && !scanning ? compareCheckpoint(saved, passport, memo, analysis) : null
+  const busy = scanning || studyPending
+  const review = saved && !busy ? compareCheckpoint(saved, passport, memo, analysis) : null
 
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
     if (passport.mode !== 'live') { setError('Run a live scan before saving a checkpoint.'); return }
-    if (scanning) { setError('Wait for this research run to finish.'); return }
+    if (busy) { setError('Wait for the live scan and historical context to finish.'); return }
     if (!thesis.trim() || !condition.trim()) { setError('Write both your thesis and the condition that would change your mind.'); return }
     const next = makeCheckpoint(passport, analysis, memo, thesis, condition)
     if (!next || !saveCheckpoint(next)) { setError('This browser could not save the checkpoint. Check storage permissions and try again.'); return }
@@ -72,7 +74,7 @@ export function ThesisCheckpoint({ passport, analysis, study, scanning, onRescan
         <div className="checkpoint-baseline"><span>{saved.disposition.replace('_', ' ')} at capture</span><span>{premium(saved.premiumBps)} measured gap</span><span>{saved.checks.length} checks · {saved.evidence.length} evidence records</span></div>
       </div>
 
-      {scanning ? <div className="checkpoint-pending" aria-live="polite"><RefreshCw size={16} className="spin" aria-hidden /> Rechecking the live record. Comparison appears when the research run finishes.</div>
+      {busy ? <div className="checkpoint-pending" aria-live="polite"><RefreshCw size={16} className="spin" aria-hidden /> Rechecking the live record and historical context. Comparison appears when both finish.</div>
         : review?.ready ? <div className="checkpoint-review" aria-live="polite">
           <div className="checkpoint-review-head"><span>Recheck · {timestamp(passport.scannedAt)}</span><strong>{review.decisionChanged ? 'Desk disposition changed' : 'Desk disposition unchanged'}</strong></div>
           <div className="checkpoint-delta">
@@ -102,8 +104,9 @@ export function ThesisCheckpoint({ passport, analysis, study, scanning, onRescan
         <div><label htmlFor="checkpoint-condition">What would change your mind?</label><textarea id="checkpoint-condition" value={condition} onChange={(event) => setCondition(event.target.value)} maxLength={300} rows={3} placeholder={memo.changeConditions[0] ?? 'e.g. The underlying opens and does not confirm the gap.'} aria-invalid={Boolean(error && !condition.trim())} aria-describedby={error ? 'checkpoint-error' : 'checkpoint-hint'} /></div>
       </div>
       <p className="checkpoint-hint" id="checkpoint-hint">A checkpoint captures this live scan's verdict, checks, and source summaries. It stays on this device; clearing browser data removes it.</p>
+      {!saved && busy && passport.mode === 'live' ? <p className="checkpoint-pending" aria-live="polite"><RefreshCw size={16} className="spin" aria-hidden /> Wait for the investigator and historical context before saving this baseline.</p> : null}
       {error ? <p className="checkpoint-error" id="checkpoint-error" role="alert">{error}</p> : null}
-      <button type="submit" className="checkpoint-primary" disabled={scanning || passport.mode !== 'live'}><Bookmark size={15} aria-hidden /> {saved ? 'Confirm new baseline' : 'Save live checkpoint'}</button>
+      <button type="submit" className="checkpoint-primary" disabled={busy || passport.mode !== 'live'}><Bookmark size={15} aria-hidden /> {saved ? 'Confirm new baseline' : 'Save live checkpoint'}</button>
       {passport.mode !== 'live' ? <button type="button" className="checkpoint-text-button" onClick={onRescan} disabled={scanning}>Run live scan first <ArrowRight size={13} aria-hidden /></button> : null}
     </form> : null}
     {saved && !editing && error ? <p className="checkpoint-error" role="alert">{error}</p> : null}
