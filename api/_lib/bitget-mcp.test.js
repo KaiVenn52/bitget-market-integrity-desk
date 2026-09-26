@@ -72,8 +72,11 @@ describe('result accessors', () => {
 function stubFetch(handler) {
   const calls = []
   vi.stubGlobal('fetch', async (url, init) => {
-    const body = JSON.parse(init.body)
+    const body = init.method === 'DELETE'
+      ? { method: '__delete__', sessionId: init.headers['mcp-session-id'] }
+      : JSON.parse(init.body)
     calls.push(body)
+    if (init.method === 'DELETE') return { ok: true, status: 200 }
     return handler(body, calls.length)
   })
   return calls
@@ -111,6 +114,8 @@ describe('mcpQueryMany', () => {
     expect(order).toEqual(['equity_price_quote', 'equity_calendar_earnings'])
     // The session established by `initialize` must be reused, not re-negotiated.
     expect(calls.filter((call) => call.method === 'initialize')).toHaveLength(1)
+    expect(calls.filter((call) => call.method === '__delete__')).toEqual([{ method: '__delete__', sessionId: 'sess-1' }])
+    expect(calls.at(-1).method).toBe('__delete__')
   })
 
   it('does not attach an id to a notification', async () => {
@@ -134,6 +139,7 @@ describe('mcpQueryMany', () => {
     // Two handshake attempts, and no entry issued behind a dead session.
     expect(calls.filter((call) => call.method === 'initialize')).toHaveLength(2)
     expect(calls.filter((call) => call.method === 'tools/call')).toHaveLength(0)
+    expect(calls.filter((call) => call.method === '__delete__')).toHaveLength(0)
   })
 
   // A cold CDN handshake was the observed cause of an all-sources-missing scan.
@@ -164,6 +170,47 @@ describe('mcpQueryMany', () => {
     const result = await mcpQueryMany([{ id: 'a', entryId: 'e', params: {} }])
     expect(result.entries.a.ok).toBe(false)
     expect(result.entries.a.error).toBe('symbol not found')
+  })
+
+  it('preserves a string-valued platform failure and still releases the session', async () => {
+    const calls = stubFetch((body) => (body.method === 'initialize'
+      ? jsonResponse({ jsonrpc: '2.0', id: 1, result: { serverInfo: { name: 's' } } }, { 'mcp-session-id': 'failed-entry' })
+      : body.method === 'notifications/initialized'
+        ? { ok: true, status: 202, headers: { get: () => null }, text: async () => '' }
+        : jsonResponse({ jsonrpc: '2.0', id: body.id, result: { structuredContent: { success: false, error: 'upstream unavailable' } } })))
+    const result = await mcpQueryMany([{ id: 'a', entryId: 'e' }])
+    expect(result.entries.a.error).toBe('upstream unavailable')
+    expect(calls.at(-1)).toEqual({ method: '__delete__', sessionId: 'failed-entry' })
+  })
+
+  it('retains the server error message on non-2xx responses', async () => {
+    stubFetch(() => ({
+      ok: false, status: 503,
+      headers: { get: () => null },
+      text: async () => '{"jsonrpc":"2.0","error":{"message":"Too many open sessions"}}',
+    }))
+    const result = await mcpQueryMany([{ id: 'a', entryId: 'e' }])
+    expect(result.entries.a.error).toContain('HTTP 503: Too many open sessions')
+  })
+
+  it('releases a session minted by a failed handshake before retrying', async () => {
+    let attempts = 0
+    const calls = stubFetch((body) => {
+      if (body.method === 'initialize') {
+        attempts += 1
+        return attempts === 1
+          ? { ok: false, status: 503, headers: { get: () => 'abandoned-session' }, text: async () => '{}' }
+          : jsonResponse({ jsonrpc: '2.0', id: body.id, result: { serverInfo: { name: 's' } } }, { 'mcp-session-id': 'active-session' })
+      }
+      if (body.method === 'notifications/initialized') return { ok: true, status: 202, headers: { get: () => null }, text: async () => '' }
+      return jsonResponse({ jsonrpc: '2.0', id: body.id, result: { structuredContent: { success: true, data: { results: [1] } } } })
+    })
+    const result = await mcpQueryMany([{ id: 'a', entryId: 'e' }])
+    expect(result.entries.a.ok).toBe(true)
+    expect(calls.filter((call) => call.method === '__delete__')).toEqual([
+      { method: '__delete__', sessionId: 'abandoned-session' },
+      { method: '__delete__', sessionId: 'active-session' },
+    ])
   })
 
   it('skips remaining entries once the shared budget is spent', async () => {

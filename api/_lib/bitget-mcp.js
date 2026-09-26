@@ -21,6 +21,8 @@ export const MCP_URL = process.env.BITGET_MCP_URL || 'https://agent.bitget.com/m
 export const MCP_PROTOCOL_VERSION = '2024-11-05'
 /** Per-call ceiling. The route's own budget is smaller, so this never dominates it. */
 export const MCP_CALL_TIMEOUT_MS = 6000
+/** Session cleanup must not turn an otherwise usable scan into a slow one. */
+export const MCP_CLOSE_TIMEOUT_MS = 750
 /**
  * Ceiling for a whole `mcpQueryMany` run, handshake included.
  *
@@ -90,8 +92,8 @@ async function rpc(method, params, sessionId, timeoutMs) {
     const nextSession = response.headers.get('mcp-session-id') || sessionId
     const text = await response.text()
     const ms = Date.now() - started
-    if (!response.ok) return { ok: false, sessionId: nextSession, ms, error: `HTTP ${response.status}` }
     const message = parseMcpBody(text)
+    if (!response.ok) return { ok: false, sessionId: nextSession, ms, error: `HTTP ${response.status}${message?.error?.message ? `: ${message.error.message}` : ''}` }
     if (!message) return { ok: false, sessionId: nextSession, ms, error: 'unparseable response body' }
     if (message.error) return { ok: false, sessionId: nextSession, ms, error: message.error.message || 'JSON-RPC error' }
     return { ok: true, sessionId: nextSession, ms, message }
@@ -100,6 +102,26 @@ async function rpc(method, params, sessionId, timeoutMs) {
   } finally {
     clearTimeout(timer)
   }
+}
+
+/**
+ * Streamable HTTP sessions are server-owned resources. Explicitly release each
+ * session after the four serial queries, including when a query fails. A 404 or
+ * 405 means the server has already closed it or does not implement DELETE.
+ * Cleanup is best-effort and never replaces the evidence result with an error.
+ */
+async function closeSession(sessionId) {
+  if (!sessionId) return
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), MCP_CLOSE_TIMEOUT_MS)
+  try {
+    await fetch(MCP_URL, {
+      method: 'DELETE',
+      headers: { 'mcp-session-id': sessionId },
+      signal: controller.signal,
+    })
+  } catch { /* source availability is reported by the queries, not by cleanup */ }
+  finally { clearTimeout(timer) }
 }
 
 /**
@@ -138,6 +160,8 @@ export async function mcpQueryMany(queries, options = {}) {
       clientInfo: { name: 'bitget-market-integrity-desk', version: '1.0.0' },
     }, null, Math.min(timeoutMs, left))
     if (init.ok) break
+    // A failed handshake can still mint a session; do not leak it before retry.
+    await closeSession(init.sessionId)
   }
 
   if (!init?.ok) {
@@ -148,32 +172,36 @@ export async function mcpQueryMany(queries, options = {}) {
   const server = init.message?.result?.serverInfo ?? null
   const sessionId = init.sessionId
 
-  // Best-effort handshake completion: a notification, so a failure here is not
-  // fatal and must not be allowed to reject the queries that follow.
-  await rpc('notifications/initialized', {}, sessionId, Math.min(timeoutMs, remaining() || timeoutMs)).catch(() => {})
+  try {
+    // Best-effort handshake completion: a notification, so a failure here is not
+    // fatal and must not be allowed to reject the queries that follow.
+    await rpc('notifications/initialized', {}, sessionId, Math.min(timeoutMs, remaining() || timeoutMs)).catch(() => {})
 
-  for (const query of list) {
-    const left = remaining()
-    if (left <= 0) {
-      entries[query.id] = { ok: false, error: 'skipped: shared MCP budget exhausted', ms: 0, skipped: true }
-      continue
+    for (const query of list) {
+      const left = remaining()
+      if (left <= 0) {
+        entries[query.id] = { ok: false, error: 'skipped: shared MCP budget exhausted', ms: 0, skipped: true }
+        continue
+      }
+      const call = await rpc('tools/call', { name: 'do_query', arguments: { entry_id: query.entryId, params: query.params ?? {} } }, sessionId, Math.min(timeoutMs, left))
+      if (!call.ok) {
+        entries[query.id] = { ok: false, error: call.error, ms: call.ms }
+        continue
+      }
+      const payload = unwrapToolResult(call.message)
+      if (!payload) {
+        entries[query.id] = { ok: false, error: 'entry returned no payload', ms: call.ms }
+        continue
+      }
+      // The platform reports its own failures inside a successful JSON-RPC frame.
+      if (payload.success === false || payload.error) {
+        entries[query.id] = { ok: false, error: typeof payload.error === 'string' ? payload.error : payload.error?.message ?? 'platform reported failure', ms: call.ms }
+        continue
+      }
+      entries[query.id] = { ok: true, data: payload.data ?? payload, ms: call.ms }
     }
-    const call = await rpc('tools/call', { name: 'do_query', arguments: { entry_id: query.entryId, params: query.params ?? {} } }, sessionId, Math.min(timeoutMs, left))
-    if (!call.ok) {
-      entries[query.id] = { ok: false, error: call.error, ms: call.ms }
-      continue
-    }
-    const payload = unwrapToolResult(call.message)
-    if (!payload) {
-      entries[query.id] = { ok: false, error: 'entry returned no payload', ms: call.ms }
-      continue
-    }
-    // The platform reports its own failures inside a successful JSON-RPC frame.
-    if (payload.success === false || payload.error) {
-      entries[query.id] = { ok: false, error: payload.error?.message ?? 'platform reported failure', ms: call.ms }
-      continue
-    }
-    entries[query.id] = { ok: true, data: payload.data ?? payload, ms: call.ms }
+  } finally {
+    await closeSession(sessionId)
   }
 
   return { server, entries }
