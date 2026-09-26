@@ -92,6 +92,7 @@
 .proof-stack b { font-size: 11px; white-space: nowrap; }
 .proof-stack small { margin-top: 2px; color: var(--muted); font-size: 9px; line-height: 1.35; }
 .proof-stack em { margin-top: 4px; color: var(--mint); font: 600 8px var(--mono); letter-spacing: .08em; font-style: normal; }
+.proof-stack em.proof-source-missing { color: var(--amber); }
 @media (max-width: 900px) { .proof-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Official Bitget MCP catalog readout on the passport: which entries answered. */

@@ -1,8 +1,14 @@
 import { ArrowUpRight, Bot, Database, FileCheck2, Network } from 'lucide-react'
+import type { Passport } from '../types'
 
 const repositoryUrl = 'https://github.com/KaiVenn52/bitget-market-integrity-desk'
 
-export function JudgeProof() {
+export function JudgeProof({ passport }: { passport: Passport }) {
+  const requested = passport.integration?.requested.length ?? 0
+  const answered = passport.integration?.answered.length ?? 0
+  const mcpStatus = passport.mode === 'snapshot' || requested === 0
+    ? 'OFFICIAL · NOT SCANNED'
+    : `OFFICIAL · ${answered}/${requested} ANSWERED`
   return <section className="judge-proof" aria-labelledby="proof-title">
     <div className="proof-intro">
       <span className="section-kicker">Production proof</span>
@@ -11,7 +17,7 @@ export function JudgeProof() {
     </div>
     <div className="proof-stack">
       <div><Database size={16} aria-hidden="true" /><span><b>Bitget rToken</b><small>Read-only UTA market API</small><em>PUBLIC</em></span></div>
-      <div><Network size={16} aria-hidden="true" /><span><b>Bitget MCP</b><small>Quotes, candles, dividends, earnings calendar</small><em>OFFICIAL</em></span></div>
+      <div><Network size={16} aria-hidden="true" /><span><b>Bitget MCP</b><small>Quotes, candles, dividends, earnings calendar</small><em className={passport.mode === 'live' && answered === 0 ? 'proof-source-missing' : ''} aria-live="polite">{mcpStatus}</em></span></div>
       <div><FileCheck2 size={16} aria-hidden="true" /><span><b>Underlying reference</b><small>Fresh Stock+ quote, or the reported prior close</small><em>TWO-TIER</em></span></div>
       <div><Bot size={16} aria-hidden="true" /><span><b>Qwen investigator</b><small>Every inline citation resolved before it is shown</small><em>BOUNDED</em></span></div>
     </div>

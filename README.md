@@ -69,7 +69,7 @@ The gate can say "the reference cannot confirm this, and the token has moved 478
 
 ## The official Bitget MCP: integrated
 
-The S2 handbook points AI Trading Desk entries at **`bitget-mcp-server`** (`https://agent.bitget.com/mcp`, HTTP transport, no account or API key) for US stock research data, and recommends it by name for research workbenches. It exposes two tools — `guide` lists the catalog, `do_query` executes one entry — over 67 catalog entries in five categories. Every `equity` entry is `free` tier.
+The S2 handbook points AI Trading Desk entries at **`bitget-mcp-server`** (`https://agent.bitget.com/mcp`, HTTP transport, no account or API key) for US stock research data, and recommends it by name for research workbenches. At the 2026-09-21 catalog inspection it exposed two tools — `guide` listed over 67 entries in five categories and `do_query` executed an entry; every then-listed `equity` entry was `free` tier. The live catalog and its availability may change.
 
 The desk calls four of them on every scan:
 
@@ -89,7 +89,7 @@ Three things about this integration are deliberate:
 
 The catalog entries are dispatched **one at a time on a single session**. That is measured, not stylistic: dispatching four concurrently on one session left three hanging until timeout while a single one answered in 233 ms, and the one that did answer came back from a different upstream provider than the same entry returns when asked sequentially.
 
-Measured over 12 consecutive production scans: **12/12 returned all four entries**, 2.96–5.35 s. Before the handshake retry was added the same test produced one all-sources-missing scan in six, caused by a cold CDN handshake consuming the shared budget.
+In an earlier 2026-09-21 sample of 12 consecutive production scans, **12/12 returned all four entries**, 2.96–5.35 s. Before the handshake retry was added the same test produced one all-sources-missing scan in six, caused by a cold CDN handshake consuming the shared budget. This is historical evidence, not a current availability guarantee; see the 2026-09-26 incident in the validation section below.
 
 ### What the dividend entry does and does not cover
 
@@ -203,9 +203,10 @@ npm.cmd run lint
 
 Current developer-observed validation:
 
-- 241/241 tests pass across eleven suites, including the deterministic integrity rules, decision memo, thesis checkpoint, analysis engine, gate, study, public-endpoint budget, Bitget MCP client, MCP evidence layer and Stock+ source parser. The checkpoint regressions cover snapshot refusal, per-symbol browser storage, corrupt/blocked storage, same-scan refusal, later evidence differences, reference-basis changes, and suppression of quote-age-only noise.
+- 244/244 tests pass across eleven suites, including the deterministic integrity rules, decision memo, thesis checkpoint, analysis engine, gate, study, public-endpoint budget, Bitget MCP client, MCP evidence layer and Stock+ source parser. The checkpoint regressions cover snapshot refusal, per-symbol browser storage, corrupt/blocked storage, same-scan refusal, later evidence differences, reference-basis changes, and suppression of quote-age-only noise.
 - **The official Bitget MCP was exercised against live responses before it was trusted.** Three defects were found only that way and are now regression-guarded: the dividend entry's real field is `ex_dividend_date` (reading a plausible alias reported *no dividend* for an instrument that had just gone ex-dividend), four concurrent queries on one session left three hanging until timeout (dispatch is serial), and the corporate check read raw MCP entries instead of parsed events (it reported "no events in window" beside an evidence record listing one).
 - **Production MCP reliability, measured:** 12 consecutive `/api/scan` calls returned all four catalog entries, 2.96–5.35 s. Before the handshake retry, the same test produced one all-sources-missing scan in six.
+- **Current availability is not that earlier sample.** On 2026-09-26 the official MCP endpoint returned `503 Too many open sessions`, and repeated production scans received no usable catalog data. The client now closes its HTTP session after every query batch, including failed handshakes that minted a session, and preserves upstream error text. The live UI reports how many entries answered. The desk continues with the Stock+/reported-close reference and labels MCP-dependent checks `UNVERIFIABLE`; upstream recovery is outside this deployment's control.
 - Production build and lint pass.
 - Desktop and 390 × 844 browser walkthroughs pass without document-level horizontal overflow.
 - Natural-language instrument resolution, question-aware Qwen synthesis, instrument switching, live and fallback scans, navigation, check expansion, evidence selection, and raw provenance reveal were exercised in a production browser.
