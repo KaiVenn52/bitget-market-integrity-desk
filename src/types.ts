@@ -141,6 +141,8 @@ export interface Passport {
     requested: string[]
     answered: string[]
     failed: string[]
+    usable?: string[]
+    status?: Record<string, 'usable' | 'partial' | 'empty' | 'unavailable'>
   }
   checks: IntegrityCheck[]
   evidence: EvidenceItem[]

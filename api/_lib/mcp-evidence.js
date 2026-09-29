@@ -380,6 +380,12 @@ export function buildMcpEvidence(collected, nowMs) {
   const dividends = dividendEvidence(entries.dividends, server, nowMs)
   const earnings = earningsEvidence(entries.earnings, server, nowMs)
   const coherence = priceCoherenceFrom(quote, history, nowMs)
+  const records = { quote, history, dividends, earnings }
+  const status = Object.fromEntries(MCP_QUERIES.map((query) => {
+    const entry = entries[query.id]
+    const record = records[query.id]
+    return [query.entryId, record.state === 'pass' ? 'usable' : entry?.noData ? 'empty' : entry?.ok ? 'partial' : 'unavailable']
+  }))
   return {
     server,
     evidence: [quote, history, coherence.evidence, dividends, earnings],
@@ -389,13 +395,16 @@ export function buildMcpEvidence(collected, nowMs) {
     dividends,
     earnings,
     corporateCheck: corporateCheckFrom(dividends, earnings),
-    // Reported to the client so the desk can state which official sources answered.
+    // Transport answers and evidence usability are different claims: a 200 quote
+    // without a source timestamp is partial, while a 204 history is empty.
     integration: {
       server: server?.name ?? 'bitget-mcp-server',
       version: server?.version ?? null,
       requested: MCP_QUERIES.map((query) => query.entryId),
       answered: MCP_QUERIES.filter((query) => entries[query.id]?.ok).map((query) => query.entryId),
       failed: MCP_QUERIES.filter((query) => entries[query.id] && !entries[query.id].ok).map((query) => query.entryId),
+      usable: MCP_QUERIES.filter((query) => status[query.entryId] === 'usable').map((query) => query.entryId),
+      status,
     },
   }
 }

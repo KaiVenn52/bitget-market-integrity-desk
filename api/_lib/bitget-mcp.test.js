@@ -92,6 +92,15 @@ describe('stateless Bitget MCP queries', () => {
     expect(result.entries.a).toMatchObject({ ok: false, error: 'HTTP 503' })
   })
 
+  it('does not count a success-shaped upstream 204 as an answered source', async () => {
+    vi.stubGlobal('fetch', async (_url, init) => response({
+      id: JSON.parse(init.body).id,
+      result: { structuredContent: { success: true, status_code: 204, data: '', error: null } },
+    }))
+    const result = await mcpQueryMany([{ id: 'history', entryId: 'equity_price_historical' }])
+    expect(result.entries.history).toMatchObject({ ok: false, noData: true, error: 'No data (HTTP 204)' })
+  })
+
   it('preserves a provider error message', async () => {
     vi.stubGlobal('fetch', async (_url, init) => response({
       id: JSON.parse(init.body).id,

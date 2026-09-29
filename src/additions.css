@@ -95,18 +95,20 @@
 .proof-stack em.proof-source-missing { color: var(--amber); }
 @media (max-width: 900px) { .proof-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-/* Official Bitget MCP catalog readout on the passport: which entries answered. */
+/* Official Bitget MCP catalog readout: transport and evidence usability differ. */
 .source-stack { margin: 0 30px 22px; padding: 13px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
 .source-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
 .source-head b { font-size: 11px; }
 .source-head em { color: var(--muted); font-size: 10px; font-style: normal; }
-.source-stack ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 5px 14px; margin: 9px 0 0; padding: 0; list-style: none; }
+.source-stack ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 20px; margin: 9px 0 0; padding: 0; list-style: none; }
 .source-stack li { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 10px; }
-.source-stack code { font: 500 10px var(--mono); color: var(--text); }
-.source-stack li span { font: 600 9px var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+.source-stack code { min-width: 0; overflow-wrap: anywhere; font: 500 10px var(--mono); color: var(--text); }
+.source-stack li span { flex: none; font: 600 9px var(--mono); letter-spacing: .04em; text-transform: uppercase; }
 .source-ok span { color: var(--mint); }
 .source-miss span { color: var(--amber); }
 .source-miss code { color: var(--muted); }
+.source-explainer { margin: 9px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+@media (max-width: 680px) { .source-stack ul { grid-template-columns: minmax(0, 1fr); } }
 .proof-links { display: grid; gap: 6px; }
 .proof-links a { display: inline-flex; align-items: center; justify-content: space-between; gap: 9px; color: var(--text); font-size: 10px; font-weight: 650; text-decoration: none; }
 .proof-links a:hover { text-decoration: underline; text-underline-offset: 3px; }

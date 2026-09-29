@@ -93,9 +93,21 @@ export async function mcpQueryMany(queries, options = {}) {
       entries[query.id] = { ok: false, error: 'entry returned no payload', ms: call.ms }
       continue
     }
+    // A documented no-content response may still be wrapped in a successful
+    // JSON-RPC result. Neither success flag makes an empty observation usable.
+    if (payload.status_code === 204) {
+      entries[query.id] = { ok: false, noData: true, error: 'No data (HTTP 204)', ms: call.ms }
+      continue
+    }
     if (payload.success === false || payload.error) {
       const status = Number.isInteger(payload.status_code) ? `HTTP ${payload.status_code}` : null
       entries[query.id] = { ok: false, error: typeof payload.error === 'string' ? payload.error : payload.error?.message ?? status ?? 'platform reported failure', ms: call.ms }
+      continue
+    }
+    // The catalog sometimes wraps an upstream 204 as success:true with an empty
+    // string. That is not an answered evidence source or a verified empty set.
+    if (payload.data === '' || payload.data == null) {
+      entries[query.id] = { ok: false, noData: true, error: `No data${Number.isInteger(payload.status_code) ? ` (HTTP ${payload.status_code})` : ''}`, ms: call.ms }
       continue
     }
     entries[query.id] = { ok: true, data: payload.data ?? payload, ms: call.ms }

@@ -346,6 +346,31 @@ describe('buildMcpEvidence', () => {
     expect(built.integration.version).toBe('4.0.3')
     expect(built.integration.answered).toEqual(['equity_price_quote', 'equity_fundamental_dividends', 'equity_calendar'])
     expect(built.integration.failed).toEqual(['equity_price_historical'])
+    expect(built.integration.usable).toEqual(['equity_price_quote', 'equity_fundamental_dividends', 'equity_calendar'])
+    expect(built.integration.status.equity_price_historical).toBe('unavailable')
+  })
+
+  it('separates a partial quote and empty history from usable catalog evidence', () => {
+    const untimedQuote = { symbol: 'AAPL', last_price: 336.85, prev_close: 338.5 }
+    const built = buildMcpEvidence({
+      server: SERVER,
+      entries: {
+        quote: ok([untimedQuote], 'bitget_data'),
+        history: { ok: false, noData: true, error: 'No data (HTTP 204)' },
+        dividends: ok([], 'bitget_data'),
+        earnings: ok([], 'finnhub'),
+      },
+    }, AT)
+    expect(built.integration.answered).toEqual(['equity_price_quote', 'equity_fundamental_dividends', 'equity_calendar'])
+    expect(built.integration.usable).toEqual(['equity_fundamental_dividends', 'equity_calendar'])
+    expect(built.integration.status).toMatchObject({
+      equity_price_quote: 'partial',
+      equity_price_historical: 'empty',
+      equity_fundamental_dividends: 'usable',
+      equity_calendar: 'usable',
+    })
+    expect(built.quote.state).toBe('unknown')
+    expect(built.history.state).toBe('unknown')
   })
 
   it('emits all four evidence records even when nothing was collected', () => {
