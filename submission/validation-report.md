@@ -17,6 +17,18 @@ Current local verification: **262/262 tests across thirteen suites**, production
 
 Current-release browser acceptance remains **unverified**: the supported browser runtime reported that saved browser permissions could not be verified. No alternate browser or screenshot workaround was used. The previously recorded desktop/mobile results below apply to their earlier releases, not this revision. Deployment and live endpoint observations for this revision are recorded separately when confirmed.
 
+### Production endpoint checks, 2026-10-02 Malaysia time
+
+Code commit `9e82f06` was pushed. The first CLI deployment returned `Not authorized` even though identity and project reads worked. Explicitly selecting the project's `kai-venn` scope succeeded: `dpl_4oz8oBqJAi8Z6cR2yA9Ds65QktE3` reached `READY` and was aliased to `https://bitget-market-integrity-desk.vercel.app`. This is deployment and endpoint verification, not browser acceptance.
+
+- NVDA scan returned `LIVE / CAUTION`, with a 2-second-old token observation. MCP identified itself as v4.0.5; quote status was `PARTIAL`, while history/dividends/calendar were `NO DATA`. Usable count was zero, correctly not described as four working evidence sources.
+- An explicitly **caller-supplied** +83 bps / 16-hour study query returned six matched rows, each within the ±2-hour stage boundary. This verifies the matching contract, not a measured +83 bps live opportunity.
+- The default NVDA study identified the underlying session as regular and selected a historical +184 bps / 18-hour episode, excluding that example from its comparison. It returned three materially resolved same-direction matches, labelled as a small historical sample, not a live-session forecast.
+- A `feed`-lens analysis returned HTTP 200, the exact submitted question, Qwen synthesis with eight inline citation IDs resolved against server evidence, and the 12-request rate-limit header. It explicitly retained the 904-second-old underlying reference as stale. Citation-ID resolution is not proof of sentence-level entailment.
+- Running the study handler locally against this machine's network returned zero candles and an honest unavailable response. That local fetch failure did not establish a production outage; production study retrieval succeeded separately.
+
+Current-release desktop/mobile interaction, checkpoint click/save/reload/recheck and visual acceptance still require a browser walkthrough. No external-user or trading-performance claim follows from these developer checks.
+
 ## Earlier observed results (through 2026-09-30)
 
 | Check | Result | Evidence |
