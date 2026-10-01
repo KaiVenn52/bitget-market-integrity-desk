@@ -180,7 +180,7 @@ in it — a wrong dividend field name, a parallel-dispatch deadlock, and a check
 read raw MCP entries instead of parsed events — were each found only by testing
 against live responses.
 
-The browser sends only a symbol and a question to `/api/analyze`. Every record the
+The browser sends a symbol, question and whitelisted research lens to `/api/analyze`. Every record the
 answer rests on is retrieved, timestamped and ranked server-side, so a client can
 never supply its own evidence and have the model endorse it. The model does not
 calculate premiums, drift or timing, does not rank catalysts, does not predict
