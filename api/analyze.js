@@ -15,6 +15,7 @@ import {
 } from './_lib/analysis.js'
 import {
   attempt,
+  closedCandles,
   fetchCandles,
   fetchHeadlines,
   fetchDailyCloses,
@@ -93,6 +94,13 @@ export default async function handler(req, res) {
   const body = req.body ?? {}
   const symbol = String(body.symbol || '')
   const question = String(body.question || `Why did ${symbol} move?`).slice(0, 400)
+  const lensTasks = {
+    integrity: 'Focus on whether the observable market state is fit for further human research.',
+    news: 'Test the short-term news explanation: distinguish a missing material move, a timing-consistent candidate, and missing news evidence. Timing does not prove causation.',
+    overnight: 'Focus on the observed closed-market drift and what remains unconfirmed until the underlying can reprice. Do not invent historical outcomes: history is supplied separately to the desk.',
+    feed: 'Test the stale-reference explanation: distinguish a fresh live quote, a stale quote, an expected prior close, and an absent reference. Missing is not stale.',
+  }
+  const lens = typeof body.lens === 'string' && Object.hasOwn(lensTasks, body.lens) ? body.lens : 'integrity'
   const meta = INSTRUMENTS.get(symbol)
   if (!meta) return res.status(400).json({ error: 'Unsupported symbol' })
 
@@ -110,7 +118,7 @@ export default async function handler(req, res) {
 
     const now = Date.now()
     const token = (tickerResult.data ?? []).find?.((item) => String(item.symbol).toLowerCase() === symbol.toLowerCase()) ?? tickerResult.data?.[0] ?? null
-    const candles = (candleResult.data ?? []).map(toCandle).filter((row) => Number.isFinite(row.timestamp) && Number.isFinite(row.close)).sort((a, b) => a.timestamp - b.timestamp)
+    const candles = closedCandles((candleResult.data ?? []).map(toCandle), 300_000, now)
 
     const session = sessionOf(now)
     const reference = pickReference(referenceQuotes, now, { dailyCloses })
@@ -227,7 +235,7 @@ export default async function handler(req, res) {
             // without costing the quality the desk is judged on.
             reasoning: { effort: 'low' },
             input: [
-              { role: 'system', content: [{ type: 'input_text', text: systemPrompt }] },
+              { role: 'system', content: [{ type: 'input_text', text: `${systemPrompt}\n${lensTasks[lens]}` }] },
               { role: 'user', content: [{ type: 'input_text', text: JSON.stringify({ researchQuestion: question, instrument: symbol, metrics: { move, drift, spread, turnover, session, referenceStale: reference.stale }, verdicts, evidence: evidence.map(({ id, title, summary, source, retrievedAt }) => ({ id, title, summary, source, retrievedAt })) }) }] },
             ],
           }),

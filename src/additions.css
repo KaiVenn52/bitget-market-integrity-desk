@@ -454,6 +454,30 @@
 
 /* Historical stress test ---------------------------------------------------- */
 
+.research-lens { display: grid; gap: 7px; margin-top: 14px; }
+.research-lens label { color: #c5ced3; font-size: 11px; }
+.research-lens select { width: 100%; min-width: 0; min-height: 40px; border: 1px solid #596873; border-radius: 9px; padding: 8px 12px; background: #17252d; color: #fffdf8; font: inherit; font-size: 12px; }
+.hypothesis-result { margin: 0 24px 20px; padding: 20px; border: 1px solid var(--line-strong); border-left: 3px solid var(--blue); border-radius: 10px; background: var(--surface); }
+.hypothesis-contradicted { border-left-color: var(--coral); }
+.hypothesis-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--muted); }
+.hypothesis-heading strong { color: var(--text); font: 600 11px var(--mono); }
+.hypothesis-result h3 { margin: 12px 0 8px; font-size: 17px; }
+.hypothesis-result p { margin: 8px 0; font-size: 12px; line-height: 1.65; }
+.hypothesis-next b { display: block; font-size: 10px; text-transform: uppercase; color: var(--muted); }
+.hypothesis-result summary { cursor: pointer; font-size: 12px; margin-top: 14px; }
+.hypothesis-result ul { display: grid; gap: 12px; padding-left: 16px; }
+.hypothesis-result li { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.hypothesis-result li span, .hypothesis-result li small { display: block; }
+.hypothesis-result li small { color: var(--muted); font-size: 10px; }
+.checkpoint-rule { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 16px 0; }
+.checkpoint-rule.has-threshold { grid-template-columns: minmax(0, 1fr) minmax(0, .4fr); }
+.checkpoint-rule label { display: block; margin-bottom: 8px; font-size: 11px; font-weight: 600; }
+.checkpoint-rule select, .checkpoint-rule input { width: 100%; min-width: 0; min-height: 42px; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
+.checkpoint-condition { border-left: 3px solid var(--blue); padding: 12px 16px; margin: 12px 0; background: var(--surface); font-size: 12px; }
+.checkpoint-condition p { margin: 8px 0 0; line-height: 1.6; }
+.condition-triggered { border-left-color: var(--coral); }
+@media (max-width: 720px) { .hypothesis-result { margin: 0 14px 16px; padding: 16px; } .checkpoint-rule.has-threshold { grid-template-columns: 1fr; } }
+
 .study-view .view-heading { align-items: center; }
 .study-symbols { display: flex; flex-wrap: wrap; gap: 6px; width: fit-content; margin: -18px 0 18px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 253, 248, .64); }
 .study-symbols button { min-height: 34px; border: 0; border-radius: 999px; padding: 0 15px; background: transparent; color: var(--muted); font: 600 12px var(--mono); transition: background-color 100ms var(--ease-out), color 100ms var(--ease-out); }

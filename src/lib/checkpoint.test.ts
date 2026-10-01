@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { snapshotFor } from '../data/snapshots'
-import type { Passport } from '../types'
+import type { MoveAnalysis, Passport } from '../types'
 import { compareCheckpoint, makeCheckpoint, readCheckpoint, removeCheckpoint, saveCheckpoint } from './checkpoint'
 import { buildDecisionMemo } from './decision'
 
@@ -115,5 +115,26 @@ describe('thesis checkpoint', () => {
     const later = { ...livePassport(), scannedAt: laterAt }
     const memo = { ...buildDecisionMemo(later, null), referenceBasis: 'Reported prior close, not a live quote.' }
     expect(compareCheckpoint(saved, later, memo, null).referenceChanged).toBe(true)
+  })
+
+  it('persists a structured condition and evaluates it on a later same-tier live observation', () => {
+    mockStorage()
+    const passport = { ...livePassport(), tokenQuoteAge: 1 }
+    const analysis = { symbol: passport.instrument.symbol, evidence: [], metrics: { drift: { currentBps: 42 } }, reference: { chosen: { price: 225 }, kind: 'reported-close', stale: true } } as unknown as MoveAnalysis
+    const saved = makeCheckpoint(passport, analysis, buildDecisionMemo(passport, null), 'The overnight gap persists.', 'A gap inside 20 bps changes my thesis.', observedAt, { intent: 'overnight', conditionRule: { metric: 'gap-within', thresholdBps: 20 } })!
+    expect(saveCheckpoint(saved)).toBe(true)
+    expect(readCheckpoint(passport.instrument.symbol)?.conditionRule?.thresholdBps).toBe(20)
+    const later = { ...passport, scannedAt: laterAt, premiumBps: 10 }
+    const nextAnalysis = { ...analysis, metrics: { ...analysis.metrics, drift: { ...analysis.metrics.drift, currentBps: 10 } } }
+    expect(compareCheckpoint(saved, later, buildDecisionMemo(later, null), nextAnalysis).condition?.status).toBe('TRIGGERED')
+  })
+
+  it('rejects malformed machine conditions while retaining older manual checkpoints', () => {
+    const values = mockStorage()
+    const saved = checkpoint()
+    values.set('mid.thesis-checkpoint.v1.rNVDAUSDT', JSON.stringify({ ...saved, conditionRule: { metric: 'gap-within', thresholdBps: -1 } }))
+    expect(readCheckpoint(saved.symbol)).toBeNull()
+    values.set('mid.thesis-checkpoint.v1.rNVDAUSDT', JSON.stringify(saved))
+    expect(readCheckpoint(saved.symbol)).not.toBeNull()
   })
 })

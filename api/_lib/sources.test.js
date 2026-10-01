@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { parseStockQuoteCandidates } from './sources.js'
+import { closedCandles, parseStockQuoteCandidates } from './sources.js'
 import { pickReference } from './analysis.js'
+
+describe('closed candle boundary', () => {
+  it('excludes forming and future bars, retaining a bar only when its full interval ended', () => {
+    const now = Date.parse('2026-10-02T19:30:00Z')
+    const rows = [19, 18, 20].map((hour) => ({ timestamp: Date.parse(`2026-10-02T${hour}:00:00Z`), close: 100 }))
+    expect(closedCandles(rows, 3_600_000, now).map((row) => new Date(row.timestamp).getUTCHours())).toEqual([18])
+    expect(closedCandles(rows, 3_600_000, now + 1_800_000).map((row) => new Date(row.timestamp).getUTCHours())).toEqual([18, 19])
+  })
+})
 
 describe('Stock+ quote response parsing', () => {
   const row = {

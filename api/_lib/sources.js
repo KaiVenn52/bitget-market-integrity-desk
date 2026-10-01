@@ -57,6 +57,11 @@ export async function attempt(fn, fallback) {
   try { return await fn() } catch (error) { return { ...fallback, error: sanitize(error instanceof Error ? error.message : error) } }
 }
 
+/** A returned latest candle may still be forming. Never call it closed. */
+export const closedCandles = (rows, intervalMs, now = Date.now()) => (rows ?? [])
+  .filter((row) => Number.isFinite(row?.timestamp) && Number.isFinite(row?.close) && row.timestamp + intervalMs <= now)
+  .sort((a, b) => a.timestamp - b.timestamp)
+
 export const toCandle = (row) => ({
   timestamp: Number(row[0]),
   open: Number(row[1]), high: Number(row[2]), low: Number(row[3]), close: Number(row[4]),

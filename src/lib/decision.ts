@@ -1,4 +1,5 @@
 import type { CheckState, MoveAnalysis, Passport, StudyResult } from '../types'
+import { assessThesis, type ThesisKind } from './thesis'
 
 export type DeskDisposition = 'READY' | 'INVESTIGATE' | 'WAIT' | 'REJECT_THESIS'
 
@@ -31,7 +32,7 @@ const dispositionCopy: Record<DeskDisposition, { label: string; headline: string
   READY: { label: 'Ready for human review', headline: 'The observable market state clears the desk checks.' },
   INVESTIGATE: { label: 'Investigate', headline: 'The thesis has unresolved evidence that needs review.' },
   WAIT: { label: 'Wait for confirmation', headline: 'A required reference is missing, stale, or internally inconsistent.' },
-  REJECT_THESIS: { label: 'Reject current thesis', headline: 'There is no measured repricing event to explain.' },
+  REJECT_THESIS: { label: 'Revisit this catalyst claim', headline: 'The measured record contradicts this short-term explanation.' },
 }
 
 // When the underlying cannot trade, the desk's reference is deliberately two-tier: the
@@ -60,7 +61,7 @@ function baseRateOf(study: StudyResult | null): DecisionBaseRate | null {
   }
 }
 
-export function buildDecisionMemo(passport: Passport, analysis: MoveAnalysis | null, study: StudyResult | null = null): DecisionMemoData {
+export function buildDecisionMemo(passport: Passport, analysis: MoveAnalysis | null, study: StudyResult | null = null, intent: ThesisKind = 'integrity'): DecisionMemoData {
   const failed = passport.checks.filter((check) => check.state === 'fail')
   const cautions = passport.checks.filter((check) => check.state === 'caution')
   const unknown = passport.checks.filter((check) => check.state === 'unknown')
@@ -76,7 +77,7 @@ export function buildDecisionMemo(passport: Passport, analysis: MoveAnalysis | n
 
   let disposition: DeskDisposition
   if (passport.state === 'UNVERIFIABLE' || referenceFailure) disposition = 'WAIT'
-  else if (analysis?.verdicts.likelyCatalyst.state === 'NO_MATERIAL_MOVE') disposition = 'REJECT_THESIS'
+  else if (intent === 'news' && assessThesis(intent, passport, analysis).status === 'CONTRADICTED') disposition = 'REJECT_THESIS'
   else if (passport.state === 'CAUTION' || failed.length || cautions.length) disposition = 'INVESTIGATE'
   else disposition = 'READY'
 
@@ -117,7 +118,7 @@ export function buildDecisionMemo(passport: Passport, analysis: MoveAnalysis | n
   const changeConditions = unique([...modelConditions, passport.researchAction]).slice(0, 3)
 
   const rationale = disposition === 'REJECT_THESIS'
-    ? analysis?.metrics.move.reason ?? 'No move crossed the desk event threshold.'
+    ? assessThesis(intent, passport, analysis).detail
     : disposition === 'WAIT'
       ? reportedClose
         ? referenceBasis ?? passport.brief

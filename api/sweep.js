@@ -24,7 +24,7 @@ import {
   turnoverAcceleration,
 } from './_lib/analysis.js'
 import { evaluateGate, summarizeSweep } from './_lib/gate.js'
-import { attempt, fetchCandles, fetchDailyCloses, fetchReferenceQuotes, fetchTicker, INSTRUMENTS, SYMBOLS, toCandle } from './_lib/sources.js'
+import { attempt, closedCandles, fetchCandles, fetchDailyCloses, fetchReferenceQuotes, fetchTicker, INSTRUMENTS, SYMBOLS, toCandle } from './_lib/sources.js'
 
 export const config = { maxDuration: 30 }
 
@@ -130,10 +130,7 @@ async function sweepOne(symbol, meta, signal) {
   ])
 
   const token = (tickerResult.data ?? []).find?.((item) => String(item.symbol).toLowerCase() === symbol.toLowerCase()) ?? tickerResult.data?.[0] ?? null
-  const candles = (candleResult.data ?? [])
-    .map(toCandle)
-    .filter((row) => Number.isFinite(row.timestamp) && Number.isFinite(row.close))
-    .sort((a, b) => a.timestamp - b.timestamp)
+  const candles = closedCandles((candleResult.data ?? []).map(toCandle), 300_000, now)
 
   const tokenPrice = Number(token?.lastPrice)
   const tokenAge = Number.isFinite(tokenPrice)

@@ -1,5 +1,6 @@
 import type { DecisionMemoData, DeskDisposition } from './decision'
 import type { CheckState, EvidenceItem, MoveAnalysis, Passport } from '../types'
+import { evaluateCondition, isThesisKind, researchGap, validCondition, type ConditionResult, type ConditionRule, type ThesisKind } from './thesis'
 
 const STORAGE_PREFIX = 'mid.thesis-checkpoint.v1.'
 const SUPPORTED_SYMBOLS = new Set(['rNVDAUSDT', 'rAAPLUSDT', 'rTSLAUSDT', 'rQQQUSDT'])
@@ -10,6 +11,10 @@ export interface ThesisCheckpoint {
   scannedAt: string
   thesis: string
   changeCondition: string
+  intent?: ThesisKind
+  conditionRule?: ConditionRule
+  referenceKind?: string | null
+  referenceCloseDate?: string | null
   disposition: DeskDisposition
   referenceBasis: string | null
   premiumBps: number | null
@@ -24,6 +29,7 @@ export interface CheckpointReview {
   premiumDeltaBps: number | null
   checkChanges: { id: string; title: string; before: string; after: string }[]
   evidenceChanges: { id: string; title: string; before: string; after: string }[]
+  condition?: ConditionResult
 }
 
 const storage = (): Storage | null => {
@@ -33,11 +39,12 @@ const storage = (): Storage | null => {
 const validDate = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value))
 const validState = (value: unknown): value is CheckState => ['pass', 'caution', 'fail', 'unknown'].includes(String(value))
 
-export function makeCheckpoint(passport: Passport, analysis: MoveAnalysis | null, memo: DecisionMemoData, thesis: string, changeCondition: string, savedAt = new Date().toISOString()): ThesisCheckpoint | null {
+export function makeCheckpoint(passport: Passport, analysis: MoveAnalysis | null, memo: DecisionMemoData, thesis: string, changeCondition: string, savedAt = new Date().toISOString(), options?: { intent: ThesisKind; conditionRule: ConditionRule }): ThesisCheckpoint | null {
   if (passport.mode !== 'live' || !SUPPORTED_SYMBOLS.has(passport.instrument.symbol) || !validDate(passport.scannedAt)) return null
   const cleanThesis = thesis.trim().slice(0, 500)
   const cleanCondition = changeCondition.trim().slice(0, 300)
   if (!cleanThesis || !cleanCondition) return null
+  if (options && (!isThesisKind(options.intent) || !validCondition(options.conditionRule))) return null
   const evidence = new Map<string, ThesisCheckpoint['evidence'][number]>()
   for (const item of [...passport.evidence, ...(analysis?.symbol === passport.instrument.symbol ? analysis.evidence : [])]) {
     if (evidence.size >= 40 && !evidence.has(item.id)) break
@@ -49,9 +56,10 @@ export function makeCheckpoint(passport: Passport, analysis: MoveAnalysis | null
     scannedAt: passport.scannedAt,
     thesis: cleanThesis,
     changeCondition: cleanCondition,
+    ...(options ? { intent: options.intent, conditionRule: options.conditionRule, referenceKind: analysis?.reference?.kind ?? null, referenceCloseDate: analysis?.reference?.closeDateKey ?? null } : {}),
     disposition: memo.disposition,
     referenceBasis: memo.referenceBasis,
-    premiumBps: passport.premiumBps,
+    premiumBps: options ? researchGap(passport, analysis) : passport.premiumBps,
     checks: passport.checks.map(({ id, title, state, result }) => ({ id, title, state, result })),
     evidence: [...evidence.values()],
   }
@@ -64,6 +72,10 @@ function isCheckpoint(value: unknown, symbol: string): value is ThesisCheckpoint
     && validDate(item.savedAt) && validDate(item.scannedAt)
     && typeof item.thesis === 'string' && item.thesis.length <= 500
     && typeof item.changeCondition === 'string' && item.changeCondition.length <= 300
+    && (item.intent === undefined || isThesisKind(item.intent))
+    && (item.conditionRule === undefined || validCondition(item.conditionRule))
+    && (item.referenceKind === undefined || item.referenceKind === null || ['live-quote', 'reported-close'].includes(item.referenceKind))
+    && (item.referenceCloseDate === undefined || item.referenceCloseDate === null || (typeof item.referenceCloseDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item.referenceCloseDate)))
     && ['READY', 'INVESTIGATE', 'WAIT', 'REJECT_THESIS'].includes(String(item.disposition))
     && (item.referenceBasis === null || typeof item.referenceBasis === 'string')
     && (item.premiumBps === null || (typeof item.premiumBps === 'number' && Number.isFinite(item.premiumBps)))
@@ -126,13 +138,15 @@ export function compareCheckpoint(saved: ThesisCheckpoint, passport: Passport, m
     evidenceChanges.push({ id, title: item.title, before: before ? `${before.state} · ${before.summary}` : 'not recorded', after: `${item.state} · ${item.summary}` })
   }
   for (const before of saved.evidence) if (!currentEvidence.has(before.id)) evidenceChanges.push({ id: before.id, title: before.title, before: `${before.state} · ${before.summary}`, after: 'not returned in this scan' })
+  const currentGap = saved.conditionRule ? researchGap(passport, analysis) : passport.premiumBps
 
   return {
     ready: true,
     decisionChanged: saved.disposition !== memo.disposition,
     referenceChanged: saved.referenceBasis !== memo.referenceBasis,
-    premiumDeltaBps: saved.premiumBps === null || passport.premiumBps === null ? null : passport.premiumBps - saved.premiumBps,
+    premiumDeltaBps: saved.premiumBps === null || currentGap === null ? null : currentGap - saved.premiumBps,
     checkChanges,
     evidenceChanges,
+    condition: evaluateCondition(saved.conditionRule, saved.premiumBps, saved.referenceKind ?? null, passport, analysis, saved.referenceCloseDate),
   }
 }

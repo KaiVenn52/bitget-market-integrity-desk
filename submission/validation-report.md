@@ -1,13 +1,23 @@
 # Validation Record
 
-Updated: 2026-09-30 (Malaysia time)
+Updated: 2026-10-02 (Malaysia time)
 Scope: local engine, public production workflow, and three adversarial review rounds
 Operator: project developer
 
 This record is linked directly from the deployed desk. Every row below was observed on
 the date shown, and rows that describe an earlier state say so.
 
-## Observed results
+## 2026-10-02 research-loop revision
+
+The current revision adds explicit market-readiness, news, overnight and stale-reference research lenses, a bounded evidence-backed hypothesis assessment, and structured observable checkpoint conditions. Free-text investment theses remain human judgments; headline timing remains non-causal. Missing and stale evidence are distinct. Rechecks preserve the selected lens and do not compare gaps across reference-tier or reported-close-date changes.
+
+Historical matching now constrains the observation stage to ±2 hours. Forming candles and unfinished following-session outcomes are excluded. Entering Stress from the memo preserves the exact comparison rather than silently loading a different target. Live-session premiums are not repurposed as token-versus-session-close drift.
+
+Current local verification: **262/262 tests across thirteen suites**, production build, lint and diff checks. Three component-render tests verify the first-save condition selector is inside the form, the focused hypothesis panel does not reject an unrelated generic question, and the memo comparison renders immediately in Stress. Additional session-clock regressions prevent a pre-bell hourly bar from making a currently open market appear closed, or an old candle from becoming a live target. These are automated contracts, **not browser interaction or visual QA**.
+
+Current-release browser acceptance remains **unverified**: the supported browser runtime reported that saved browser permissions could not be verified. No alternate browser or screenshot workaround was used. The previously recorded desktop/mobile results below apply to their earlier releases, not this revision. Deployment and live endpoint observations for this revision are recorded separately when confirmed.
+
+## Earlier observed results (through 2026-09-30)
 
 | Check | Result | Evidence |
 |---|---:|---|

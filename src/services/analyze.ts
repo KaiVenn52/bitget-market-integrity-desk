@@ -1,14 +1,15 @@
 import type { MoveAnalysis } from '../types'
+import type { ThesisKind } from '../lib/thesis'
 
 const ANALYSIS_TIMEOUT_MS = 45_000
 export type AnalysisProgress = (message: string) => void
 
 /**
- * Ask the server to explain a repricing. The browser sends only a symbol and the
- * trader's question: every record the answer rests on is retrieved, timestamped
+ * Ask the server to explain a repricing. The browser sends a symbol, question and
+ * whitelisted research lens: every record the answer rests on is retrieved, timestamped
  * and ranked server-side, so the client cannot supply its own evidence.
  */
-export async function runAnalysis(symbol: string, question: string, onProgress?: AnalysisProgress): Promise<MoveAnalysis | null> {
+export async function runAnalysis(symbol: string, question: string, onProgress?: AnalysisProgress, lens: ThesisKind = 'integrity'): Promise<MoveAnalysis | null> {
   onProgress?.('Retrieving Bitget records and timestamped headlines.')
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT_MS)
@@ -16,7 +17,7 @@ export async function runAnalysis(symbol: string, question: string, onProgress?:
     const response = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ symbol, question }),
+      body: JSON.stringify({ symbol, question, lens }),
       signal: controller.signal,
     })
     if (!response.ok) {

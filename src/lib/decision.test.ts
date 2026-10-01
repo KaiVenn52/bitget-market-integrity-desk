@@ -5,14 +5,16 @@ import { buildDecisionMemo } from './decision'
 
 const passport = (overrides: Partial<Passport> = {}): Passport => ({
   ...snapshotFor('rNVDAUSDT'),
+  mode: 'live', tokenQuoteAge: 2,
   state: 'PASS',
   checks: snapshotFor('rNVDAUSDT').checks.map((check) => ({ ...check, state: 'pass' as const })),
   ...overrides,
 })
 
 const noMoveAnalysis = {
+  symbol: 'rNVDAUSDT', evidence: [],
   verdicts: { likelyCatalyst: { state: 'NO_MATERIAL_MOVE' }, whatWouldChange: ['A move above 20 bps.'], headlines: [] },
-  metrics: { move: { detected: false, reason: 'Largest measured move was 9 bps.' } },
+  metrics: { move: { detected: false, reason: 'Largest measured move was 9 bps.', candlesUsed: 50 } },
 } as unknown as MoveAnalysis
 
 const closedMarketStudy = {
@@ -34,9 +36,14 @@ describe('decision memo', () => {
   })
 
   it('rejects a catalyst thesis when there is no material move', () => {
-    const result = buildDecisionMemo(passport(), noMoveAnalysis)
+    const result = buildDecisionMemo(passport(), noMoveAnalysis, null, 'news')
     expect(result.disposition).toBe('REJECT_THESIS')
     expect(result.changeConditions).toContain('A move above 20 bps.')
+  })
+
+  it('does not reject a generic or overnight thesis just because the short-term tape is quiet', () => {
+    expect(buildDecisionMemo(passport(), noMoveAnalysis).disposition).not.toBe('REJECT_THESIS')
+    expect(buildDecisionMemo(passport(), noMoveAnalysis, null, 'overnight').disposition).not.toBe('REJECT_THESIS')
   })
 
   it('investigates a caution state instead of presenting it as cleared', () => {

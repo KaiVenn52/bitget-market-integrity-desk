@@ -31,10 +31,10 @@ function EpisodeRow({ item }: { item: StudyResult['matched'][number] }) {
   </tr>
 }
 
-export function StressTest({ symbol, onSymbol }: { symbol: string; onSymbol: (next: string) => void }) {
-  const [result, setResult] = useState<StudyResult | null>(null)
-  const [note, setNote] = useState('Retrieving closed-market history.')
-  const [loadedSymbol, setLoadedSymbol] = useState<string | null>(null)
+export function StressTest({ symbol, onSymbol, seed = null }: { symbol: string; onSymbol: (next: string) => void; seed?: StudyResult | null }) {
+  const [result, setResult] = useState<StudyResult | null>(seed)
+  const [note, setNote] = useState(seed ? 'Showing the exact comparison attached to the decision memo.' : 'Retrieving closed-market history.')
+  const [loadedSymbol, setLoadedSymbol] = useState<string | null>(seed?.symbol ?? null)
   const [busy, setBusy] = useState(false)
   const [showAll, setShowAll] = useState(false)
 
@@ -50,18 +50,19 @@ export function StressTest({ symbol, onSymbol }: { symbol: string; onSymbol: (ne
 
   const rerun = useCallback((next: string) => {
     setBusy(true)
-    void runStudy(next, undefined, setNote).then((payload) => applyResult(next, payload))
-  }, [applyResult])
+    void runStudy(next, seed?.target.driftBps ?? undefined, setNote, { stageHours: seed?.target.stageHours }).then((payload) => applyResult(next, payload))
+  }, [applyResult, seed])
 
   // The instrument on screen is the only one whose result may be shown, so a
   // response that arrives after the user has already switched is discarded.
   useEffect(() => {
+    if (seed) return
     let cancelled = false
     void runStudy(symbol, undefined, setNote).then((payload) => {
       if (!cancelled) applyResult(symbol, payload)
     })
     return () => { cancelled = true }
-  }, [symbol, applyResult])
+  }, [symbol, applyResult, seed])
 
   return <main className="content-view study-view">
     <div className="view-heading">
@@ -79,6 +80,7 @@ export function StressTest({ symbol, onSymbol }: { symbol: string; onSymbol: (ne
       {SYMBOLS.map((item) => <button key={item} className={item === symbol ? 'active' : ''} onClick={() => onSymbol(item)} disabled={running}>{item.replace('USDT', '')}</button>)}
     </div>
     <p className="gate-note" aria-live="polite">{note}</p>
+    {seed ? <p className="study-context">Memo comparison captured {seed.generatedAt}. The target and matched rows are preserved on entry. Re-run refreshes the historical records for this same target.</p> : null}
 
     {!result && !running ? <section className="panel limitations" aria-label="Stress test unavailable">
       <h2><TriangleAlert size={15} aria-hidden /> The stress test could not be completed</h2>
@@ -98,7 +100,7 @@ export function StressTest({ symbol, onSymbol }: { symbol: string; onSymbol: (ne
 
         <dl className="study-facts">
           <div><dt>Drift tested</dt><dd>{bps(result.target.driftBps)}<small>{result.target.source}</small></dd></div>
-          <div><dt>Band</dt><dd>±{result.target.bandBps} bps<small>minimum {result.target.minWindowHours}h window</small></dd></div>
+          <div><dt>Band</dt><dd>±{result.target.bandBps} bps<small>{result.target.stageHours != null ? `stage ${Math.round(result.target.stageHours * 10) / 10}h ±${result.target.stageToleranceHours ?? 2}h` : `minimum ${result.target.minWindowHours}h window`}</small></dd></div>
           <div><dt>Episodes built</dt><dd>{result.coverage.episodes}<small>{result.coverage.resolved} with a following session</small></dd></div>
           <div><dt>Yahoo closes</dt><dd>{result.coverage.withUnderlying}<small>{result.coverage.withUnderlying ? 'underlying outcomes measured' : 'rToken resolution used'}</small></dd></div>
         </dl>

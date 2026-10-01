@@ -9,7 +9,7 @@
 // a forecast, and the endpoint never returns a trade recommendation.
 
 import { MOVE_THRESHOLD_BPS, sessionLabel, sessionOf } from './_lib/analysis.js'
-import { attempt, fetchCandles, fetchDailyCloses, INSTRUMENTS, toCandle } from './_lib/sources.js'
+import { attempt, closedCandles, fetchCandles, fetchDailyCloses, INSTRUMENTS, toCandle } from './_lib/sources.js'
 import { attachUnderlyingOutcomes, buildEpisodes, driftDistribution, matchEpisodes, outcomeStats, stressTestVerdict } from './_lib/study.js'
 
 export const config = { maxDuration: 30 }
@@ -22,16 +22,19 @@ const DEFAULT_BAND_BPS = 100
 const DEFAULT_MIN_WINDOW_HOURS = 2
 
 /** Drift of the most recent closed candle against the last session close before it. */
-function currentState(candles) {
+export function currentState(candles, now = Date.now()) {
   const last = candles[candles.length - 1]
   if (!last) return null
-  const session = sessionOf(last.timestamp)
+  // The latest closed bar can start before the opening bell. Its timestamp must
+  // not make a currently open underlying market appear closed for another hour.
+  const session = sessionOf(now)
   let anchor = null
   for (let index = candles.length - 1; index >= 0; index -= 1) {
     if (sessionOf(candles[index].timestamp) === 'regular') { anchor = candles[index]; break }
   }
   const anchorPrice = anchor && anchor.timestamp <= last.timestamp ? anchor.close : null
-  const driftBps = Number.isFinite(anchorPrice) && anchorPrice > 0 ? Math.round(((last.close - anchorPrice) / anchorPrice) * 10_000) : null
+  const recent = now - last.timestamp <= 2 * 3_600_000 && last.timestamp <= now
+  const driftBps = recent && Number.isFinite(anchorPrice) && anchorPrice > 0 ? Math.round(((last.close - anchorPrice) / anchorPrice) * 10_000) : null
   return {
     lastCandleMs: last.timestamp,
     lastClose: last.close,
@@ -61,10 +64,7 @@ export default async function handler(req, res) {
       fetchDailyCloses(meta.ticker),
     ])
 
-    const candles = (candleResult.data ?? [])
-      .map(toCandle)
-      .filter((row) => Number.isFinite(row.timestamp) && Number.isFinite(row.close))
-      .sort((a, b) => a.timestamp - b.timestamp)
+    const candles = closedCandles((candleResult.data ?? []).map(toCandle), 3_600_000)
 
     if (candles.length < 48) {
       return res.status(200).json({
@@ -102,11 +102,19 @@ export default async function handler(req, res) {
     }
 
     const material = Number.isFinite(targetDriftBps) && Math.abs(targetDriftBps) >= MOVE_THRESHOLD_BPS
+    const requestedStage = req.query?.stageHours === undefined ? NaN : Number(req.query.stageHours)
+    const stageHours = Number.isFinite(requestedStage) && requestedStage >= 0 && requestedStage <= 168
+      ? requestedStage
+      : targetSource === 'most recent closed-market episode'
+        ? (latestEpisode.peakMs - latestEpisode.anchorMs) / 3_600_000
+        : current && !current.underlyingTradable && Number.isFinite(current.anchorMs) && current.driftBps !== null
+          ? (current.lastCandleMs - current.anchorMs) / 3_600_000 : null
+    const stageToleranceHours = 2
     // When the example is itself a past episode, it must not also be counted as its own
     // precedent: matching an episode against a pool containing itself adds a guaranteed
     // zero-distance "same direction" row and inflates every count.
     const excludeAnchorMs = targetSource === 'most recent closed-market episode' ? latestEpisode.anchorMs : null
-    const matched = material ? matchEpisodes(episodes, targetDriftBps, { bandBps, minWindowHours, excludeAnchorMs }) : []
+    const matched = material ? matchEpisodes(episodes, targetDriftBps, { bandBps, minWindowHours, excludeAnchorMs, stageHours, stageToleranceHours }) : []
     const stats = outcomeStats(matched)
     const verdict = !material
       ? {
@@ -117,10 +125,11 @@ export default async function handler(req, res) {
         tone: 'unknown',
       }
       : stressTestVerdict(targetDriftBps, stats, bandBps)
+    if (stageHours !== null) verdict.detail += ` Matching is also restricted to observations within ±${stageToleranceHours} hours of the target's ${Math.round(stageHours * 10) / 10}-hour stage after the last session bar.`
     const targetContext = targetSource === 'live closed-market drift'
       ? `The underlying market is closed and the token is ${targetDriftBps} bps from its last session close.`
       : targetSource === 'most recent closed-market episode'
-        ? `The underlying market is open, so there is no live token-side drift to test. The comparison below uses the most recent closed-market episode (${new Date(latestEpisode.anchorMs).toISOString().slice(0, 10)}, peak ${latestEpisode.peakDriftBps} bps) as the example, and that episode is excluded from the sample it is compared against.`
+        ? `No usable live closed-market drift is available to test. The comparison below uses the most recent closed-market episode (${new Date(latestEpisode.anchorMs).toISOString().slice(0, 10)}, peak ${latestEpisode.peakDriftBps} bps) as the historical example, and that episode is excluded from the sample it is compared against.`
         : targetSource === 'requested'
           ? `The drift being tested was supplied by the caller (${targetDriftBps} bps).`
           : 'No drift was available to test.'
@@ -132,7 +141,7 @@ export default async function handler(req, res) {
       { id: 'distribution', title: 'Drift distribution', summary: `${distribution.observations} closed-market observations; median ${distribution.medianAbsBps} bps, 90th percentile ${distribution.p90AbsBps} bps, maximum ${distribution.maxAbsBps} bps; ${distribution.aboveThresholdPct}% beyond the 20 bps alignment threshold.`, state: 'pass', source: 'Deterministic computation over candles', endpoint: 'Derived', retrievedAt: new Date().toISOString() },
       { id: 'matched', title: 'Matched historical episodes', summary: `${matched.length} earlier same-direction episodes were within ${bandBps} bps of the ${targetDriftBps} bps being tested at a point that was observable while the market was shut${excludeAnchorMs ? '; the example episode is excluded from this sample' : ''}.`, state: matched.length ? 'pass' : 'unknown', source: 'Deterministic point-in-time episode matching', endpoint: 'Derived', retrievedAt: new Date().toISOString() },
       { id: 'underlying-closes', title: 'Yahoo-reported underlying daily closes', summary: daily.note, state: daily.closes.length ? 'pass' : 'unknown', source: 'Yahoo Finance chart API', endpoint: '/v8/finance/chart?interval=1d', retrievedAt: new Date().toISOString() },
-      { id: 'session', title: 'Session context', summary: current ? `The latest candle belongs to the ${current.sessionLabel}; the underlying ${current.underlyingTradable ? 'can' : 'cannot'} currently reprice.` : 'Session context unavailable.', state: 'pass', source: 'US equity session calendar (America/New_York)', endpoint: 'Derived', retrievedAt: new Date().toISOString() },
+      { id: 'session', title: 'Session context', summary: current ? `The current calendar classifies the ${current.sessionLabel}; the underlying ${current.underlyingTradable ? 'can' : 'cannot'} currently reprice. Latest closed candle began ${new Date(current.lastCandleMs).toISOString()}.` : 'Session context unavailable.', state: 'pass', source: 'US equity session calendar (America/New_York)', endpoint: 'Derived', retrievedAt: new Date().toISOString() },
     ]
 
     return res.status(200).json({
@@ -143,7 +152,7 @@ export default async function handler(req, res) {
       mode: 'live',
       reasoningMode: 'rules',
       lookback: { candles: candles.length, from: new Date(candles[0].timestamp).toISOString(), to: new Date(candles[candles.length - 1].timestamp).toISOString() },
-      target: { driftBps: targetDriftBps, bandBps, minWindowHours, source: targetSource, material, context: targetContext },
+      target: { driftBps: targetDriftBps, bandBps, minWindowHours, source: targetSource, material, context: targetContext, stageHours, stageToleranceHours },
       current,
       distribution,
       stats: (({ rows, ...rest }) => rest)(stats),

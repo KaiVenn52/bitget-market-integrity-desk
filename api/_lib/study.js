@@ -77,6 +77,10 @@ export function buildEpisodes(candles, options = {}) {
     if (!points.length) continue
     const peak = points.reduce((best, point) => (Math.abs(point.driftBps) > Math.abs(best.driftBps) ? point : best), points[0])
     const lastSessionRow = sessionRows[sessionRows.length - 1]
+    // An ongoing following session is not its eventual close. Only a closed
+    // hourly bar ending at the session boundary (or later closed-market bars)
+    // establishes a completed outcome; a partial morning must remain unresolved.
+    const sessionComplete = lastSessionRow && sessionOf(lastSessionRow.timestamp + 3_600_000) !== 'regular'
     const resolutionBps = lastSessionRow ? bpsBetween(lastSessionRow.close, anchorPrice) : null
     // Excursions are measured against the anchor in the direction the token had
     // already moved, which is the direction a trader would have acted on.
@@ -94,7 +98,7 @@ export function buildEpisodes(candles, options = {}) {
       peakDriftBps: peak.driftBps,
       peakMs: peak.timestamp,
       lastDriftBps: points[points.length - 1].driftBps,
-      resolution: sessionRows.length && resolutionBps !== null
+      resolution: sessionComplete && resolutionBps !== null
         ? {
           sessionCloseMs: lastSessionRow.timestamp,
           sessionClosePrice: lastSessionRow.close,
@@ -175,8 +179,12 @@ export function driftDistribution(episodes, options = {}) {
  * choosing the closest point selects *when* the window looked like today without
  * biasing what followed it.
  */
-export function matchedPointOf(episode, targetDriftBps) {
+export function matchedPointOf(episode, targetDriftBps, options = {}) {
+  const targetStageHours = options.stageHours
+  const tolerance = options.stageToleranceHours ?? 2
   const points = (episode?.points ?? []).filter((point) => Number.isFinite(point?.driftBps))
+    .filter((point) => !Number.isFinite(targetStageHours) || (Number.isFinite(point.timestamp) && Number.isFinite(episode.anchorMs)
+      && Math.abs((point.timestamp - episode.anchorMs) / 3_600_000 - targetStageHours) <= tolerance))
   if (!points.length) return null
   const targetSign = Math.sign(targetDriftBps)
   const sameDirection = points.filter((point) => Math.sign(point.driftBps) === targetSign)
@@ -207,7 +215,7 @@ export function matchEpisodes(episodes, targetDriftBps, options = {}) {
   return (episodes ?? [])
     .filter((episode) => episode.resolution && episode.windowHours >= minWindowHours)
     .filter((episode) => excludeAnchorMs === null || episode.anchorMs !== excludeAnchorMs)
-    .map((episode) => ({ episode, point: matchedPointOf(episode, targetDriftBps) }))
+    .map((episode) => ({ episode, point: matchedPointOf(episode, targetDriftBps, options) }))
     .filter((candidate) => candidate.point)
     .map((candidate) => ({ ...candidate, distance: Math.abs(Math.abs(candidate.point.driftBps) - Math.abs(targetDriftBps)) }))
     .filter((candidate) => candidate.distance <= band)

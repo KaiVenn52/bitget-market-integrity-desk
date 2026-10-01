@@ -1,11 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import { attachUnderlyingOutcomes, buildEpisodes, driftDistribution, etDateKey, matchEpisodes, outcomeOf, outcomeStats, stressTestVerdict } from './study.js'
+import { currentState } from '../study.js'
 
 // Hourly bars on the hour, in UTC. In September the U.S. regular session runs
 // 13:30–20:00 UTC, so the regular hourly bars are 14:00–19:00 and everything from
 // 20:00 through 13:00 the next day belongs to a closed window.
 const bar = (ms, close, high = close, low = close) => ({ timestamp: ms, open: close, high, low, close, turnover: 1_000_000 })
 const at = (day, hour) => Date.UTC(2026, 8, day, hour, 0)
+
+describe('current study session', () => {
+  it('uses the current calendar, not a closed bar that started before the opening bell', () => {
+    const rows = [bar(at(16, 19), 100), bar(at(17, 13), 101)]
+    expect(currentState(rows, at(17, 14)).underlyingTradable).toBe(true)
+    expect(currentState(rows, at(17, 14)).session).toBe('regular')
+  })
+  it('does not call an old retrieved candle a live drift', () => {
+    expect(currentState([bar(at(16, 19), 100), bar(at(17, 1), 101)], at(17, 8)).driftBps).toBeNull()
+  })
+})
 
 /** A weekday session of hourly bars from 14:00 to 19:00 UTC. */
 const session = (day, prices) => prices.map((price, index) => bar(at(day, 14 + index), price))
@@ -59,6 +71,17 @@ describe('episode construction', () => {
     const candles = [
       ...session(16, [100, 100, 100, 100, 100, 100]),
       ...closedWindow(16, Array.from({ length: 18 }, () => 102)),
+    ]
+    const [episode] = buildEpisodes(candles)
+    expect(episode.resolution).toBeNull()
+    expect(matchEpisodes([episode], 200)).toEqual([])
+  })
+
+  it('never treats an unfinished following session as its eventual close', () => {
+    const candles = [
+      ...session(16, [100, 100, 100, 100, 100, 100]),
+      ...closedWindow(16, Array.from({ length: 18 }, () => 102)),
+      ...session(17, [102, 103]),
     ]
     const [episode] = buildEpisodes(candles)
     expect(episode.resolution).toBeNull()
@@ -157,6 +180,15 @@ describe('scenario matching', () => {
     // Keyed on the peak it would have been 415 bps away and outside the band entirely.
     expect(matchEpisodes([path], 65, { bandBps: 20, excludeAnchorMs: null })).toHaveLength(1)
     expect(matchEpisodes([{ ...path, points: [{ timestamp: at(16, 20), driftBps: 480 }] }], 65, { bandBps: 20 })).toEqual([])
+  })
+
+  it('matches at a comparable stage instead of borrowing a drift seen much later in the window', () => {
+    const path = {
+      ...episode(480, 300, 18),
+      points: [{ timestamp: at(16, 20), driftBps: 10 }, { timestamp: at(17, 12), driftBps: 180 }],
+    }
+    expect(matchEpisodes([path], 180, { bandBps: 20, stageHours: 1, stageToleranceHours: 2 })).toEqual([])
+    expect(matchEpisodes([path], 180, { bandBps: 20, stageHours: 17, stageToleranceHours: 2 })[0].matchedStageHours).toBe(17)
   })
 
   it('never counts an episode as its own precedent', () => {

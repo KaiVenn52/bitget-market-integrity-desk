@@ -6,6 +6,7 @@ const aliases: Record<string, string[]> = {
 }
 
 export function resolveInstrument(query: string): string | null {
-  const tokens = query.toLowerCase().match(/[a-z0-9]+/g) ?? []
-  return Object.entries(aliases).find(([, terms]) => terms.some((term) => tokens.some((token) => token === term)))?.[0] ?? null
+  const tokens: string[] = query.toLowerCase().match(/[a-z0-9]+/g) ?? []
+  const matches = Object.entries(aliases).filter(([, terms]) => terms.some((term) => tokens.includes(term)))
+  return matches.length === 1 ? matches[0][0] : null
 }
