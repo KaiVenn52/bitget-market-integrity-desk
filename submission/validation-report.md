@@ -1,13 +1,27 @@
 # Validation Record
 
-Updated: 2026-10-02 (Malaysia time)
+Updated: 2026-10-03 (Malaysia time)
 Scope: local engine, public production workflow, and three adversarial review rounds
 Operator: project developer
 
 This record is linked directly from the deployed desk. Every row below was observed on
 the date shown, and rows that describe an earlier state say so.
 
-## 2026-10-02 research-loop revision
+## 2026-10-03 iterative review and production acceptance
+
+Three defects were repaired: Stress reruns now preserve the historical example's exclusion instead of admitting it into its own comparison pool; checkpoint gaps fail closed when either reported-close date is missing; and a live memo with no historical base rate explains the empty result rather than silently hiding historical context. Source review and controlled fixtures established the rerun defect; the old historical-example failure was not reproduced in the live closed-market default view.
+
+Local verification: **268/268 tests across fifteen suites**, lint, TypeScript/Vite build and diff checks passed. Code commits `0817e2d` and `40598da` were pushed. The latest code deployment `dpl_4ebJ4Z9QzAw5vNLKHuXhgusRsT4W` reached `READY` on the public production alias.
+
+Two full production walkthroughs passed using installed Playwright and local Chrome, explicitly authorized by the user after the supported Browser runtime was unavailable. At 1440 × 1000 and 390 × 844: live research, snapshot-save refusal, checkpoint save/reload/recheck, lens preservation, memo-to-Stress target preservation, Stress rerun, ambiguous-symbol refusal, Replay/Method navigation, actual four-symbol Gate sweep and local-log persistence passed. No application console errors or warnings, Vite error overlay, or document-level horizontal overflow were observed. Screenshots were inspected outside the repository.
+
+The latest closed-market feed lens correctly returned `OUT OF SCOPE`: an expected prior close is not itself a feed failure. The saved fresh-reference condition remained `NOT TRIGGERED`. Historical context explained that the 11 bps token-versus-session-close target was below the 20 bps event threshold and could differ from the 21 bps underlying-reference gap. The Gate returned 1 WAIT and 3 CLEAR in that observation; CLEAR is a verification disposition, not an instruction to trade. Qwen-backed analysis returned HTTP 200. MCP-dependent records still included upstream HTTP 503 limitations; this acceptance does not establish restored official data availability.
+
+A separate production study query used a real resolved episode as an explicitly caller-supplied +282 bps / 18-hour target with `excludedAnchorMs=1790881200000`. It returned two matched rows and no self-match; an invalid excluded anchor returned HTTP 400 rather than silently changing the comparison. This verifies exclusion handling, not a current 282 bps opportunity or predictive accuracy.
+
+These are developer-operated acceptance checks, not external-user validation, profitability evidence, universal bug freedom or an uptime guarantee.
+
+## 2026-10-02 research-loop revision (historical)
 
 The current revision adds explicit market-readiness, news, overnight and stale-reference research lenses, a bounded evidence-backed hypothesis assessment, and structured observable checkpoint conditions. Free-text investment theses remain human judgments; headline timing remains non-causal. Missing and stale evidence are distinct. Rechecks preserve the selected lens and do not compare gaps across reference-tier or reported-close-date changes.
 
@@ -15,7 +29,7 @@ Historical matching now constrains the observation stage to ±2 hours. Forming c
 
 Current local verification: **262/262 tests across thirteen suites**, production build, lint and diff checks. Three component-render tests verify the first-save condition selector is inside the form, the focused hypothesis panel does not reject an unrelated generic question, and the memo comparison renders immediately in Stress. Additional session-clock regressions prevent a pre-bell hourly bar from making a currently open market appear closed, or an old candle from becoming a live target. These are automated contracts, **not browser interaction or visual QA**.
 
-Current-release browser acceptance remains **unverified**: the supported browser runtime reported that saved browser permissions could not be verified. No alternate browser or screenshot workaround was used. The previously recorded desktop/mobile results below apply to their earlier releases, not this revision. Deployment and live endpoint observations for this revision are recorded separately when confirmed.
+At the initial October 2 checkpoint, browser acceptance was **unverified** because the supported browser runtime could not verify saved permissions. The user subsequently explicitly authorized local Playwright/Chrome testing. The completed October 3 production walkthroughs above supersede that initial acceptance gap.
 
 ### Production endpoint checks, 2026-10-02 Malaysia time
 
@@ -27,7 +41,7 @@ Code commit `9e82f06` was pushed. The first CLI deployment returned `Not authori
 - A `feed`-lens analysis returned HTTP 200, the exact submitted question, Qwen synthesis with eight inline citation IDs resolved against server evidence, and the 12-request rate-limit header. It explicitly retained the 904-second-old underlying reference as stale. Citation-ID resolution is not proof of sentence-level entailment.
 - Running the study handler locally against this machine's network returned zero candles and an honest unavailable response. That local fetch failure did not establish a production outage; production study retrieval succeeded separately.
 
-Current-release desktop/mobile interaction, checkpoint click/save/reload/recheck and visual acceptance still require a browser walkthrough. No external-user or trading-performance claim follows from these developer checks.
+The initial endpoint-only checkpoint did not establish browser acceptance. Subsequent authorized desktop/mobile walkthroughs are recorded above; no external-user or trading-performance claim follows from them.
 
 ## Earlier observed results (through 2026-09-30)
 
