@@ -7,7 +7,15 @@ Operator: project developer
 This record is linked directly from the deployed desk. Every row below was observed on
 the date shown, and rows that describe an earlier state say so.
 
-## 2026-10-03 iterative review and production acceptance
+## 2026-10-03 follow-up: checkpoint delta consistency
+
+A further source review found that condition evaluation refused incomparable gaps, but `premiumDeltaBps` still subtracted them. Controlled regressions reproduced a -32 bps delta across rolled/missing close dates and changed reference tiers. The display now refuses numeric changes when reference identity is missing, the tier/date differs, or a current quote is stale. Older manual checkpoints remain readable but cannot claim a comparable gap delta without reference identity. A same-date, same-tier regression retains the valid -32 bps change. The UI explains that the two measured gaps are separate observations when comparison is unavailable.
+
+**272/272 tests across fifteen suites**, lint and TypeScript/Vite build passed. Code `dcaf12a` was pushed and deployed as `dpl_31pkyPuZThbGctg3kGYX15MZqidP`, `READY` on the public alias. The full authorized Playwright/Chrome production flow passed again at 1440 × 1000 and 390 × 844 with zero observed application console errors/warnings and no document overflow. In an isolated browser context, changing the stored close date to `2000-01-01` and rechecking verified the visible refusal and absence of a numeric gap delta on desktop/mobile. This is storage fault injection, not real historical-market data, and it does not alter a user's existing profile.
+
+On this run, Memo and Stress retained the +21 bps / 15-hour target and six matched historical windows; 5/6 same-direction outcomes were explicitly historical context, not a forecast. The actual four-symbol Gate sweep returned 2 WAIT and 2 CLEAR. Official MCP quote evidence still exposed HTTP 503; passing the app workflow does not establish official-source recovery. Video, public posting and final submission were not performed.
+
+## 2026-10-03 iterative review and production acceptance (earlier pass)
 
 Three defects were repaired: Stress reruns now preserve the historical example's exclusion instead of admitting it into its own comparison pool; checkpoint gaps fail closed when either reported-close date is missing; and a live memo with no historical base rate explains the empty result rather than silently hiding historical context. Source review and controlled fixtures established the rerun defect; the old historical-example failure was not reproduced in the live closed-market default view.
 
