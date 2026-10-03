@@ -70,6 +70,12 @@ describe('observable invalidation conditions', () => {
     const closed = analysis({ reference: { ...analysis().reference, kind: 'reported-close', closeDateKey: '2026-10-02' } })
     expect(evaluateCondition({ metric: 'gap-reversed', thresholdBps: 20 }, 80, 'reported-close', passport({ premiumBps: -30 }), closed, '2026-10-01').status).toBe('UNVERIFIABLE')
   })
+  it('abstains when either reported-close date is missing', () => {
+    const closed = analysis({ reference: { ...analysis().reference, kind: 'reported-close', closeDateKey: '2026-10-02' } })
+    const rule = { metric: 'gap-within' as const, thresholdBps: 20 }
+    expect(evaluateCondition(rule, 80, 'reported-close', passport({ premiumBps: 10 }), closed).status).toBe('UNVERIFIABLE')
+    expect(evaluateCondition(rule, 80, 'reported-close', passport({ premiumBps: 10 }), { ...closed, reference: { ...closed.reference, closeDateKey: null } }, '2026-10-02').status).toBe('UNVERIFIABLE')
+  })
   it('requires a genuinely fresh same-session reference, not a reported close', () => {
     const rule = { metric: 'reference-fresh' as const, thresholdBps: 20 }
     expect(evaluateCondition(rule, 80, 'reported-close', passport(), analysis()).status).toBe('TRIGGERED')

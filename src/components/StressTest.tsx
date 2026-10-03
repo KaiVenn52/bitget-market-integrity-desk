@@ -50,7 +50,7 @@ export function StressTest({ symbol, onSymbol, seed = null }: { symbol: string; 
 
   const rerun = useCallback((next: string) => {
     setBusy(true)
-    void runStudy(next, seed?.target.driftBps ?? undefined, setNote, { stageHours: seed?.target.stageHours }).then((payload) => applyResult(next, payload))
+    void runStudy(next, seed?.target.driftBps ?? undefined, setNote, { stageHours: seed?.target.stageHours, excludedAnchorMs: seed?.target.excludedAnchorMs }).then((payload) => applyResult(next, payload))
   }, [applyResult, seed])
 
   // The instrument on screen is the only one whose result may be shown, so a

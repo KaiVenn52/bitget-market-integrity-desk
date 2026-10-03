@@ -113,7 +113,11 @@ export default async function handler(req, res) {
     // When the example is itself a past episode, it must not also be counted as its own
     // precedent: matching an episode against a pool containing itself adds a guaranteed
     // zero-distance "same direction" row and inflates every count.
-    const excludeAnchorMs = targetSource === 'most recent closed-market episode' ? latestEpisode.anchorMs : null
+    const suppliedExclusion = req.query?.excludedAnchorMs === undefined ? null : Number(req.query.excludedAnchorMs)
+    if (suppliedExclusion !== null && (!Number.isSafeInteger(suppliedExclusion) || !resolved.some((episode) => episode.anchorMs === suppliedExclusion))) {
+      return res.status(400).json({ error: 'The saved example is no longer in the retrieved resolved history. Start a new comparison rather than silently changing its exclusion.' })
+    }
+    const excludeAnchorMs = targetSource === 'most recent closed-market episode' ? latestEpisode.anchorMs : suppliedExclusion
     const matched = material ? matchEpisodes(episodes, targetDriftBps, { bandBps, minWindowHours, excludeAnchorMs, stageHours, stageToleranceHours }) : []
     const stats = outcomeStats(matched)
     const verdict = !material
@@ -131,7 +135,7 @@ export default async function handler(req, res) {
       : targetSource === 'most recent closed-market episode'
         ? `No usable live closed-market drift is available to test. The comparison below uses the most recent closed-market episode (${new Date(latestEpisode.anchorMs).toISOString().slice(0, 10)}, peak ${latestEpisode.peakDriftBps} bps) as the historical example, and that episode is excluded from the sample it is compared against.`
         : targetSource === 'requested'
-          ? `The drift being tested was supplied by the caller (${targetDriftBps} bps).`
+          ? `The drift being tested was supplied by the caller (${targetDriftBps} bps).${excludeAnchorMs !== null ? ` The saved historical example (${new Date(excludeAnchorMs).toISOString()}) is still excluded from its own comparison sample.` : ''}`
           : 'No drift was available to test.'
 
     const withUnderlying = episodes.filter((episode) => episode.underlying).length
@@ -152,7 +156,7 @@ export default async function handler(req, res) {
       mode: 'live',
       reasoningMode: 'rules',
       lookback: { candles: candles.length, from: new Date(candles[0].timestamp).toISOString(), to: new Date(candles[candles.length - 1].timestamp).toISOString() },
-      target: { driftBps: targetDriftBps, bandBps, minWindowHours, source: targetSource, material, context: targetContext, stageHours, stageToleranceHours },
+      target: { driftBps: targetDriftBps, bandBps, minWindowHours, source: targetSource, material, context: targetContext, stageHours, stageToleranceHours, excludedAnchorMs: excludeAnchorMs },
       current,
       distribution,
       stats: (({ rows, ...rest }) => rest)(stats),

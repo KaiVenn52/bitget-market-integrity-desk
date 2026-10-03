@@ -273,7 +273,7 @@ export interface StudyResult {
   mode: DataMode
   reasoningMode: ReasoningMode
   lookback: { candles: number; from: string; to: string }
-  target: { driftBps: number | null; bandBps: number; minWindowHours: number; source: string; material: boolean; context: string; stageHours?: number | null; stageToleranceHours?: number }
+  target: { driftBps: number | null; bandBps: number; minWindowHours: number; source: string; material: boolean; context: string; stageHours?: number | null; stageToleranceHours?: number; excludedAnchorMs?: number | null }
   current: {
     lastCandleMs: number
     lastClose: number

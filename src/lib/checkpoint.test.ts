@@ -120,7 +120,7 @@ describe('thesis checkpoint', () => {
   it('persists a structured condition and evaluates it on a later same-tier live observation', () => {
     mockStorage()
     const passport = { ...livePassport(), tokenQuoteAge: 1 }
-    const analysis = { symbol: passport.instrument.symbol, evidence: [], metrics: { drift: { currentBps: 42 } }, reference: { chosen: { price: 225 }, kind: 'reported-close', stale: true } } as unknown as MoveAnalysis
+    const analysis = { symbol: passport.instrument.symbol, evidence: [], metrics: { drift: { currentBps: 42 } }, reference: { chosen: { price: 225 }, kind: 'reported-close', closeDateKey: '2026-09-25', stale: true } } as unknown as MoveAnalysis
     const saved = makeCheckpoint(passport, analysis, buildDecisionMemo(passport, null), 'The overnight gap persists.', 'A gap inside 20 bps changes my thesis.', observedAt, { intent: 'overnight', conditionRule: { metric: 'gap-within', thresholdBps: 20 } })!
     expect(saveCheckpoint(saved)).toBe(true)
     expect(readCheckpoint(passport.instrument.symbol)?.conditionRule?.thresholdBps).toBe(20)

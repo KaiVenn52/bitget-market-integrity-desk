@@ -101,7 +101,8 @@ export function evaluateCondition(rule: ConditionRule | undefined, baselineGap: 
   if (!Number.isFinite(gap) || gap === null) return unknown('The current gap could not be measured.')
   const currentBasis = analysis.reference?.kind ?? null
   if (!baselineBasis || !currentBasis || baselineBasis !== currentBasis) return unknown('The reference tier changed or is unknown; these gaps are not comparable.')
-  if (currentBasis === 'reported-close' && baselineCloseDate && baselineCloseDate !== analysis.reference.closeDateKey) return unknown('The reported-close date changed; these gaps do not share the saved price baseline.')
+  if (currentBasis === 'reported-close' && (!baselineCloseDate || !analysis.reference.closeDateKey)) return unknown('A reported-close date is missing; the saved and current price baselines cannot be compared.')
+  if (currentBasis === 'reported-close' && baselineCloseDate !== analysis.reference.closeDateKey) return unknown('The reported-close date changed; these gaps do not share the saved price baseline.')
   if (analysis.reference.stale && currentBasis !== 'reported-close') return unknown('The live underlying reference is stale.')
   if (rule.metric === 'gap-within') return observed(Math.abs(gap) <= rule.thresholdBps, `Absolute gap is ${Math.abs(gap)} bps; your threshold is ${rule.thresholdBps} bps (${currentBasis}).`)
   if (baselineGap === null || !Number.isFinite(baselineGap) || Math.abs(baselineGap) < 20) return unknown('The saved baseline did not contain a material directional gap.')

@@ -7,7 +7,7 @@ const STUDY_TIMEOUT_MS = 30_000
  * specific drift (for example the one the gate just flagged); leaving it out lets
  * the endpoint choose, and it says which choice it made.
  */
-export async function runStudy(symbol: string, driftBps?: number, onProgress?: (note: string) => void, options?: { stageHours?: number | null }): Promise<StudyResult | null> {
+export async function runStudy(symbol: string, driftBps?: number, onProgress?: (note: string) => void, options?: { stageHours?: number | null; excludedAnchorMs?: number | null }): Promise<StudyResult | null> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), STUDY_TIMEOUT_MS)
   onProgress?.(`Retrieving closed hourly candles for ${symbol}.`)
@@ -15,6 +15,7 @@ export async function runStudy(symbol: string, driftBps?: number, onProgress?: (
     const query = new URLSearchParams({ symbol })
     if (Number.isFinite(driftBps)) query.set('driftBps', String(Math.round(driftBps as number)))
     if (Number.isFinite(options?.stageHours)) query.set('stageHours', String(options?.stageHours))
+    if (Number.isFinite(options?.excludedAnchorMs)) query.set('excludedAnchorMs', String(options?.excludedAnchorMs))
     const response = await fetch(`/api/study?${query.toString()}`, { signal: controller.signal, headers: { accept: 'application/json' } })
     if (!response.ok) {
       onProgress?.(`Stress test endpoint returned HTTP ${response.status}.`)
