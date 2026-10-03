@@ -55,6 +55,11 @@ export function DecisionMemo({ passport, analysis, study, studyPending, intent =
     </div> : studyPending ? <div className="decision-baserate is-loading" aria-live="polite">
       <div className="baserate-head"><History size={14} aria-hidden /><span>Historical base rate</span><em>Matching comparable windows…</em></div>
       <small>The decision is usable now. Historical context will attach when the deterministic study finishes.</small>
+    </div> : passport.mode === 'live' ? <div className="decision-baserate is-empty" aria-label="Historical context unavailable or empty">
+      <div className="baserate-head"><History size={14} aria-hidden /><span>Historical context</span><em>No base rate inferred</em></div>
+      <strong>{study?.verdict.headline ?? 'Historical comparison unavailable'}</strong>
+      <small>{study?.verdict.detail ?? 'Historical records could not produce a defensible comparison. The desk does not fill a missing sample with a forecast.'}</small>
+      {study ? <small>The study measures rToken drift from its own last session bar; this can differ from the underlying-reference gap above. {study.target.context}</small> : null}
     </div> : null}
 
     <div className="decision-evidence">

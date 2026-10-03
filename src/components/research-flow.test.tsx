@@ -10,6 +10,14 @@ const passport = { ...snapshotFor('rNVDAUSDT'), mode: 'live' as const, tokenQuot
 const noop = () => {}
 
 describe('rendered research flow contracts (not browser interaction QA)', () => {
+  it('explains an empty historical comparison in a focused live memo instead of hiding it', () => {
+    const study = { available: true, stats: { episodes: 0 }, target: { driftBps: 11, context: 'Token-side study target.' }, verdict: { headline: 'No material drift to stress test', detail: '11 bps is below the event threshold.' } } as unknown as StudyResult
+    const html = renderToStaticMarkup(<DecisionMemo passport={passport} analysis={null} study={study} studyPending={false} intent="feed" onGate={noop} onStress={noop} />)
+    expect(html).toContain('No base rate inferred')
+    expect(html).toContain('11 bps is below the event threshold.')
+    expect(html).toContain('can differ from the underlying-reference gap above')
+    expect(html).not.toContain('See every matched window')
+  })
   it('puts the observable-condition selector inside the first-save form', () => {
     const html = renderToStaticMarkup(<ThesisCheckpoint passport={passport} analysis={null} study={null} scanning={false} studyPending={false} intent="overnight" onRescan={noop} />)
     const form = html.slice(html.indexOf('<form'), html.indexOf('</form>'))
