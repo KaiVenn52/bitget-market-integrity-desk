@@ -89,7 +89,7 @@ describe('thesis checkpoint', () => {
     expect(review.ready).toBe(true)
     expect(review.decisionChanged).toBe(true)
     expect(review.referenceChanged).toBe(false)
-    expect(review.premiumDeltaBps).toBe(33)
+    expect(review.premiumDeltaBps).toBeNull() // Legacy baseline has no identifiable reference tier/date.
     expect(review.checkChanges.some((item) => item.after.includes('UNVERIFIABLE'))).toBe(true)
     expect(review.evidenceChanges.some((item) => item.after.includes('Reference source unavailable'))).toBe(true)
   })
@@ -126,7 +126,10 @@ describe('thesis checkpoint', () => {
     expect(readCheckpoint(passport.instrument.symbol)?.conditionRule?.thresholdBps).toBe(20)
     const later = { ...passport, scannedAt: laterAt, premiumBps: 10 }
     const nextAnalysis = { ...analysis, metrics: { ...analysis.metrics, drift: { ...analysis.metrics.drift, currentBps: 10 } } }
-    expect(compareCheckpoint(saved, later, buildDecisionMemo(later, null), nextAnalysis).condition?.status).toBe('TRIGGERED')
+    const review = compareCheckpoint(saved, later, buildDecisionMemo(later, null), nextAnalysis)
+    expect(review.condition?.status).toBe('TRIGGERED')
+    expect(review.premiumDeltaBps).toBe(-32)
+    expect(review.gapComparisonIssue).toBeNull()
   })
 
   it('rejects malformed machine conditions while retaining older manual checkpoints', () => {
@@ -136,5 +139,20 @@ describe('thesis checkpoint', () => {
     expect(readCheckpoint(saved.symbol)).toBeNull()
     values.set('mid.thesis-checkpoint.v1.rNVDAUSDT', JSON.stringify(saved))
     expect(readCheckpoint(saved.symbol)).not.toBeNull()
+  })
+
+  it.each([
+    ['rolled close', 'reported-close', '2026-09-28'],
+    ['missing close date', 'reported-close', null],
+    ['changed tier', 'live-quote', null],
+  ])('refuses a numeric gap delta for %s even when both gaps are measured', (_label, kind, date) => {
+    const passport = { ...livePassport(), tokenQuoteAge: 1 }
+    const analysis = { symbol: passport.instrument.symbol, evidence: [], metrics: { drift: { currentBps: 42 } }, reference: { chosen: { price: 225 }, kind: 'reported-close', closeDateKey: '2026-09-25', stale: true } } as unknown as MoveAnalysis
+    const memo = buildDecisionMemo(passport, null)
+    const saved = makeCheckpoint(passport, analysis, memo, 'Thesis', 'Condition', observedAt, { intent: 'overnight', conditionRule: { metric: 'gap-within', thresholdBps: 20 } })!
+    const next = { ...analysis, metrics: { ...analysis.metrics, drift: { ...analysis.metrics.drift, currentBps: 10 } }, reference: { ...analysis.reference, kind, closeDateKey: date } } as MoveAnalysis
+    const review = compareCheckpoint(saved, { ...passport, scannedAt: laterAt }, memo, next)
+    expect(review.premiumDeltaBps).toBeNull()
+    expect(review.gapComparisonIssue).toBeTruthy()
   })
 })

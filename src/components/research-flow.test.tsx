@@ -1,5 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { makeCheckpoint } from '../lib/checkpoint'
+import { buildDecisionMemo } from '../lib/decision'
 import { snapshotFor } from '../data/snapshots'
 import type { MoveAnalysis, StudyResult } from '../types'
 import { DecisionMemo } from './DecisionMemo'
@@ -10,6 +12,17 @@ const passport = { ...snapshotFor('rNVDAUSDT'), mode: 'live' as const, tokenQuot
 const noop = () => {}
 
 describe('rendered research flow contracts (not browser interaction QA)', () => {
+  it('explains why an older checkpoint cannot produce a comparable numeric gap change', () => {
+    const saved = makeCheckpoint(passport, null, buildDecisionMemo(passport, null), 'My thesis', 'My condition')!
+    vi.stubGlobal('window', { localStorage: { getItem: () => JSON.stringify(saved) } })
+    try {
+      const next = { ...passport, scannedAt: new Date(Date.parse(passport.scannedAt) + 60000).toISOString() }
+      const html = renderToStaticMarkup(<ThesisCheckpoint passport={next} analysis={null} study={null} scanning={false} studyPending={false} onRescan={noop} />)
+      expect(html).toContain('Gap comparison unavailable:')
+      expect(html).toContain('separate observations, not a comparable change')
+      expect(html).not.toContain('· gap 0 bps')
+    } finally { vi.unstubAllGlobals() }
+  })
   it('explains an empty historical comparison in a focused live memo instead of hiding it', () => {
     const study = { available: true, stats: { episodes: 0 }, target: { driftBps: 11, context: 'Token-side study target.' }, verdict: { headline: 'No material drift to stress test', detail: '11 bps is below the event threshold.' } } as unknown as StudyResult
     const html = renderToStaticMarkup(<DecisionMemo passport={passport} analysis={null} study={study} studyPending={false} intent="feed" onGate={noop} onStress={noop} />)

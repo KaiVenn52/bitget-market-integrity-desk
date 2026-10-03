@@ -93,6 +93,7 @@ export function ThesisCheckpoint({ passport, analysis, study, scanning, studyPen
           </div>
           {review.referenceChanged ? <div className="checkpoint-reference-change"><span>Reference basis changed</span><p>Before: {saved.referenceBasis ?? 'not specified'}</p><p>Now: {memo.referenceBasis ?? 'not specified'}</p></div> : null}
           <p className="checkpoint-diff-count">{review.checkChanges.length} check changes · {review.evidenceChanges.length} evidence changes{review.premiumDeltaBps === null ? '' : ` · gap ${review.premiumDeltaBps > 0 ? '+' : ''}${review.premiumDeltaBps} bps`}</p>
+          {review.gapComparisonIssue ? <p className="checkpoint-caveat checkpoint-gap-unavailable" role="status">Gap comparison unavailable: {review.gapComparisonIssue} The two measured gaps above are separate observations, not a comparable change.</p> : null}
           {changeRows.length ? <>
             <ul className="checkpoint-change-list">{changeRows.slice(0, showAll ? undefined : 4).map((item) => <li key={`${item.kind}-${item.id}`}><span>{item.kind} · {item.title}</span><small>Before: {item.before}</small><small>Now: {item.after}</small></li>)}</ul>
             {changeRows.length > 4 ? <button type="button" className="checkpoint-text-button" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show fewer changes' : `Show all ${changeRows.length} changes`}</button> : null}

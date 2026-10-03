@@ -27,6 +27,7 @@ export interface CheckpointReview {
   decisionChanged: boolean
   referenceChanged: boolean
   premiumDeltaBps: number | null
+  gapComparisonIssue?: string | null
   checkChanges: { id: string; title: string; before: string; after: string }[]
   evidenceChanges: { id: string; title: string; before: string; after: string }[]
   condition?: ConditionResult
@@ -139,12 +140,29 @@ export function compareCheckpoint(saved: ThesisCheckpoint, passport: Passport, m
   }
   for (const before of saved.evidence) if (!currentEvidence.has(before.id)) evidenceChanges.push({ id: before.id, title: before.title, before: `${before.state} · ${before.summary}`, after: 'not returned in this scan' })
   const currentGap = saved.conditionRule ? researchGap(passport, analysis) : passport.premiumBps
+  // Numeric deltas need the same provenance guarantees as condition evaluation.
+  // Legacy records lack this identity; retain them, but do not invent comparability.
+  const reference = analysis?.symbol === saved.symbol ? analysis.reference : null
+  const gapComparisonIssue = !saved.referenceKind || !reference?.chosen || !reference.kind
+    ? 'The saved or current reference identity is missing; no gap change is calculated.'
+    : saved.referenceKind !== reference.kind
+      ? 'The reference tier changed; no gap change is calculated.'
+      : reference.kind === 'reported-close' && (!saved.referenceCloseDate || !reference.closeDateKey || saved.referenceCloseDate !== reference.closeDateKey)
+        ? 'The reported-close date changed or is missing; no gap change is calculated.'
+        : reference.kind === 'live-quote' && reference.stale
+          ? 'The current underlying quote is stale; no gap change is calculated.'
+          : !Number.isFinite(passport.tokenQuoteAge) || passport.tokenQuoteAge < 0 || passport.tokenQuoteAge > 120
+            ? 'The current token observation is not fresh; no gap change is calculated.'
+            : saved.premiumBps === null || currentGap === null
+              ? 'One of the gaps could not be measured; no gap change is calculated.'
+              : null
 
   return {
     ready: true,
     decisionChanged: saved.disposition !== memo.disposition,
     referenceChanged: saved.referenceBasis !== memo.referenceBasis,
-    premiumDeltaBps: saved.premiumBps === null || currentGap === null ? null : currentGap - saved.premiumBps,
+    premiumDeltaBps: gapComparisonIssue || saved.premiumBps === null || currentGap === null ? null : currentGap - saved.premiumBps,
+    gapComparisonIssue,
     checkChanges,
     evidenceChanges,
     condition: evaluateCondition(saved.conditionRule, saved.premiumBps, saved.referenceKind ?? null, passport, analysis, saved.referenceCloseDate),
